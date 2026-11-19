@@ -9,14 +9,14 @@ summary: "0.10.1 authenticates historical project state before migration and rec
 tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d3a387b8364633333832c10b7c4e682b09f2343b916957b0e63d555eb3999fb4"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:ccdb3fbd321eef3dd9d91c412832203b68fd71bab30689c8a9095f6fd89520f3"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:307f40fbc24d404398dc5852f746f03f8599379fd22716f54cfc1ae13a3600af"
-  - "repo:crates/hive-projection/src/lib.rs#sha256:05ece29f62af952b3a7d30fc5fa38a279d161bdde8e8f608cc1924e37c49a699"
-  - "repo:crates/hive-render/src/lib.rs#sha256:395e1b02d6e50e6460f9c05b0765b5329a6a3dc995de0c102bf5f8edebfe7a78"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:96e73fe5c33bb18cf1c2d6e21271df1738c02bc77f06a70fadbcb5b67ea8f5e5"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:81c8223df0cba01511f0da69e8bc2b79bca26a22fa0439af874f6b4ed320606e"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:78a72f681ee0b81c56872449d08e5dc633a3c8f98c8540026eb6799c510bb12c"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:82599d4eeb2477228ff3b76ef634a18be0a208c9ebaa2ec823b8c1da229d8a35"
+  - "repo:crates/hive-render/src/lib.rs#sha256:d037c1cea2d7a4bef6b5476a0cac77a8b7113034ec135cc5043fc7e30416cf95"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"
   - "repo:docs/releases/0.10.3.md#sha256:94a75051e50352ff04de8e649b8382db81ee5b6b2ea95276203bdddeedcc2ea8"
-  - "repo:harness/project-bases/registry.yml#sha256:d686ec7a433db992078e0428e25ecf337cae6d9a1a37f341dfe5ac37274bf284"
+  - "repo:harness/project-bases/registry.yml#sha256:c56c61329f495702b7cad50d37fcc88921ad0fd381fc4486535b3b883f98995b"
 links: [historical-project-base-coverage, installed-usage-guard, skill-retirement-migration, usage-guard-thresholds]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

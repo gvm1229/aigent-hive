@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod cli_help;
 mod custom_agent_cli;
 mod discord;
 mod display_options;
@@ -72,19 +73,19 @@ OUTPUT:
     Readable results use your saved language. Add --output json for machine output.
 
 USAGE:
-    hive doctor
+    hive doctor [--output json]
     hive roster --help
     hive summon --help
     hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
-    hive check-target <path>
+    hive check-target <path> [--output json]
     hive setup --help
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
     hive setup --target <dir> --user-root <dir> --show --summary [--output json]
     hive setup --target <dir> --user-root <dir> --describe --question <question-id> [--output json]
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
+    hive setup --target <dir> --answers <yml> [--capabilities <json>] --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
     hive source-wiki lint --target <source-root> [--output json]
     hive source-wiki index --target <source-root> [--output json]
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
@@ -139,13 +140,17 @@ Create or validate an installed Aigent Hive consumer harness.
 USAGE:
     hive setup --target <dir> [--user-root <dir>] [--interactive|--non-interactive] [--resume|--dry-run]
     hive setup --target <dir> [--user-root <dir>] (--show|--describe --section <id>) [--output json]
-    hive setup --target <dir> --answers <yml> --capabilities <json> --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--output json]
+    hive setup --target <dir> --answers <yml> [--capabilities <json>] --user-root <dir> (--dry-run|--apply|--validate) [--reconfigure-role <role-id>]... [--input-channel answers-file|agent] [--output json]
 
 MODES:
     --summary    Compact status/completion output; not an approval preview
     --dry-run    Render and validate in staging without changing the target
     --apply      Render, validate, and apply only manifest-owned changes
     --validate   Validate the installed harness without changing the target
+
+--capabilities is optional for --dry-run, --apply and --validate. Without it, file setup uses
+the same saved or detected host capability data as terminal setup; no command generates a
+capability file. Detection never verifies execution support or grants hooks.
 ";
 
 const STALE_MARKER: &[u8] = b"{\"schema_version\":1,\"stale\":true}\n";
@@ -229,7 +234,7 @@ struct HookResult {
 struct SetupArguments {
     target: PathBuf,
     answers: PathBuf,
-    capabilities: PathBuf,
+    capabilities: Option<PathBuf>,
     user_root: PathBuf,
     mode: SetupMode,
     reconfigure_roles: BTreeSet<String>,
@@ -274,6 +279,13 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         .and_then(|name| hive_core::gods::find(name))
     {
         return gods::run_alias(god, &arguments[1..]);
+    }
+    if let Some(code) = cli_help::precheck(&arguments) {
+        return code;
+    }
+    if let Some(text) = cli_help::help_request(&arguments, human_output::language()) {
+        print!("{text}");
+        return ExitCode::SUCCESS;
     }
     if let Some(family) = family_help_request(&arguments) {
         print_family_help(family);
@@ -359,12 +371,10 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
             update_discovery::run(&arguments[1..])
         }
         Some("update") => update::run_update(&arguments[1..]),
-        Some("doctor" | "check-target") if !wants_json(&arguments) => {
-            match run_human(arguments.into_iter()) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(message) => human_output::error(&message),
-            }
-        }
+        Some("doctor" | "check-target") => match run_human(arguments.into_iter()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => human_output::error(&message),
+        },
         _ if wants_json(&arguments) => {
             let command = arguments.first().map_or("<missing>", String::as_str);
             let result = ActionResult {
@@ -757,7 +767,7 @@ fn print_family_help(family: &str) {
 USAGE:"
     );
     for line in family_usage_lines(family) {
-        println!("{line}");
+        print!("{}", cli_help::wrap(line));
     }
 }
 
@@ -787,6 +797,10 @@ fn run_setup(arguments: &[String]) -> ExitCode {
     let result = match parsed {
         Ok(arguments) => {
             let setup_mode = arguments.mode;
+            // Like the terminal, say where capability data came from; it never proves execution.
+            let capabilities = serde_json::json!({"capabilities":{
+                "source": if arguments.capabilities.is_some() {"provided-document"} else {"saved-or-detected-by-cli"},
+                "execution_capabilities_verified": false}});
             match user_setup::execute_project_file(&arguments) {
                 Ok(outcome) => ActionResult {
                     schema_version: 1,
@@ -817,7 +831,7 @@ fn run_setup(arguments: &[String]) -> ExitCode {
                         },
                     ],
                     next_action: None,
-                    data: None,
+                    data: Some(capabilities),
                 },
                 Err(error) => failure_result(&error),
             }
@@ -1063,7 +1077,7 @@ fn parse_setup(arguments: &[String]) -> Result<SetupArguments, RenderError> {
     Ok(SetupArguments {
         target: PathBuf::from(required(target, "--target")?),
         answers: PathBuf::from(required(answers, "--answers")?),
-        capabilities: PathBuf::from(required(capabilities, "--capabilities")?),
+        capabilities: capabilities.map(PathBuf::from),
         user_root: PathBuf::from(required(user_root, "--user-root")?),
         mode: mode.ok_or_else(|| {
             RenderError::Input("choose exactly one of --dry-run, --apply, or --validate".to_owned())
@@ -2307,10 +2321,11 @@ fn parse_hook(arguments: &[String]) -> Result<HookArguments, String> {
 fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
     match arguments.next().as_deref() {
         Some("doctor") => {
-            reject_extra_arguments(arguments)?;
+            reject_extra_arguments(without_json_output(arguments))?;
             doctor()
         }
         Some("check-target") => {
+            let mut arguments = without_json_output(arguments);
             let target = arguments
                 .next()
                 .ok_or_else(|| format!("missing target path\n\n{USAGE}"))?;
@@ -2322,7 +2337,7 @@ fn run_human(mut arguments: impl Iterator<Item = String>) -> Result<(), String> 
             Ok(())
         }
         Some("-h" | "--help") | None => {
-            print!("{USAGE}");
+            print!("{}", cli_help::top_help(human_output::language()));
             Ok(())
         }
         Some(command) => Err(format!("unknown command: {command}\n\n{USAGE}")),
@@ -2354,6 +2369,18 @@ fn version_output_for(product: &str, package: &str, release_date: &str) -> Strin
     }
 }
 
+/// `--output json` only selects the display; it is not an extra argument.
+fn without_json_output(arguments: impl Iterator<Item = String>) -> std::vec::IntoIter<String> {
+    let mut kept: Vec<String> = arguments.collect();
+    if let Some(index) = kept
+        .windows(2)
+        .position(|pair| pair[0] == "--output" && pair[1] == "json")
+    {
+        kept.drain(index..index + 2);
+    }
+    kept.into_iter()
+}
+
 fn reject_extra_arguments(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
     if let Some(argument) = arguments.next() {
         return Err(format!("unexpected argument: {argument}\n\n{USAGE}"));
@@ -2366,8 +2393,10 @@ fn doctor() -> Result<(), String> {
         env::current_dir().map_err(|error| format!("cannot read current directory: {error}"))?;
     let marker = source_marker_path(&current_directory);
 
-    // Release and install checks match this exact identity line.
-    println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
+    // Release and install checks match this exact identity line; JSON stays one document.
+    if !human_output::machine() {
+        println!("aigent-hive {}", env!("CARGO_PKG_VERSION"));
+    }
     emit_json_result(&ActionResult {
         schema_version: 1,
         action: "InspectInstallation",
@@ -2518,13 +2547,52 @@ mod tests {
     }
 
     #[test]
+    fn setup_parsing_accepts_an_omitted_capabilities_file() {
+        let parsed = parse_setup(
+            &[
+                "--target",
+                "t",
+                "--answers",
+                "a.json",
+                "--user-root",
+                "u",
+                "--apply",
+                "--input-channel",
+                "agent",
+            ]
+            .map(str::to_owned),
+        )
+        .expect("agent setup without --capabilities");
+        assert!(parsed.capabilities.is_none());
+        let explicit = parse_setup(
+            &[
+                "--target",
+                "t",
+                "--answers",
+                "a.json",
+                "--user-root",
+                "u",
+                "--apply",
+                "--capabilities",
+                "c.json",
+            ]
+            .map(str::to_owned),
+        )
+        .expect("explicit capabilities");
+        assert_eq!(explicit.capabilities, Some(PathBuf::from("c.json")));
+    }
+
+    #[test]
     fn setup_help_has_the_exact_supported_invocation() {
         assert!(is_help_request(&["--help".to_owned()]));
         assert!(SETUP_USAGE.contains(
-            "hive setup --target <dir> --answers <yml> --capabilities <json> \
+            "hive setup --target <dir> --answers <yml> [--capabilities <json>] \
              --user-root <dir> (--dry-run|--apply|--validate)"
         ));
         assert!(SETUP_USAGE.contains("--output json"));
+        assert!(SETUP_USAGE
+            .contains("--capabilities is optional for --dry-run, --apply and --validate"));
+        assert!(SETUP_USAGE.contains("no command generates a"));
     }
 
     #[test]

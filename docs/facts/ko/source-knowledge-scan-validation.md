@@ -9,8 +9,8 @@ summary: "candidate·apply 공통 credential 검증과 사람용 review ID 오�
 tags: [knowledge, scan, source, v0-9-4, validation]
 aliases: ["검토 source 가져오기", "스캔 검증 정합성"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:83139680efc6f06e7accaec5c445d8c8a9481af51b6550ffe7cd6f9c81f38bfa"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:8fd4d92714fc65bf19d53aee4f0cd0ee29689b105d6979e7a63299587c1a402b"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32db20fc6252cd4a5dcf6fac16ff4e7da275a8c0ca41ddd93c3eb6f6b1f28f68"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:812c302031f36694ad109479698f9d89b125392dba55468c0131e52d45f47b44"
 links: [knowledge-cross-project-access, knowledge-portability-scan, source-development]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active

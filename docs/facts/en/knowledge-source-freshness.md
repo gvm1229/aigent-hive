@@ -9,7 +9,7 @@ summary: "Canonical integrity and current source availability are separate check
 tags: [freshness, knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a0cf1b55b6cfc9d02920f117d25fb752e25267093d1be960b33267b8f6b0a94c"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
   - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:e609abd004c690bcdce2822313645ba7dd733fa9114e778c6305314c4ada0813"
   - "repo:schemas/knowledge-retrieval-result.schema.json#sha256:6d8499cf211d663d928c3fa1a31a0e375e6c970736414a1298f1b42180953ac9"

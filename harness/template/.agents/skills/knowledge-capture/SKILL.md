@@ -1,11 +1,12 @@
 ---
 name: knowledge-capture
-description: (knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.
+description: (knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work; never save secrets, raw conversations, or uncertain guesses.
 ---
 
-# Capture One Knowledge Claim (`knowledge-capture`)
+# Capture Knowledge Claims (`knowledge-capture`)
 
-For each eligible turn, write at most one atomic knowledge claim.
+For each eligible turn, write every durable atomic knowledge claim the turn supports, at most
+eight, in one write. Never merge separate facts into one claim to save a write.
 
 In a consumer project, apply `.agents/directives/00-project-harness.md`'s availability gate
 before this command-backed workflow. Ordinary collaboration skips capture and leaves canonical
@@ -30,14 +31,33 @@ only after a new request receives fresh allowed usage; never write during the ha
 3. For consumer knowledge, reject secret, credential, confidential, ephemeral, ambiguous,
    speculative, private-path, raw transcript, complete conversation, hook payload, tool output,
    cache, database, and runtime content with canonical write count zero.
-4. For a safe explicit `user-root` user statement, normalize one atomic fact and use a stable
+4. For each safe explicit `user-root` user statement, normalize one atomic fact and use a stable
    `claim_key` plus `project-profile|decision|convention|preference|workflow`; do not create a
    request JSON or a provenance digest. Use the strict request schema only for reviewed artifacts,
    verified outcomes, replacements, or another supported scope. Do not retain the raw turn.
-5. Run exactly one write-through request. Prefer the simple user-statement route:
+   Give each fact one subject of one or two lowercase English levels, such as
+   `design/visual-style`, even for a Korean fact. Facts that answer the same later question
+   share a subject. Before choosing a new subject, read the existing ones once per turn with
+   `hive knowledge subjects list --user-root <user-root> --output json` and reuse a matching
+   subject. Restating a stored fact with a subject relabels it in place; it never duplicates it.
+   After the write, if `data.subjects` (one entry per fact for `--batch`) lists
+   `near_duplicates`, relabel the new fact to the existing subject in the next turn.
+5. Run exactly one write-through request per turn, plus at most one retry of a rejected
+   batch. For one fact, prefer the simple
+   user-statement route:
 
    ```text
-   hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json
+   hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json
+   ```
+
+   For two to eight `user-root` facts, write a temporary batch file outside the project and
+   run one batch. Every fact keeps its own `claim_key`; one rejected fact writes none of them.
+   On rejection, drop or correct only the named fact and retry the batch once. Delete the
+   temporary file after the command, whatever its result:
+
+   ```text
+   {"schema_version":1,"facts":[{"normalized_fact":"<fact>","claim_key":"<stable-key>","kind":"preference","subject":"<area/topic>"}]}
+   hive knowledge remember --user-root <user-root> --batch <facts.json> --output json
    ```
 
    For a reviewed artifact or another supported scope, use:
@@ -90,7 +110,7 @@ not permission to read confidential knowledge.
 
 ## Explicit source ingest
 
-For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary one-fact capture does not load that procedure.
+For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary turn capture does not load that procedure.
 
 ## Safety
 

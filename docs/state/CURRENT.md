@@ -1,28 +1,30 @@
 # 현재 상태
 
-- 제품 버전: `0.15.2`
-- 공개 안정판: `0.15.1` (2026-11-15), 정식 `0.15.2` 진행 중. [0.15.2-test.4 세 OS 수용](../research/overhaul/OV152-006.md)·[이 PC 다섯 앱 확인](../research/overhaul/OV152-007.md)
-- 작업: 0.15.2 호스트 설치 복구. [소유 계획](../plans/active/0.15.2-host-install.md)·[수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)
-- 현재 요청: 다섯 앱의 Hive 플러그인·Skill 확인과 수정 뒤 새 정식 출시. 진행 약 85%, 남은 일은 정식 0.15.2 게시. [이어 하기 순서](../research/overhaul/OV152-continuation.md). 재정비 단계 5 이후 보류 유지
-- 구독자 글: 0.15.1 안내 전송 완료, 0.15.2 안내는 정식 게시와 함께
+- 제품 버전: `0.15.3`
+- 공개 안정판·PC 설치: `0.15.2` (2026-11-16). [정식 근거](../research/overhaul/OV152-008.md)
+- 작업: 재정비 단계 5 0.15.3 기억 회수, 브랜치 `feature/overhaul-5-0.15.3-memory`. [소유 계획](../plans/active/0.15.3-memory.md)·[시작 근거](../research/overhaul/OV153-001.md)
+- 현재 요청(2026-11-19 유지관리자, local 세션): OV153-014·015 범위 추가와 이 세션에서 구현, 정식 0.15.3 출시까지 계속. 이 세션만 사용량 보호 해제. 원문 "Continue with your implementation while disabling the usage guard for this session only. Do not stop until 0.15.3 stable version is released"
+- 진행: OV153-001–007·009 완료. [구현 근거](../research/overhaul/OV153-002-006.md)·[회수율 재측정](../research/overhaul/OV153-007.md) 22/40→32/40(보류 3/10→5/10)·[단계 검토](../research/overhaul/stage-5-review.md)·[develop 병합](../research/overhaul/OV153-009.md)
+- 공개 시험 0.15.3-test.1(OV153-008) 완료. [공개 시험 근거](../research/overhaul/OV153-008.md). 워크플로 실행은 cloud 가능([확인 기록](../plans/overhaul/venue.md))
+- **cloud 부분 완료**(2026-11-17): [OV153-011](../research/overhaul/OV153-011.md)(추가 범위 A1–A4 포함)·[OV153-012](../research/overhaul/OV153-012.md)·[OV153-013](../research/overhaul/OV153-013.md) 구현·독립 검토·develop 병합, CI 통과. [0.15.3-test.2](../research/overhaul/OV153-011-test2.md) 게시·세 OS 수용 통과. 출시 노트·구독자 안내·정식 공개 문서 준비 완료
+- **정식 0.15.3 보류**(2026-11-17 유지관리자): [에이전트 주도 프로젝트 설정 OV153-011](../research/overhaul/OV153-011-request.md) 포함 전 출시 금지. 시험판 재수용·이 PC 확인 뒤 출시
+- **0.15.3 범위 추가**(2026-11-17 유지관리자): [대화형 설정 화면 가독성 OV153-012](../research/overhaul/OV153-012-request.md). 기능·문구 유지, 질문 구분·제목·구역·꾸밈 추가
+- **cloud 위임**(2026-11-17): OV153-011 구현부터 test.2 수용·문서 준비까지 cloud 세션 담당, local 단계만 남으면 종료. [위임 순서](../research/overhaul/OV153-cloud-mandate.md)
+- **0.15.3 범위 추가**(2026-11-19 유지관리자): [호스트별 5시간·주간 사용량 보호 OV153-014](../research/overhaul/OV153-014-request.md)·[CLI 오타 추천과 도움말 OV153-015](../research/overhaul/OV153-015-request.md). [npm 설치 뒤 갱신 결함 OV153-016](../research/overhaul/OV153-016-request.md) 추가. 구현 근거 [014](../research/overhaul/OV153-014.md)·[015](../research/overhaul/OV153-015.md)·[016](../research/overhaul/OV153-016.md), 이 PC 확인 [OV153-010](../research/overhaul/OV153-010.md). [0.15.3-test.3 공개 시험](../research/overhaul/OV153-test3.md) 게시·세 OS 수용 통과, test.3 대리 확인에서 찾은 결함은 [OV153-017](../research/overhaul/OV153-017-request.md)([수정 근거](../research/overhaul/OV153-017.md))로 수정, [0.15.3-test.4 공개 시험](../research/overhaul/OV153-test4.md) 게시·세 OS 수용 통과
+- **local 세션 시작점**: [0.15.3 local 인계](../research/overhaul/OV153-local-handoff.md). test.2 설치, 실제 Claude·Codex 세션의 Skill 설정(빈 폴더·기존 프로젝트), A4 재현, OV153-012 실제 터미널, OV153-013 재현, 통과 뒤 정식 OV153-010. cloud 남은 작업 없음
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
-- [정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md)·[이전 정식 근거](../research/overhaul/OV150-013.md) 보존
-
-- [최종 CLI·안내 검증](../research/overhaul/stage-4-human-output.md): Rust 1,475개 통과·5개 수동 제외, Python 1,211개 중 1,167개 통과·44개 제외. fmt·clippy·문서·문체·지침·계획·Source Wiki 통과, Windows 밖 실행·실제 설치·Discord 전송 미검증
-- [이전 판별 검토·측정](../research/overhaul/stage-4-review.md): 보류 종류 19/20·출력 사실 53/53, 고정 검색 22/40의 당시 근거 보존. 감지기·검색 구현·동결 정답 변경 없음
-- 이번 고정 실행 파일 사본 3개·184,858,624바이트 정리. 전체 산출물의 기존 검토 필요 467개·보존 1개·최소 29.52GiB·미측정 21경로는 별도 조치 필요, 임의 삭제 없음
-
+- [0.15.2 종료 상태](../archive/state/0.15.2-closeout.md)·[0.15.2 수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)·[정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md) 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
-- 구현 목표: `0.15.2`
-- 현재 등록 항목: 9/10 완료
+- 구현 목표: `0.15.3`
+- 현재 등록 항목: 16/17 완료
 
-- `agent-owned`: `OV152-008`
+- `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: 없음
+- `awaiting-external-evidence`: `OV153-010`
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 

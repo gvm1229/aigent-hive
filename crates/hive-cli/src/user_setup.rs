@@ -2206,6 +2206,15 @@ fn validate_config_semantics(config: &UserSetupConfig) -> Result<(), SetupError>
             ));
         }
     }
+    for (host, windows) in &config.usage_guard.host_windows {
+        windows.validate().map_err(SetupError::Input)?;
+        // Antigravity reports only provider pools; its one threshold uses the weekly-only shape.
+        if host.as_str() == "antigravity" && windows.five_hour_limit {
+            return Err(SetupError::Input(
+                "antigravity has no 5-hour window; store its single threshold as five_hour_limit: false with guard: weekly".to_owned(),
+            ));
+        }
+    }
     if config.schema_version == 1
         && !config.usage_guard.projection_enabled()
         && config.usage_guard.codexbar_fallback_enabled
@@ -3484,7 +3493,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         InterfaceLanguage::En => {
             let capture = if config.wiki.enabled {
                 "- Hive knowledge is the memory: write every fact you would otherwise keep in the host's own memory (auto-memory, memory files, saved memories) as Hive Markdown knowledge instead, and never keep a second copy in host memory. Record it in the current project's Hive knowledge when the project uses Hive; use the global user-root knowledge only when the fact applies beyond one project. When no Hive knowledge destination fits (a project-specific fact in a folder without Hive), say so and suggest `hive setup --target <project folder>`; only then may host memory keep it.
-- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly; an unregistered repository's user-global fact stays at `user-root`, and ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+- Before every final response, review the current user statement and completed outcome for each safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly; an unregistered repository's user-global fact stays at `user-root`, and ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, split it into atomic facts with one condition each and give every fact one subject of one or two lowercase English levels, such as `design/visual-style`; facts that answer the same later question share a subject, and an existing subject from `hive knowledge subjects list --user-root <user-root> --output json` is reused. A lasting preference or rule (from now on, always, never, remember) must be recorded before the final response. Run `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` once for one fact, or `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` once for two to eight facts, each with its `subject`; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`, adding `--expansions \"<term,term>\"` for Korean, English and inflected key words; claim hits arrive with their whole subject group, and at most two follow-up lookups with new key words are allowed when hits are insufficient. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge; preserve canonical Markdown until an explicit deletion request.\n"
             };
@@ -3496,7 +3505,7 @@ fn render_user_directive(config: &UserSetupConfig, resolved_skills: &[String]) -
         InterfaceLanguage::Ko => {
             let capture = if config.wiki.enabled {
                 "- Hive 지식이 기억 저장소: 앱 자체 기억(자동 기억·기억 파일·저장된 기억)에 남길 사실은 Hive Markdown 지식으로 기록하고 앱 기억에 중복 저장 금지. Hive를 쓰는 프로젝트의 사실은 그 프로젝트 지식에 기록, 한 프로젝트를 넘어 적용되는 사실만 전역 user-root 지식에 기록. 맞는 Hive 지식 위치가 없으면(Hive 없는 폴더의 프로젝트 전용 사실) 이를 알리고 `hive setup --target <project folder>`를 제안, 그때만 앱 기억에 보관 허용.
-- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과를 각각 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화는 조건 하나씩의 원자 사실로 나누고, 각 사실에 `design/visual-style`처럼 소문자 영어 1–2단계 주제 부여. 나중에 같은 질문에 답할 사실은 같은 주제를 쓰고, `hive knowledge subjects list --user-root <user-root> --output json`의 기존 주제를 재사용. 앞으로·항상·금지·기억 같은 지속 선호·규칙은 최종 응답 전 반드시 기록. 사실 1개는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` 1회, 사실 2–8개는 사실마다 `subject`를 담은 `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행하고 한국어·영어·어형 핵심어는 `--expansions \"<term,term>\"`으로 전달. 주제가 있는 사실은 같은 주제 묶음으로 반환되며, 부족하면 새 핵심어로 후속 조회 최대 2회. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지. 명시적 삭제 요청 전까지 canonical Markdown을 보존.\n"
             };
@@ -3602,10 +3611,14 @@ pub(crate) struct UsageThresholdUpdate {
     pub(crate) current: u8,
     pub(crate) changed_paths: Vec<String>,
     pub(crate) config_bytes: Vec<u8>,
+    /// Hosts whose per-host guarded windows now use the requested threshold.
+    pub(crate) host_windows_updated: Vec<String>,
 }
 
-/// Update only the authenticated global usage threshold while keeping the user projection
-/// manifest bound to the new canonical preferences. Project-local thresholds are intentionally
+/// Update the authenticated global usage threshold while keeping the user projection manifest
+/// bound to the new canonical preferences. The value replaces the single legacy threshold and
+/// the threshold of every guarded window of every host with per-host window choices, so one
+/// command never leaves a host on an older floor. Project-local thresholds are intentionally
 /// outside this path.
 #[allow(clippy::too_many_lines)]
 pub(crate) fn set_operational_usage_threshold(
@@ -3628,12 +3641,28 @@ pub(crate) fn set_operational_usage_threshold(
     let mut config = parse_and_validate_installed_config(&prior_bytes)
         .map_err(|error| error.message().to_owned())?;
     let previous = config.usage_guard.stop_remaining_percent;
-    if previous == remaining_percent {
+    let host_windows_updated: Vec<String> = config
+        .usage_guard
+        .host_windows
+        .keys()
+        .map(|host| host.as_str().to_owned())
+        .collect();
+    let windows_match = config.usage_guard.host_windows.values().all(|windows| {
+        [
+            windows.five_hour_stop_remaining_percent,
+            windows.weekly_stop_remaining_percent,
+        ]
+        .into_iter()
+        .flatten()
+        .all(|threshold| threshold == remaining_percent)
+    });
+    if previous == remaining_percent && windows_match {
         return Ok(UsageThresholdUpdate {
             previous,
             current: remaining_percent,
             changed_paths: Vec::new(),
             config_bytes: prior_bytes,
+            host_windows_updated,
         });
     }
     if let Some((project, threshold)) = config
@@ -3647,6 +3676,16 @@ pub(crate) fn set_operational_usage_threshold(
         ));
     }
     config.usage_guard.stop_remaining_percent = remaining_percent;
+    for windows in config.usage_guard.host_windows.values_mut() {
+        for threshold in [
+            &mut windows.five_hour_stop_remaining_percent,
+            &mut windows.weekly_stop_remaining_percent,
+        ] {
+            if threshold.is_some() {
+                *threshold = Some(remaining_percent);
+            }
+        }
+    }
     // Apply the same provenance rule that the reload uses, so the published candidate and the
     // reloaded setup agree. The changed value becomes an external change with a new fingerprint.
     let declarations = serde_json::to_value(&config)
@@ -3723,6 +3762,7 @@ pub(crate) fn set_operational_usage_threshold(
         current: remaining_percent,
         changed_paths,
         config_bytes: desired,
+        host_windows_updated,
     })
 }
 
@@ -4585,7 +4625,7 @@ usage_guard:
         let mut base = incoming.clone();
         let replaced = String::from_utf8(base.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global setup through the CLI", "# Earlier Setup Hive");
+            .replace("# Agent-driven global setup", "# Earlier Setup Hive");
         base = replaced.into_bytes();
         assert_ne!(base, incoming, "synthetic old heading must differ");
 
@@ -4617,7 +4657,7 @@ usage_guard:
         let incoming = files.get(&path).expect("user-setup source").clone();
         let base = String::from_utf8(incoming.clone())
             .expect("UTF-8 Skill")
-            .replace("# Global setup through the CLI", "# Earlier Setup Hive")
+            .replace("# Agent-driven global setup", "# Earlier Setup Hive")
             .into_bytes();
         assert_ne!(base, incoming, "synthetic old heading must differ");
 

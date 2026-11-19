@@ -112,6 +112,7 @@ fn decision(value: &Value, origin: DecisionOrigin) -> Result<PreferenceDecision,
     .map_err(SetupError::Internal)
 }
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn inspect(
     options: &Options,
     store: &ProgressStore,
@@ -164,14 +165,21 @@ pub(super) fn inspect(
             "global settings changed during inspection; retry the read-only command".into(),
         ));
     }
-    let data = if options.describe {
+    let mut data = if options.describe {
         let selected_section = if let Some(id) = &options.question {
-            super::super::catalog()?
+            let project: Vec<_> = super::super::catalog()?
                 .questions
                 .into_iter()
-                .find(|q| q.scope == PreferenceScope::Project && q.id == *id)
-                .map(|q| q.section)
-                .ok_or_else(|| SetupError::Input("unknown project setup question".into()))?
+                .filter(|q| q.scope == PreferenceScope::Project)
+                .collect();
+            let found = project
+                .iter()
+                .find(|q| q.id == *id)
+                .map(|q| q.section.clone());
+            found.ok_or_else(|| {
+                let ids: Vec<&str> = project.iter().map(|q| q.id.as_str()).collect();
+                super::super::unknown_question(id, &ids)
+            })?
         } else {
             options.section.clone().ok_or_else(|| {
                 SetupError::Input("project describe requires --section or --question".into())
@@ -198,7 +206,14 @@ pub(super) fn inspect(
     } else {
         json!({"stored":stored,"effective":effective,"sources":sources,"parent":parent,"pending":pending})
     };
-    Ok(report(
+    let next_action = offer_agent_setup(
+        options,
+        &root,
+        stored.is_none(),
+        pending.as_ref(),
+        &mut data,
+    );
+    let mut result = report(
         "success",
         0,
         if options.question.is_some() {
@@ -209,7 +224,102 @@ pub(super) fn inspect(
         language,
         ["프로젝트 설정 조회 결과", "Project setup inspection"],
         Some(data),
-    ))
+    );
+    result.next_action = next_action;
+    Ok(result)
+}
+
+/// An unconfigured project offers the agent path with its proposal as the first-class next action.
+fn offer_agent_setup(
+    options: &Options,
+    root: &cap_std::fs::Dir,
+    unconfigured: bool,
+    pending: Option<&user_setup::progress_store::SetupProgress>,
+    data: &mut Value,
+) -> Option<String> {
+    // An untouched terminal draft never blocks the agent apply, so it counts as fresh here too.
+    let draft = pending.filter(|progress| super::file_input::is_untouched_draft(progress));
+    let fresh = !options.describe
+        && unconfigured
+        && pending.is_none_or(|progress| {
+            progress.phase == user_setup::progress_store::ProgressPhase::Complete || draft.is_some()
+        });
+    if !fresh {
+        return None;
+    }
+    // A read-only status call never fails because the agent proposal is unavailable.
+    let agent = agent_setup(options, root).unwrap_or_else(|error| {
+        json!({"unavailable":true,"reason":error.message().chars().take(240).collect::<String>()})
+    });
+    let next_action = if agent["user_setup_required"] == true {
+        Some(super::user_setup_command(options))
+    } else if agent["unavailable"] == true {
+        None
+    } else {
+        Some(super::agent_command(options))
+    };
+    data["agent_setup"] = agent;
+    if draft.is_some() {
+        data["agent_setup"]["terminal_draft"] = json!("superseded-on-apply");
+    }
+    next_action
+}
+
+/// Whether the target holds nothing but hidden entries, read with a small bound.
+fn project_state(target: &std::path::Path) -> &'static str {
+    let Ok(entries) = std::fs::read_dir(target) else {
+        return "existing";
+    };
+    let visible = entries
+        .take(256)
+        .filter_map(Result::ok)
+        .any(|entry| !entry.file_name().to_string_lossy().starts_with('.'));
+    if visible {
+        "existing"
+    } else {
+        "empty"
+    }
+}
+
+/// CLI-detected starting values for the agent; the agent's interview or scan decides the answers.
+fn agent_setup(options: &Options, root: &cap_std::fs::Dir) -> Result<Value, SetupError> {
+    let Some(config) = user_setup::load_operational_config(root)? else {
+        return Ok(json!({"user_setup_required":true,
+            "reason":"Finish global user setup first; project file setup reads its saved preferences."}));
+    };
+    let host = config
+        .selected_hosts
+        .first()
+        .map_or("codex", |host| host.as_str());
+    let defaults =
+        super::questions::defaults(&options.target, &global_preferences(&options.root)?, host);
+    let names = |key: &str| {
+        defaults["project_profile"][key]
+            .as_array()
+            .map_or_else(Vec::new, |facts| {
+                facts
+                    .iter()
+                    .map(|fact| fact["name"].clone())
+                    .collect::<Vec<_>>()
+            })
+    };
+    let state = project_state(&options.target);
+    let mut detected_defaults = json!({"setup_mode":defaults["setup_mode"],
+        "project_name":defaults["project_name"],"primary_host":defaults["primary_host"]});
+    if state == "existing" {
+        detected_defaults["project_kind"] = defaults["project_kind"].clone();
+    }
+    Ok(json!({
+        "project_state":state,
+        "requires_user_confirmation":true,
+        "required_answers":["setup_mode","project_name","project_kind","primary_host"],
+        "detected_defaults":detected_defaults,
+        "selected_hosts":config.selected_hosts.iter().map(|host| host.as_str()).collect::<Vec<_>>(),
+        "detected":{"languages":names("languages"),"frameworks":names("frameworks"),
+            "package_managers":names("package_managers")},
+        "capabilities":"saved-or-detected-by-cli",
+        "consent_answers_default_empty":["persistent_roles","approved_optional_skills","approved_fallback_hooks","knowledge_include_paths"]
+    }))
 }
 
 fn described(

@@ -10,11 +10,13 @@ struct Options {
     json: bool,
     language: InterfaceLanguage,
     family: String,
+    subcommand: String,
 }
 thread_local! {
     // Unit tests of machine contracts keep their original mode until process configuration.
     static OPTIONS: RefCell<Options> = const { RefCell::new(Options {
         json: true, language: InterfaceLanguage::En, family: String::new(),
+        subcommand: String::new(),
     }) };
 }
 
@@ -29,11 +31,16 @@ pub(crate) fn configure(arguments: &[String]) {
             json,
             language: crate::user_setup::output_language(arguments),
             family: arguments.first().cloned().unwrap_or_default(),
+            subcommand: arguments
+                .get(1)
+                .filter(|a| !a.starts_with('-'))
+                .cloned()
+                .unwrap_or_default(),
         }
     });
 }
 
-fn machine_protocol(arguments: &[String]) -> bool {
+pub(crate) fn machine_protocol(arguments: &[String]) -> bool {
     let first = arguments.first().map(String::as_str);
     let second = arguments.get(1).map(String::as_str);
     matches!(
@@ -108,8 +115,11 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
                 value
             }
         });
+    if data["declined"] == true && matches!(action, "SetupHarness" | "SetupHiveUser") {
+        return declined(value, language);
+    }
     if failed {
-        return failure(value, language, &ko);
+        return failure(value, language, &ko, family);
     }
     if action == "SetUsageThreshold" {
         if let Some(text) = threshold_message(data, language) {
@@ -168,6 +178,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
             output.push_str(&readable_command(next));
         }
     }
+    output.push_str(&terminal_resume(value, language));
     if data["session_recheck_required"] == true {
         output.push_str(&choose(
             language,
@@ -254,7 +265,7 @@ fn sentence(message: &str) -> String {
     text
 }
 
-fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
+fn failure(value: &Value, language: InterfaceLanguage, ko: &str, family: &str) -> String {
     let original = value["message"]
         .as_str()
         .unwrap_or("The request could not be completed.");
@@ -273,12 +284,29 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
     if let Some(option) =
         option.filter(|_| !next.as_deref().is_some_and(|n| n.starts_with("hive ")))
     {
-        // A missing option has one exact fix; say it instead of a generic --help pointer.
+        // A missing option has one exact fix; say it with a complete example and the help command.
+        let subcommand = OPTIONS.with(|options| options.borrow().subcommand.clone());
+        let example = crate::cli_help::example_for(
+            family,
+            Some(subcommand.as_str()).filter(|s| !s.is_empty()),
+        )
+        .map_or_else(String::new, |example| {
+            choose(
+                language,
+                &format!("\n예시: {example}"),
+                &format!("\nExample: {example}"),
+            )
+        });
+        let help = if crate::cli_help::find(family).is_some() {
+            crate::cli_help::help_command(family)
+        } else {
+            "--help".to_owned()
+        };
         return choose(
             language,
-            &format!("처리 실패: {}. 필요한 옵션 {option}을(를) 지정하지 않았습니다.\n다음 단계: {option} 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 --help로 볼 수 있습니다.",
+            &format!("처리 실패: {}. 필요한 옵션 {option}을(를) 지정하지 않았습니다.{example}\n다음 단계: {option} 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 {help}로 볼 수 있습니다.",
                 ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료")),
-            &format!("Failed. The required option {option} is missing.\nNext: add {option} and run the same command again. See --help for usage."),
+            &format!("Failed. The required option {option} is missing.{example}\nNext: add {option} and run the same command again. See {help} for usage."),
         );
     }
     if language == InterfaceLanguage::En {
@@ -301,6 +329,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
             |next| readable_command(&next),
         );
         write!(output, "\nNext: {remedy}").expect("formatting a String");
+        output.push_str(&terminal_resume(value, language));
         return output;
     }
     let topic = ko.trim_end_matches(" 처리 완료").trim_end_matches(" 완료");
@@ -326,7 +355,45 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str) -> String {
         || "--help로 사용 방법을 확인하고, 표시된 입력을 고친 뒤 다시 실행하세요.".to_owned(),
         |next| next_ko(&next),
     ));
+    output.push_str(&terminal_resume(value, language));
     output
+}
+
+/// A person said no at the final confirmation: not a failure, and the agent path is not theirs.
+fn declined(value: &Value, language: InterfaceLanguage) -> String {
+    let mut text = choose(
+        language,
+        "적용하지 않았습니다. 바뀐 것은 없습니다.",
+        "Not applied. Nothing changed.",
+    );
+    if let Some(terminal) = value["data"]["terminal_next_action"]
+        .as_str()
+        .filter(|next| !next.is_empty())
+    {
+        text.push_str(&choose(
+            language,
+            "
+나중에 이어서 하려면: ",
+            "
+To continue later: ",
+        ));
+        text.push_str(&readable_command(terminal));
+    }
+    text
+}
+
+/// A pending setup lists the agent path first; a person still sees the terminal resume.
+fn terminal_resume(value: &Value, language: InterfaceLanguage) -> String {
+    value["data"]["terminal_next_action"]
+        .as_str()
+        .filter(|next| !next.is_empty())
+        .map_or_else(String::new, |terminal| {
+            choose(
+                language,
+                "\n터미널에서 이어가기: ",
+                "\nContinue in a terminal: ",
+            ) + &readable_command(terminal)
+        })
 }
 
 fn code_sentence(code: &str) -> Option<(&'static str, &'static str)> {
@@ -336,13 +403,15 @@ fn code_sentence(code: &str) -> Option<(&'static str, &'static str)> {
         .map(|(_, ko, en)| (*ko, *en))
 }
 
-/// The option named by the fixed "missing required option", "missing value for" or "requires" shapes.
+/// The option named by the fixed "missing required option", "missing value for", "requires" or
+/// "missing --option" shapes.
 fn missing_option(message: &str) -> Option<String> {
     let lower = message.to_ascii_lowercase();
     let after = [
         "missing required option ",
         "missing value for ",
         " requires ",
+        "missing ",
     ]
     .iter()
     .find_map(|marker| lower.find(marker).map(|at| &message[at + marker.len()..]))?;
@@ -645,6 +714,10 @@ pub(crate) fn guidance(lines: &[String]) {
 
 pub(crate) fn machine() -> bool {
     OPTIONS.with(|options| options.borrow().json)
+}
+
+pub(crate) fn language() -> InterfaceLanguage {
+    OPTIONS.with(|options| options.borrow().language)
 }
 
 pub(crate) fn emit_version(text: &str) {

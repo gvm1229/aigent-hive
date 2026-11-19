@@ -13,8 +13,9 @@ use crate::run::{portable_relative_path, AdapterError, FileSnapshot, PinnedTarge
 use crate::usage;
 use hive_core::sha256_digest;
 use hive_core::usage_guard::{
-    detect_usage_reset, evaluate_observation_only, evaluate_usage, evaluate_zero_quota,
-    UsageDecision, UsagePolicy,
+    detect_usage_reset, evaluate_guarded_usage, evaluate_observation_only, evaluate_usage,
+    evaluate_zero_quota, select_guarded_snapshots, GuardedWindow, UsageDecision, UsagePolicy,
+    UsageUnknownReason, UsageWindow,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -114,6 +115,8 @@ pub(crate) struct InstalledUsageConfig {
     pub(crate) codexbar_fallback_enabled: bool,
     pub(crate) quota_reset_guard_enabled: bool,
     pub(crate) policy: Option<hive_core::preferences::UsageProtection>,
+    /// The host's chosen windows with their thresholds; `None` keeps the legacy single threshold.
+    pub(crate) guarded_windows: Option<Vec<GuardedWindow>>,
     pub(crate) discord_guard_enabled: bool,
     pub(crate) discord_webhook_url_env: Option<String>,
     pub(crate) discord_request_privacy: String,
@@ -200,6 +203,8 @@ struct TurnObservation {
     evidence_digest: String,
     remaining_percent: Option<f64>,
     next_action: Option<String>,
+    /// Guarded windows without a usable measurement, named for the user.
+    missing_windows: Vec<&'static str>,
     snapshots: Vec<hive_core::usage_guard::UsageSnapshot>,
     normalized: Option<usage::NormalizedSnapshot>,
 }
@@ -302,10 +307,12 @@ pub(crate) fn current_dispatch_binding(
     let halt = load_halt(target, &binding)?;
     let warning = observation_warning::is_current(&config, &halt)?;
     if matches!(halt.state, OverrideState::Stale | OverrideState::Damaged)
-        || halt
-            .marker
-            .as_ref()
-            .is_some_and(|marker| marker.decision != "observed" && !warning)
+        || halt.marker.as_ref().is_some_and(|marker| {
+            marker.decision != "observed"
+                    && !warning
+                    // Same rule as status: a session opt-out ignores an old missing-measurement halt.
+                    && !(marker.decision == "usage-unknown" && session_disabled(&config, &control))
+        })
     {
         return Err(AdapterError::OwnerBlocked(
             "usage session is halted and cannot authorize loop preparation".to_owned(),
@@ -441,6 +448,19 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
             target.verify_current()?;
             return runtime.verify_current();
         }
+        // After a session opt-out a missing measurement is bypassed without a halt, so there is
+        // no observation to recheck. The proof holds only while the same binding stays disabled;
+        // any measurement that enforce did take is rechecked below, so a measured 0% still blocks.
+        if preflight.result.code == "hive.usage-session-bypassed" && preflight.snapshot().is_none()
+        {
+            if !session_disabled(&config, &control) {
+                return Err(AdapterError::Conflict(
+                    "usage session control changed before dispatch authorization".to_owned(),
+                ));
+            }
+            target.verify_current()?;
+            return runtime.verify_current();
+        }
         let snapshot = preflight.snapshot().ok_or_else(|| {
             AdapterError::Safety("enforced dispatch lacks a fresh sensor observation".to_owned())
         })?;
@@ -458,8 +478,9 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
         .with_stop_remaining_percent(config.threshold)
         .map_err(|_| AdapterError::Safety("dispatch usage policy is invalid".to_owned()))?;
         if !matches!(
-            evaluate_guard_decision(
+            evaluate_host_decision(
                 &policy,
+                config.guarded_windows.as_deref(),
                 &snapshot.core_snapshots(),
                 now,
                 effective_enabled(&control, config.guard_enabled),
@@ -1301,10 +1322,12 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         && (pending_reset
             || (current_halt
                 && current_policy
-                && halt
-                    .marker
-                    .as_ref()
-                    .is_some_and(|marker| marker.decision != "observed" && !warning)));
+                && halt.marker.as_ref().is_some_and(|marker| {
+                    marker.decision != "observed"
+                        && !warning
+                        // Enforce no longer blocks on a missing measurement after a session opt-out.
+                        && !(marker.decision == "usage-unknown" && session_disabled(&config, &loaded))
+                })));
     let recheck_required = config.observation_required(&loaded)
         && !pending_reset
         && (halt.state == OverrideState::Damaged || (current_halt && !current_policy));
@@ -1356,6 +1379,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             "threshold_remaining_percent": config.threshold,
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
+            "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "host_scope": binding.host_scope,
             "guard_enabled": guard_enabled,
             "zero_quota_guard_enabled": config.preflight_zero_enabled(&loaded),
@@ -1529,6 +1553,12 @@ fn enforce_captured(
     let refreshed_control = load_control(runtime, &binding)?;
     if runtime_digest(refreshed_control.snapshot.bytes()) != trace.control_digest {
         return Ok(policy_changed_result(&binding, &config));
+    }
+    // A session opt-out removes the threshold check, so a missing measurement cannot block.
+    // A measured zero quota still blocks while the separate zero-quota guard stays enabled.
+    if observation.decision == Some("usage-unknown") && session_disabled(&config, &loaded) {
+        trace.normalized = None;
+        return Ok(session_disabled_result(&binding, &config, &observation));
     }
     if warning_only {
         let mut result = observation_warning::result(
@@ -1710,6 +1740,7 @@ fn enforce_captured(
     };
 
     let next_action = observation.next_action.clone();
+    let missing_windows = observation.missing_windows.clone();
     let context = read_run_notification_context(&target, arguments.run_id.as_deref())?;
     let marker = HaltMarker {
         schema_version: 2,
@@ -1793,6 +1824,26 @@ fn enforce_captured(
         );
     }
     result.next_action = next_action;
+    if decision == "usage-unknown" && !missing_windows.is_empty() {
+        result.message = format!(
+            "subscription usage could not be verified safely: no measurement for guarded window(s) {}",
+            missing_windows.join(", ")
+        );
+    }
+    if let Some(data) = result
+        .data
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        data.insert("missing_windows".to_owned(), json!(missing_windows));
+        data.insert(
+            "guarded_windows".to_owned(),
+            config
+                .guarded_windows
+                .as_deref()
+                .map_or(serde_json::Value::Null, guarded_windows_json),
+        );
+    }
     if changed {
         let marker = published
             .marker
@@ -1916,6 +1967,7 @@ fn record_discord_notification(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)]
 fn observe_usage(
     target: &PinnedTarget,
     config: &InstalledUsageConfig,
@@ -1934,11 +1986,12 @@ fn observe_usage(
     let snapshot = read_usage_snapshot(target, config, binding, account_digest, sampled_at);
     let Ok(snapshot) = snapshot else {
         let error = snapshot.expect_err("the failed sensor result was matched");
+        let missing_windows = missing_window_labels(config, None);
         let next_action = match error {
             usage::SensorError::FallbackRequired(host) => {
                 Some(usage::fallback_install_next_action(host))
             }
-            _ => None,
+            _ => Some(missing_measurement_next_action(config, &missing_windows)),
         };
         return TurnObservation {
             decision: Some("usage-unknown"),
@@ -1951,12 +2004,13 @@ fn observe_usage(
             ),
             remaining_percent: None,
             next_action,
+            missing_windows,
             snapshots: Vec::new(),
             normalized: None,
         };
     };
     let core_snapshots = snapshot.core_snapshots();
-    let (mut decision, remaining_percent) = match sampled_at_unix.and_then(|now| {
+    let (mut decision, block, missing) = match sampled_at_unix.and_then(|now| {
         UsagePolicy::new(
             &snapshot.sensor_id,
             &snapshot.sensor_version,
@@ -1966,8 +2020,9 @@ fn observe_usage(
         .with_stop_remaining_percent(config.threshold)
         .ok()
         .map(|policy| {
-            evaluate_guard_decision(
+            evaluate_host_decision(
                 &policy,
+                config.guarded_windows.as_deref(),
                 &core_snapshots,
                 now,
                 threshold_enabled,
@@ -1975,31 +2030,45 @@ fn observe_usage(
             )
         })
     }) {
-        Some(UsageDecision::Allow(_)) => (None, None),
+        Some(UsageDecision::Allow(_)) => (None, None, None),
         Some(UsageDecision::Block(block)) => (
             Some(if zero_enabled && block.remaining_percent == 0.0 {
                 "quota-exhausted"
             } else {
                 "halted"
             }),
-            Some(block.remaining_percent),
+            Some(block),
+            None,
         ),
-        Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None),
+        Some(UsageDecision::Unknown(UsageUnknownReason::MissingWindow { window })) => {
+            (Some("usage-unknown"), None, Some(window))
+        }
+        Some(UsageDecision::Unknown(_)) | None => (Some("usage-unknown"), None, None),
     };
+    // Reset detection compares only guarded windows, so an unguarded refill cannot stop work.
+    let reset_snapshots = config.guarded_windows.as_deref().map_or_else(
+        || core_snapshots.clone(),
+        |guarded| select_guarded_snapshots(guarded, &core_snapshots).unwrap_or_default(),
+    );
     if reset_enabled
         && decision.is_none()
-        && detect_usage_reset(&core_snapshots, previous_snapshots).is_some()
+        && detect_usage_reset(&reset_snapshots, previous_snapshots).is_some()
         && !crate::usage_monitor::reset_already_dispatched(
             target,
-            &core_snapshots,
+            &reset_snapshots,
             previous_snapshots,
         )
     {
         decision = Some("usage-reset");
     }
+    let missing_windows = missing.map_or_else(Vec::new, |window| {
+        missing_window_labels(config, Some(window))
+    });
     TurnObservation {
         decision,
-        selected_window: if decision == Some("quota-exhausted")
+        selected_window: if let (Some(block), Some(_)) = (block, &config.guarded_windows) {
+            window_label(block.window)
+        } else if decision == Some("quota-exhausted")
             && core_snapshots
                 .iter()
                 .all(|snapshot| snapshot.quota_pool.is_none())
@@ -2018,20 +2087,71 @@ fn observe_usage(
         },
         measured_at: snapshot.measured_at,
         evidence_digest: snapshot.evidence_digest(),
-        remaining_percent,
-        next_action: None,
+        remaining_percent: block.map(|block| block.remaining_percent),
+        next_action: (!missing_windows.is_empty())
+            .then(|| missing_measurement_next_action(config, &missing_windows)),
+        missing_windows,
         snapshots: core_snapshots,
         normalized: Some(snapshot),
     }
 }
 
-fn evaluate_guard_decision(
+/// Windows to name when a measurement is missing: the stated one, every guarded window, or
+/// for a legacy policy either cadence window.
+fn missing_window_labels(
+    config: &InstalledUsageConfig,
+    window: Option<UsageWindow>,
+) -> Vec<&'static str> {
+    match (window, config.guarded_windows.as_deref()) {
+        (Some(window), _) => vec![window_label(window)],
+        (None, Some(guarded)) => guarded
+            .iter()
+            .map(|entry| window_label(entry.window()))
+            .collect(),
+        (None, None) => vec!["session", "weekly"],
+    }
+}
+
+/// Resolution paths for a guarded window without a measurement. No path is taken automatically.
+fn missing_measurement_next_action(config: &InstalledUsageConfig, windows: &[&str]) -> String {
+    let host = config.primary_host.as_str();
+    let capture = match host {
+        "claude" => "enable the Claude Code status-line capture (`hive usage capture --host claude`) from the Hive plugin",
+        "codex" => "make the Codex native usage reading available (`hive usage probe-native --host codex`)",
+        _ => "enable the host usage capture for this session",
+    };
+    format!(
+        "no measurement for guarded usage window(s): {}. Resolve with one of: {capture}; or disable protection for only this session with `hive usage session --action disable --confirm-session-disable`; or review consented fallback `hive usage fallback-install --host {host} --dry-run --output json`; or rerun `hive setup --scope user --section usage` to guard other windows",
+        windows.join(", ")
+    )
+}
+
+/// Apply the selected checks to the guarded windows only; `None` keeps legacy precedence.
+fn evaluate_host_decision(
     policy: &UsagePolicy,
+    guarded: Option<&[GuardedWindow]>,
     snapshots: &[hive_core::usage_guard::UsageSnapshot],
     now: i64,
     threshold_enabled: bool,
     zero_enabled: bool,
 ) -> UsageDecision {
+    if let Some(guarded) = guarded {
+        let selected = match select_guarded_snapshots(guarded, snapshots) {
+            Ok(selected) => selected,
+            Err(reason) => return UsageDecision::Unknown(reason),
+        };
+        if zero_enabled {
+            let decision = evaluate_zero_quota(policy, &selected, now);
+            if !matches!(decision, UsageDecision::Allow(_)) || !threshold_enabled {
+                return decision;
+            }
+        }
+        return if threshold_enabled {
+            evaluate_guarded_usage(policy, guarded, &selected, now)
+        } else {
+            evaluate_observation_only(policy, &selected, now)
+        };
+    }
     if zero_enabled {
         let decision = evaluate_zero_quota(policy, snapshots, now);
         if !matches!(decision, UsageDecision::Allow(_)) || !threshold_enabled {
@@ -2231,7 +2351,60 @@ fn allowed_result(
             "process_id": binding.process_id,
             "selected_window": observation.selected_window,
             "threshold_remaining_percent": config.threshold,
+            "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "measured_at": observation.measured_at,
+            "scope": "automatic-dispatch-preflight",
+            "authorizes_dispatch": false,
+        })),
+    }
+}
+
+/// Whether the current binding's control explicitly turned an installed ordinary safeguard off.
+fn session_disabled(config: &InstalledUsageConfig, loaded: &LoadedControl) -> bool {
+    config.ordinary_enabled()
+        && loaded.state == OverrideState::Current
+        && loaded
+            .control
+            .as_ref()
+            .is_some_and(|control| !control.guard_enabled)
+}
+
+fn session_disabled_result(
+    binding: &SessionBinding,
+    config: &InstalledUsageConfig,
+    observation: &TurnObservation,
+) -> ActionResult {
+    ActionResult {
+        schema_version: 1,
+        action: "CheckUsage",
+        status: "success",
+        exit_code: 0,
+        code: "hive.usage-session-bypassed",
+        message: "usage safeguard is disabled for this session binding; the missing measurement does not block and no halt was recorded".to_owned(),
+        changed_paths: Vec::new(),
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: config.config_locator.clone(),
+            digest: sha256_digest(&config.bytes),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "guard_enabled": false,
+            "policy_evaluated": true,
+            "policy_schema_version": if config.policy.is_some() {2} else {1},
+            "enforcement_enabled": !config.enforcement_disabled(),
+            "enforced": false,
+            "observation_required": true,
+            "observation_available": false,
+            "missing_windows": observation.missing_windows,
+            "zero_quota_guard_enabled": true,
+            "session_override": "current",
+            "host_scope": binding.host_scope,
+            "session_id_digest": binding.session_digest,
+            "process_id": binding.process_id,
+            "threshold_remaining_percent": config.threshold,
+            "global_threshold_remaining_percent": config.global_threshold,
+            "project_threshold_remaining_percent": config.project_threshold,
             "scope": "automatic-dispatch-preflight",
             "authorizes_dispatch": false,
         })),
@@ -2261,6 +2434,9 @@ pub(crate) fn effective_policy_digest(
     if let Some(policy) = &config.policy {
         value["decision_contract"] = json!("usage-preferences-v2");
         value["usage_policy"] = json!(policy);
+    }
+    if let Some(guarded) = &config.guarded_windows {
+        value["guarded_windows"] = guarded_windows_json(guarded);
     }
     let bytes = serde_json_canonicalizer::to_vec(&value).map_err(|error| {
         AdapterError::Internal(format!("cannot encode effective usage policy: {error}"))
@@ -2377,7 +2553,10 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
                 "hive.usage-global-threshold-unchanged"
             },
             message: if changed {
-                "global usage threshold was updated atomically".to_owned()
+                format!(
+                    "global usage threshold was updated atomically, including every guarded window of: [{}]",
+                    update.host_windows_updated.join(", ")
+                )
             } else {
                 "global usage threshold already matched the requested value".to_owned()
             },
@@ -2393,6 +2572,8 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
                 "previous_remaining_percent": update.previous,
                 "threshold_remaining_percent": update.current,
                 "stored_global_threshold_remaining_percent": update.current,
+                "host_windows_updated": update.host_windows_updated,
+                "applies_to": "legacy-threshold-and-every-guarded-host-window",
                 "session_recheck_required": changed,
             })),
         });
@@ -2676,6 +2857,7 @@ pub(crate) fn read_effective_config(
             codexbar_fallback_enabled: false,
             quota_reset_guard_enabled: false,
             policy: None,
+            guarded_windows: None,
             discord_guard_enabled: false,
             discord_webhook_url_env: None,
             discord_request_privacy: "summary".to_owned(),
@@ -2751,6 +2933,7 @@ pub(crate) fn read_effective_config(
         codexbar_fallback_enabled: guard.projection_enabled() && guard.codexbar_fallback_enabled,
         quota_reset_guard_enabled: guard.reset_enabled(),
         policy: guard.policy.clone(),
+        guarded_windows: None,
         discord_guard_enabled: guard.projection_enabled() && guard.discord.enabled,
         discord_webhook_url_env: guard.discord.webhook_url_env.clone(),
         discord_request_privacy: "summary".to_owned(),
@@ -2769,11 +2952,16 @@ pub(crate) fn read_effective_config(
         .flatten();
     let project_threshold =
         installed_project.then_some(configured_project_threshold.unwrap_or(effective.threshold));
-    effective.threshold = project_threshold
-        .unwrap_or(guard.stop_remaining_percent)
-        .max(guard.stop_remaining_percent);
+    let thresholds = effective_thresholds(
+        guard,
+        &effective.primary_host,
+        project_threshold,
+        configured_project_threshold,
+    )?;
+    effective.threshold = thresholds.strictest();
     effective.global_threshold = Some(guard.stop_remaining_percent);
     effective.project_threshold = project_threshold;
+    effective.guarded_windows = thresholds.windows;
     effective.guard_enabled = guard.threshold_enabled();
     effective.policy.clone_from(&guard.policy);
     effective.codexbar_fallback_enabled =
@@ -2807,6 +2995,128 @@ pub(crate) fn read_effective_config(
         UsageTargetClass::Project
     };
     Ok(effective)
+}
+
+/// One host's effective thresholds. Every reader (enforce, status, dispatch verification,
+/// `setup --show`, the monitor) takes its floors from [`effective_thresholds`].
+pub(crate) struct EffectiveThresholds {
+    /// The single legacy floor, used only when `windows` is `None`.
+    pub(crate) legacy: u8,
+    /// The host's guarded windows with their floors; `None` keeps the legacy threshold.
+    pub(crate) windows: Option<Vec<GuardedWindow>>,
+}
+
+impl EffectiveThresholds {
+    /// The strictest floor in force, reported as `threshold_remaining_percent`.
+    pub(crate) fn strictest(&self) -> u8 {
+        self.windows
+            .as_deref()
+            .and_then(|windows| {
+                windows
+                    .iter()
+                    .map(GuardedWindow::stop_remaining_percent)
+                    .max()
+            })
+            .unwrap_or(self.legacy)
+    }
+}
+
+/// Resolve one host's floors from the global legacy threshold, the host's window choice and a
+/// project floor. `legacy_project` raises the legacy threshold; `window_project` (an explicit
+/// project override) raises every guarded window floor.
+pub(crate) fn effective_thresholds(
+    guard: &crate::user_setup::UsageGuardPreferences,
+    host: &str,
+    legacy_project: Option<u8>,
+    window_project: Option<u8>,
+) -> Result<EffectiveThresholds, AdapterError> {
+    Ok(EffectiveThresholds {
+        legacy: legacy_project
+            .unwrap_or(guard.stop_remaining_percent)
+            .max(guard.stop_remaining_percent),
+        windows: guarded_windows(guard, host, window_project)?,
+    })
+}
+
+/// Convert one host's stored window choice. A project override raises every guarded floor.
+fn guarded_windows(
+    guard: &crate::user_setup::UsageGuardPreferences,
+    host: &str,
+    project_threshold: Option<u8>,
+) -> Result<Option<Vec<GuardedWindow>>, AdapterError> {
+    let Some(windows) = guard
+        .host_windows
+        .iter()
+        .find_map(|(selected, windows)| (selected.as_str() == host).then_some(windows))
+    else {
+        return Ok(None);
+    };
+    let floor =
+        |threshold: Option<u8>| threshold.map(|value| value.max(project_threshold.unwrap_or(0)));
+    [
+        (
+            UsageWindow::Session,
+            floor(windows.five_hour_stop_remaining_percent),
+        ),
+        (
+            UsageWindow::Weekly,
+            floor(windows.weekly_stop_remaining_percent),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(window, threshold)| threshold.map(|threshold| (window, threshold)))
+    .map(|(window, threshold)| {
+        GuardedWindow::new(window, threshold).map_err(|_| {
+            AdapterError::Safety("stored usage window threshold is invalid".to_owned())
+        })
+    })
+    .collect::<Result<Vec<_>, _>>()
+    .map(Some)
+}
+
+/// One host's saved window choice as shown by `setup --show` and monitor status. Project
+/// overrides can still raise each floor for a registered project.
+pub(crate) fn host_window_summary(
+    guard: &crate::user_setup::UsageGuardPreferences,
+    host: &str,
+) -> serde_json::Value {
+    let thresholds = effective_thresholds(guard, host, None, None).unwrap_or(EffectiveThresholds {
+        legacy: guard.stop_remaining_percent,
+        windows: None,
+    });
+    let Some(guarded) = thresholds.windows.as_deref() else {
+        return json!({"host":host,"mode":"legacy","selection":"session-then-weekly",
+            "threshold_remaining_percent":thresholds.legacy});
+    };
+    if host == "antigravity" {
+        // Antigravity reports only provider pools; its single threshold applies to each pool.
+        return json!({"host":host,"mode":"per-window","guard":"provider",
+            "windows":[{"window":"provider","threshold_remaining_percent":thresholds.strictest()}]});
+    }
+    let windows = guard
+        .host_windows
+        .iter()
+        .find_map(|(selected, windows)| (selected.as_str() == host).then_some(windows));
+    json!({"host":host,"mode":"per-window",
+        "five_hour_limit":windows.map(|windows| windows.five_hour_limit),
+        "guard":windows.map(|windows| windows.guard),
+        "windows":guarded_windows_json(guarded)})
+}
+
+fn window_label(window: UsageWindow) -> &'static str {
+    match window {
+        UsageWindow::Session => "session",
+        UsageWindow::Weekly => "weekly",
+        UsageWindow::Provider => "provider",
+    }
+}
+
+fn guarded_windows_json(guarded: &[GuardedWindow]) -> serde_json::Value {
+    json!(guarded
+        .iter()
+        .map(|entry| json!({"window":window_label(entry.window()),
+            "threshold_remaining_percent":entry.stop_remaining_percent()}))
+        .collect::<Vec<_>>())
 }
 
 #[allow(clippy::too_many_lines)]
@@ -2911,6 +3221,7 @@ fn parse_installed_config(bytes: Vec<u8>) -> Result<InstalledUsageConfig, Adapte
         codexbar_fallback_enabled,
         quota_reset_guard_enabled: true,
         policy: None,
+        guarded_windows: None,
         discord_guard_enabled,
         discord_webhook_url_env,
         discord_request_privacy,
@@ -3629,6 +3940,506 @@ mod tests {
                 .clone(),
         );
         fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+    }
+
+    fn write_windows(
+        root: &std::path::Path,
+        bound: &SessionBinding,
+        session: Option<f64>,
+        weekly: Option<f64>,
+    ) {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut capture = valid_capture(bound);
+        capture["received_at_unix_seconds"] = json!(now);
+        capture["received_at_unix_millis"] = json!(now * 1000);
+        capture["expires_at_unix_seconds"] = json!(now + 120);
+        let mut windows = Vec::new();
+        if let Some(remaining) = session {
+            windows.push(json!({"name":"session","window_minutes":300,
+                "remaining_percent":remaining,"resets_at_unix_seconds":now + 3600}));
+        }
+        if let Some(remaining) = weekly {
+            windows.push(json!({"name":"weekly","window_minutes":10080,
+                "remaining_percent":remaining,"resets_at_unix_seconds":now + 7200}));
+        }
+        capture["windows"] = json!(windows);
+        let path = root.join(claude_capture_path(&bound.session_digest).unwrap());
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, serde_json::to_vec(&capture).unwrap()).unwrap();
+    }
+
+    fn set_host_windows(root: &std::path::Path, windows: Option<Value>) {
+        let path = root.join(".hive/config/user-setup.yml");
+        let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let guard = config["usage_guard"].as_object_mut().unwrap();
+        match windows {
+            Some(windows) => guard.insert("host_windows".into(), json!({ "claude": windows })),
+            None => guard.remove("host_windows"),
+        };
+        fs::write(&path, serde_yaml::to_string(&config).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn antigravity_shows_one_provider_threshold_and_rejects_a_five_hour_shape() {
+        let user = temporary_target();
+        write_version_two_policy(
+            user.path(),
+            "antigravity",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        let path = user.path().join(".hive/config/user-setup.yml");
+        let mut config: Value = serde_yaml::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let parse = |config: &Value| {
+            crate::user_setup::parse_and_validate_installed_config(
+                serde_yaml::to_string(config).unwrap().as_bytes(),
+            )
+        };
+        config["usage_guard"]["host_windows"] = json!({"antigravity":{"five_hour_limit":false,
+            "guard":"weekly","weekly_stop_remaining_percent":25}});
+        let stored = parse(&config).unwrap();
+        assert_eq!(
+            super::host_window_summary(&stored.usage_guard, "antigravity"),
+            json!({"host":"antigravity","mode":"per-window","guard":"provider",
+                "windows":[{"window":"provider","threshold_remaining_percent":25}]})
+        );
+        config["usage_guard"]["host_windows"] = json!({"antigravity":{"five_hour_limit":true,
+            "guard":"weekly","weekly_stop_remaining_percent":25}});
+        assert!(parse(&config).is_err());
+    }
+
+    #[test]
+    fn global_threshold_command_moves_every_guarded_window_and_every_reader_agrees() {
+        let project = temporary_target();
+        let user = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        write_version_two_policy(
+            user.path(),
+            "claude",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        set_host_windows(
+            user.path(),
+            Some(json!({"five_hour_limit":true,"guard":"both",
+                "five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10})),
+        );
+        let parsed = ParsedBinding {
+            session_id: "threshold-command".into(),
+            process_id: 9,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: Some(user.path().into()),
+            host: Some("claude".into()),
+            run_id: None,
+        };
+        write_windows(project.path(), &bound, Some(20.0), Some(50.0));
+        let before = enforce(&args).unwrap();
+        assert_eq!(before.code, "hive.usage-limited");
+        assert_eq!(
+            before.data.as_ref().unwrap()["threshold_remaining_percent"],
+            30
+        );
+        let set = |percent| {
+            set_threshold(&ThresholdArguments {
+                target: None,
+                user_root: Some(user.path().into()),
+                remaining_percent: percent,
+            })
+            .unwrap()
+        };
+        let updated = set(15);
+        assert_eq!(updated.code, "hive.usage-global-threshold-updated");
+        assert_eq!(
+            updated.data.as_ref().unwrap()["host_windows_updated"],
+            json!(["claude"])
+        );
+        assert!(updated.message.contains("claude"));
+        // Enforce, status, `setup --show` and the stored file now read the same floors.
+        let both = json!([{"window":"session","threshold_remaining_percent":15},
+            {"window":"weekly","threshold_remaining_percent":15}]);
+        let allowed = enforce(&args).unwrap();
+        assert_eq!(allowed.code, "hive.usage-allowed", "{:?}", allowed.data);
+        assert_eq!(
+            allowed.data.as_ref().unwrap()["threshold_remaining_percent"],
+            15
+        );
+        assert_eq!(allowed.data.as_ref().unwrap()["guarded_windows"], both);
+        let shown = status(&StatusArguments {
+            target: project.path().into(),
+            binding: parsed,
+            user_root: Some(user.path().into()),
+            host: Some("claude".into()),
+        })
+        .unwrap();
+        assert_eq!(
+            shown.data.as_ref().unwrap()["threshold_remaining_percent"],
+            15
+        );
+        assert_eq!(shown.data.as_ref().unwrap()["guarded_windows"], both);
+        let stored = crate::user_setup::parse_and_validate_installed_config(
+            &fs::read(user.path().join(".hive/config/user-setup.yml")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(stored.usage_guard.stop_remaining_percent, 15);
+        assert_eq!(
+            super::host_window_summary(&stored.usage_guard, "claude")["windows"],
+            both
+        );
+        // The weekly floor moved up from 10 to 15 as well.
+        write_windows(project.path(), &bound, Some(90.0), Some(12.0));
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-limited");
+        assert_eq!(set(15).code, "hive.usage-global-threshold-unchanged");
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn per_host_windows_check_only_the_guarded_windows_against_their_thresholds() {
+        let project = temporary_target();
+        let user = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        write_version_two_policy(
+            user.path(),
+            "claude",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        let parsed = ParsedBinding {
+            session_id: "host-windows".into(),
+            process_id: 9,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().into(),
+            binding: parsed,
+            account_digest: None,
+            user_root: Some(user.path().into()),
+            host: Some("claude".into()),
+            run_id: None,
+        };
+        let check = |windows: Option<Value>, session: Option<f64>, weekly: Option<f64>| {
+            set_host_windows(user.path(), windows);
+            write_windows(project.path(), &bound, session, weekly);
+            enforce(&args).unwrap()
+        };
+        let weekly_only =
+            json!({"five_hour_limit":true,"guard":"weekly","weekly_stop_remaining_percent":10});
+        // B: an exhausted 5-hour window is not guarded, so it neither blocks nor needs data.
+        let result = check(Some(weekly_only.clone()), Some(0.0), Some(50.0));
+        assert_eq!(result.code, "hive.usage-allowed", "{:?}", result.data);
+        assert_eq!(
+            result.data.as_ref().unwrap()["guarded_windows"][0]["window"],
+            "weekly"
+        );
+        assert_eq!(
+            check(Some(weekly_only.clone()), None, Some(50.0)).code,
+            "hive.usage-allowed"
+        );
+        let blocked = check(Some(weekly_only), Some(90.0), Some(10.0));
+        assert_eq!(blocked.code, "hive.usage-limited");
+        assert_eq!(blocked.data.as_ref().unwrap()["selected_window"], "weekly");
+        // No 5-hour limit: weekly only.
+        let no_limit =
+            json!({"five_hour_limit":false,"guard":"weekly","weekly_stop_remaining_percent":30});
+        assert_eq!(
+            check(Some(no_limit.clone()), Some(0.0), Some(31.0)).code,
+            "hive.usage-allowed"
+        );
+        assert_eq!(
+            check(Some(no_limit), Some(99.0), Some(30.0)).code,
+            "hive.usage-limited"
+        );
+        // A: only the 5-hour window, at its own threshold.
+        let five_hour = json!({"five_hour_limit":true,"guard":"five-hour",
+            "five_hour_stop_remaining_percent":40});
+        assert_eq!(
+            check(Some(five_hour.clone()), Some(41.0), Some(0.0)).code,
+            "hive.usage-allowed"
+        );
+        assert_eq!(
+            check(Some(five_hour.clone()), Some(40.0), Some(99.0)).code,
+            "hive.usage-limited"
+        );
+        let missing = check(Some(five_hour), None, Some(80.0));
+        assert_eq!(missing.code, "hive.usage-unknown");
+        assert_eq!(
+            missing.data.as_ref().unwrap()["missing_windows"],
+            json!(["session"])
+        );
+        assert!(missing.message.contains("session"), "{}", missing.message);
+        assert!(missing.next_action.as_deref().is_some_and(|action| {
+            action.contains("--confirm-session-disable")
+                && action.contains("hive usage capture --host claude")
+        }));
+        // C: either window at or under its own threshold blocks.
+        let both = json!({"five_hour_limit":true,"guard":"both",
+            "five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10});
+        assert_eq!(
+            check(Some(both.clone()), Some(31.0), Some(11.0)).code,
+            "hive.usage-allowed"
+        );
+        let session_low = check(Some(both.clone()), Some(30.0), Some(90.0));
+        assert_eq!(session_low.code, "hive.usage-limited");
+        assert_eq!(
+            session_low.data.as_ref().unwrap()["selected_window"],
+            "session"
+        );
+        let weekly_low = check(Some(both), Some(90.0), Some(10.0));
+        assert_eq!(weekly_low.code, "hive.usage-limited");
+        assert_eq!(
+            weekly_low.data.as_ref().unwrap()["selected_window"],
+            "weekly"
+        );
+        // Legacy: no per-host entry keeps session precedence with the single threshold.
+        assert_eq!(
+            check(None, Some(50.0), Some(5.0)).code,
+            "hive.usage-allowed"
+        );
+        assert_eq!(check(None, None, Some(5.0)).code, "hive.usage-limited");
+    }
+
+    #[test]
+    fn session_disable_makes_a_missing_measurement_non_blocking_without_a_halt() {
+        let project = temporary_target();
+        let config_dir = project.path().join(".hive/config");
+        fs::create_dir_all(&config_dir).unwrap();
+        fs::write(
+            config_dir.join("harness.toml"),
+            installed_config("claude", true, false),
+        )
+        .unwrap();
+        let parsed = ParsedBinding {
+            session_id: "disabled-unknown".into(),
+            process_id: 11,
+        };
+        let bound = bind_session(&parsed, "claude");
+        let args = EnforceArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            account_digest: None,
+            user_root: None,
+            host: Some("claude".into()),
+            run_id: None,
+        };
+        let unknown = enforce(&args).unwrap();
+        assert_eq!(unknown.code, "hive.usage-unknown");
+        assert_eq!(
+            unknown.data.as_ref().unwrap()["missing_windows"],
+            json!(["session", "weekly"])
+        );
+        assert!(unknown.next_action.is_some());
+        let halt_file = project.path().join(halt_path(&bound));
+        assert!(halt_file.exists());
+        control_session(&SessionArguments {
+            target: project.path().into(),
+            binding: parsed.clone(),
+            user_root: None,
+            host: Some("claude".into()),
+            action: SessionAction::Disable,
+            confirm_disable: true,
+            confirm_reset_guard_disable: false,
+            confirm_zero_quota_guard_disable: false,
+        })
+        .unwrap();
+        let shown = status(&StatusArguments {
+            target: project.path().into(),
+            binding: parsed,
+            user_root: None,
+            host: Some("claude".into()),
+        })
+        .unwrap();
+        assert_eq!(shown.exit_code, 0, "{:?}", shown.data);
+        let before = fs::read(&halt_file).unwrap();
+        for _ in 0..2 {
+            let result = enforce(&args).unwrap();
+            assert_eq!(result.exit_code, 0);
+            assert_eq!(result.code, "hive.usage-session-bypassed");
+            assert!(result
+                .changed_paths
+                .iter()
+                .all(|path| !path.contains("halt")));
+            assert_eq!(fs::read(&halt_file).unwrap(), before);
+        }
+        // A measured zero quota still blocks while the zero-quota guard remains on.
+        write_windows(project.path(), &bound, Some(50.0), Some(0.0));
+        assert_eq!(enforce(&args).unwrap().code, "hive.usage-quota-exhausted");
+    }
+
+    /// Contract between enforce and dispatch: every exit-0 enforce code either authorizes
+    /// automatic dispatch through `verify_dispatch_preflight` or is rejected by
+    /// `dispatch_preflight` itself. A blocked result never passes.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn every_exit_zero_enforce_code_has_a_matching_dispatch_verification() {
+        #[derive(Clone, Copy)]
+        enum Setup {
+            Measured(f64),
+            Missing,
+            SessionDisabledMissing,
+            SessionDisabledZeroOff,
+            SessionDisabledMeasuredZero,
+            MasterOff,
+            PreflightOff,
+            WarnOnMissing,
+            NonHive,
+        }
+        // (setup, enforce code, exit code, dispatch_preflight accepts, verify passes)
+        let table = [
+            (Setup::Measured(75.0), "hive.usage-allowed", 0, true, true),
+            // A blocked result never reaches verification; with a run it needs run evidence.
+            (Setup::Missing, "hive.usage-unknown", 3, false, false),
+            (
+                Setup::SessionDisabledMissing,
+                "hive.usage-session-bypassed",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::SessionDisabledZeroOff,
+                "hive.usage-session-bypassed",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::SessionDisabledMeasuredZero,
+                "hive.usage-quota-exhausted",
+                3,
+                false,
+                false,
+            ),
+            (Setup::MasterOff, "hive.usage-disabled", 0, true, true),
+            (
+                Setup::PreflightOff,
+                "hive.usage-preflight-disabled",
+                0,
+                true,
+                true,
+            ),
+            (
+                Setup::WarnOnMissing,
+                "hive.usage-observation-warning",
+                0,
+                true,
+                true,
+            ),
+            (Setup::NonHive, "hive.usage-not-configured", 0, false, false),
+        ];
+        for (setup, code, exit, accepted, verified) in table {
+            let user = temporary_target();
+            let mut policy = hive_core::preferences::UsageProtection {
+                enforcement_enabled: !matches!(setup, Setup::MasterOff),
+                ..Default::default()
+            };
+            if !matches!(setup, Setup::PreflightOff) {
+                policy.preflight.threshold_enabled = true;
+                policy.preflight.zero_quota_enabled = true;
+            }
+            policy.preflight.observation_failure = if matches!(setup, Setup::WarnOnMissing) {
+                hive_core::preferences::PreflightFailure::Warn
+            } else {
+                hive_core::preferences::PreflightFailure::Block
+            };
+            write_version_two_policy(user.path(), "claude", policy);
+            let project = temporary_target();
+            if !matches!(setup, Setup::NonHive) {
+                fs::create_dir_all(project.path().join(".hive/config")).unwrap();
+                fs::write(
+                    project.path().join(".hive/config/harness.toml"),
+                    installed_config("claude", true, false),
+                )
+                .unwrap();
+            }
+            let parsed = ParsedBinding {
+                session_id: "dispatch-contract".to_owned(),
+                process_id: 9,
+            };
+            let bound = bind_session(&parsed, "claude");
+            match setup {
+                Setup::Measured(remaining) => {
+                    write_windows(project.path(), &bound, Some(remaining), Some(remaining));
+                }
+                Setup::SessionDisabledMeasuredZero => {
+                    write_windows(project.path(), &bound, Some(50.0), Some(0.0));
+                }
+                _ => {}
+            }
+            let session = |action, zero| SessionArguments {
+                target: project.path().into(),
+                binding: parsed.clone(),
+                user_root: Some(user.path().to_owned()),
+                host: Some("claude".into()),
+                action,
+                confirm_disable: true,
+                confirm_reset_guard_disable: false,
+                confirm_zero_quota_guard_disable: zero,
+            };
+            if matches!(
+                setup,
+                Setup::SessionDisabledMissing
+                    | Setup::SessionDisabledZeroOff
+                    | Setup::SessionDisabledMeasuredZero
+            ) {
+                control_session(&session(SessionAction::Disable, false)).unwrap();
+            }
+            if matches!(setup, Setup::SessionDisabledZeroOff) {
+                control_session(&session(SessionAction::DisableZeroQuotaGuard, true)).unwrap();
+            }
+            let preflight = super::dispatch_preflight(
+                project.path(),
+                "claude",
+                "dispatch-contract",
+                9,
+                Some(user.path()),
+                "no-run",
+                None,
+                |_| Ok(()),
+            );
+            assert_eq!(preflight.is_ok(), accepted, "{code}: {:?}", preflight.err());
+            let Ok(preflight) = preflight else {
+                let direct = enforce(&EnforceArguments {
+                    target: project.path().into(),
+                    binding: parsed.clone(),
+                    account_digest: None,
+                    user_root: Some(user.path().to_owned()),
+                    host: Some("claude".into()),
+                    run_id: None,
+                })
+                .unwrap();
+                assert_eq!((direct.code, direct.exit_code), (code, exit));
+                continue;
+            };
+            assert_eq!(preflight.result.code, code);
+            assert_eq!(preflight.result.exit_code, exit, "{code}");
+            assert_eq!(
+                super::verify_dispatch_preflight(&preflight).is_ok(),
+                verified,
+                "{code}: {:?}",
+                super::verify_dispatch_preflight(&preflight).err()
+            );
+            if matches!(setup, Setup::SessionDisabledMissing) {
+                // Re-enabling the session invalidates the bypass proof.
+                control_session(&session(SessionAction::Enable, false)).unwrap();
+                assert!(super::verify_dispatch_preflight(&preflight).is_err());
+            }
+        }
     }
 
     fn write_current_capture(

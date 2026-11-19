@@ -9,12 +9,12 @@ summary: "0.13.1 구현의 재시작·만료 이전값 비교 제외, 하한·0%
 tags: [reset, session, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:ccdb3fbd321eef3dd9d91c412832203b68fd71bab30689c8a9095f6fd89520f3"
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5e8568062b3902e2ae075b2170b43c65c8ef176e916f0b9cf42bb3f4a20b3fa5"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5dce6f068cc25d0cfb9fc416b81e1373a7440112365b7cb292b04adf2d6c408b"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:6effcddaa5061365989f4ce449664b30f59bebc1eaf15f6fdf08f2d9e741a102"
-  - "repo:crates/hive-core/src/usage_guard.rs#sha256:e59ef8b5bfe8b2024bb68a6940e23bf9ea45a4af611d7f5d2078f11c1cdfe228"
+  - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"
   - "repo:docs/decisions/reset-stop-boundary.md#sha256:f8b3f933a7275d5375d60aa08b30e1434e2a9c5037125708d5627269b78b210a"
-  - "repo:docs/guides/installed-usage-guard.md#sha256:96e73fe5c33bb18cf1c2d6e21271df1738c02bc77f06a70fadbcb5b67ea8f5e5"
+  - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"
   - "repo:docs/research/public-test-0.13.0.md#sha256:c831b239c282a19ee42a0cbf9779484f044bd973425d61f319e9c9947de7a2f9"
   - "repo:docs/research/release-0.13.0.md#sha256:6b143f2aa5a5a0f4f6a484412470eef818af07151a983edfab5c3988e5cf7840"
   - "repo:docs/research/session-stop-0.12.1.md#sha256:50b5ba7baa1b9c2ed7bf96669115860655bb2fe0b7b5d7df7ac5fa628c650437"

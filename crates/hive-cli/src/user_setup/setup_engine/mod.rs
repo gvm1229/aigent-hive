@@ -26,7 +26,9 @@ pub(in crate::user_setup) use file_input::{execute as execute_file, file_options
 pub(in crate::user_setup) use project::execute_file as execute_project_file;
 pub(in crate::user_setup) use project::run as run_project;
 mod host_scope;
+mod host_windows;
 pub(in crate::user_setup) use host_scope::validate as validate_update_hosts;
+mod layout;
 mod legacy;
 pub(in crate::user_setup) mod messages;
 mod recovery;
@@ -122,6 +124,8 @@ pub(super) fn describe_section(arguments: &[String]) -> Result<ActionResult, Set
             ))
         }
     };
+    // Agents often pass the answer key (`interface_language`); question ids use hyphens.
+    let question = question.map(|id| id.replace('_', "-"));
     let section = question_section(scope, section, question.as_deref())?;
     let user_root = root.map_or_else(super::resolve_user_root, |path| Ok(path.into()))?;
     let root_cap =
@@ -206,6 +210,19 @@ fn description_result(
     }
 }
 
+/// Prefix shared with `messages::failure`, which turns it into a localized suggestion.
+pub(super) const UNKNOWN_QUESTION_HINT: &str = "unknown setup question; did you mean: ";
+
+/// An unknown question id, with the closest catalog ids when any are near.
+pub(super) fn unknown_question(id: &str, ids: &[&str]) -> SetupError {
+    let hint = crate::cli_help::suggest(id, ids).join(", ");
+    SetupError::Input(if hint.is_empty() {
+        "unknown setup question".into()
+    } else {
+        format!("{UNKNOWN_QUESTION_HINT}{hint}")
+    })
+}
+
 fn question_section(
     scope: PreferenceScope,
     section: Option<String>,
@@ -213,12 +230,19 @@ fn question_section(
 ) -> Result<String, SetupError> {
     match (section, question) {
         (Some(section), None) => Ok(section),
-        (None, Some(id)) => catalog()?
-            .questions
-            .into_iter()
-            .find(|q| q.scope == scope && q.id == id)
-            .map(|q| q.section)
-            .ok_or_else(|| SetupError::Input("unknown setup question".into())),
+        (None, Some(id)) => {
+            let questions: Vec<_> = catalog()?
+                .questions
+                .into_iter()
+                .filter(|q| q.scope == scope)
+                .collect();
+            let template = host_windows::instance(id).map_or(id, |(template, _)| template);
+            if let Some(found) = questions.iter().find(|q| q.id == template) {
+                return Ok(found.section.clone());
+            }
+            let ids: Vec<&str> = questions.iter().map(|q| q.id.as_str()).collect();
+            Err(unknown_question(id, &ids))
+        }
         _ => Err(SetupError::Input(
             "choose one question or one section".into(),
         )),
@@ -231,7 +255,15 @@ fn section_data(
     current: Option<&Value>,
 ) -> Result<Value, SetupError> {
     let catalog = catalog()?;
-    let questions = catalog.section(scope, section);
+    // Without stored hosts the per-host questions stay templates that name `{host}`.
+    let expanded = current.map_or_else(
+        || catalog.questions.clone(),
+        |current| host_windows::expand(&catalog.questions, current),
+    );
+    let questions: Vec<_> = expanded
+        .iter()
+        .filter(|q| q.scope == scope && q.section == section)
+        .collect();
     if questions.is_empty() {
         return Err(SetupError::Input(
             "unknown setup question section".to_owned(),
@@ -262,6 +294,25 @@ fn section_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_question_id_with_underscores_finds_its_section() {
+        assert_eq!(
+            question_section(PreferenceScope::User, None, Some("user-hosts")).unwrap(),
+            question_section(
+                PreferenceScope::User,
+                None,
+                Some(&"user_hosts".replace('_', "-"))
+            )
+            .unwrap()
+        );
+        let error = question_section(PreferenceScope::User, None, Some("user-hostz")).unwrap_err();
+        assert!(
+            error.message().contains("did you mean: user-hosts"),
+            "{}",
+            error.message()
+        );
+    }
 
     #[test]
     fn canonical_questions_are_valid_and_section_output_is_bounded() {

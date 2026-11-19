@@ -318,12 +318,51 @@ fn execute<R: BufRead, W: Write>(
         } else {
             path.replace('\'', "'\"'\"'")
         };
-        result.next_action = Some(format!(
-            "hive setup --scope user --resume --user-root '{quoted}'{}",
-            if options.review { " --review" } else { "" }
-        ));
+        route_pending_to_agent(&mut result, &quoted, options.review, terminal.language);
     }
     Ok(result)
+}
+
+/// A pending result never points only to a terminal: an AI agent continues through the status
+/// and answer-file preview path, and a person can still resume in a terminal.
+fn route_pending_to_agent(
+    result: &mut crate::ActionResult,
+    quoted_root: &str,
+    review: bool,
+    language: InterfaceLanguage,
+) {
+    let terminal = format!(
+        "hive setup --scope user --resume --user-root '{quoted_root}'{}",
+        if review { " --review" } else { "" }
+    );
+    let agent = if review {
+        [
+            format!("{terminal} --dry-run --output json"),
+            format!("{terminal} --review-answers <answers-file> --output json"),
+        ]
+    } else {
+        [
+            format!("hive setup --scope user --user-root '{quoted_root}' --show --summary --output json"),
+            format!(
+                "hive setup --scope user --user-root '{quoted_root}' --answers <patch-file> --input-channel agent --dry-run --output json"
+            ),
+        ]
+    };
+    result.next_action = Some(agent.join("\n"));
+    if review {
+        result.message.clone_from(&(if language == InterfaceLanguage::En {
+            "Monitor withdrawal review is pending. An AI agent previews it with --review --dry-run and confirms with --review-answers; a person can continue in a terminal."
+        } else {
+            "감시 종료 검토가 아직 끝나지 않았습니다. AI 에이전트는 --review --dry-run으로 미리 보고 --review-answers로 확인하며, 사람은 터미널에서 이어서 진행할 수 있습니다."
+        })
+        .to_owned());
+    }
+    let mut data = result.data.take().unwrap_or_else(|| json!({}));
+    if let Some(object) = data.as_object_mut() {
+        object.insert("agent_next_actions".into(), json!(agent));
+        object.insert("terminal_next_action".into(), json!(terminal));
+    }
+    result.data = Some(data);
 }
 
 fn execute_inner<R: BufRead, W: Write>(
@@ -567,8 +606,26 @@ fn collect<R: BufRead, W: Write>(
     let needs_language = progress.answers.get("interface_language").is_none()
         || (progress.selected_section.as_deref() == Some("language")
             && !answered(progress, selected("user-language")?));
-    if needs_language && !ask(store, progress, selected("user-language")?, terminal)? {
-        return Ok(false);
+    // Step numbers: questions asked so far and the total still planned with the current answers.
+    let mut asked = 0;
+    let planned = |progress: &Conversation, quick: bool, from: usize| {
+        super::host_windows::expand(questions, &progress.answers)
+            .get(from..)
+            .unwrap_or_default()
+            .iter()
+            .filter(|q| will_ask_user(progress, q, options, quick))
+            .count()
+    };
+    if needs_language {
+        let quick = progress.setup_mode.as_deref() != Some("custom");
+        let step = Some((
+            1,
+            1 + usize::from(progress.setup_mode.is_none()) + planned(progress, quick, 0),
+        ));
+        if !ask(store, progress, selected("user-language")?, step, terminal)? {
+            return Ok(false);
+        }
+        asked += 1;
     }
     terminal.language = if progress.answers["interface_language"] == "ko" {
         InterfaceLanguage::Ko
@@ -579,7 +636,7 @@ fn collect<R: BufRead, W: Write>(
     if progress.fresh && progress.answers["preference_decisions"]["/wiki/language"].is_null() {
         progress.answers["wiki"]["language"] = progress.answers["interface_language"].clone();
     }
-    for question in questions
+    for question in super::host_windows::expand(questions, &progress.answers)
         .iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {
@@ -608,20 +665,48 @@ fn collect<R: BufRead, W: Write>(
         } else {
             "user-mode".clone_into(&mut progress.step);
             persist(store, progress)?;
-            let answer = terminal.ask(selected("user-mode")?, None)?;
+            let step = Some((asked + 1, asked + 1 + planned(progress, true, 0)));
+            let answer = terminal.ask_step(selected("user-mode")?, None, step)?;
             let AnswerInput::Answered { value, .. } = answer else {
                 return Ok(false);
             };
+            asked += 1;
             progress.setup_mode = value.as_str().map(str::to_owned);
         }
         persist(store, progress)?;
     }
     let quick = progress.setup_mode.as_deref() == Some("expedited");
-    for question in questions
-        .iter()
-        .filter(|q| q.scope == PreferenceScope::User)
+    // Host questions depend on the selected hosts, so expand again after every answer.
+    let mut index = 0;
+    while let Some(question) = super::host_windows::expand(questions, &progress.answers)
+        .get(index)
+        .cloned()
     {
-        if matches!(
+        index += 1;
+        if !will_ask_user(progress, &question, options, quick) {
+            continue;
+        }
+        let step = Some((
+            asked + 1,
+            asked + planned(progress, quick, index - 1).max(1),
+        ));
+        if !ask(store, progress, &question, step, terminal)? {
+            return Ok(false);
+        }
+        asked += 1;
+    }
+    Ok(true)
+}
+
+/// Whether the user question loop still asks `question` with the current answers.
+fn will_ask_user(
+    progress: &Conversation,
+    question: &Question,
+    options: &Options,
+    quick: bool,
+) -> bool {
+    question.scope == PreferenceScope::User
+        && !matches!(
             question.id.as_str(),
             "user-language"
                 | "user-mode"
@@ -629,26 +714,11 @@ fn collect<R: BufRead, W: Write>(
                 | "user-index-rebuild"
                 | "user-monitor-activation"
                 | "user-vector-search"
-        ) {
-            continue;
-        }
-        if question.id == "user-hosts" && !progress.update_hosts.is_empty() {
-            continue;
-        }
-        if !selected_question(progress, question, options, quick) {
-            continue;
-        }
-        if !question.applicable(&progress.answers) {
-            continue;
-        }
-        if answered(progress, question) && options.resume {
-            continue;
-        }
-        if !ask(store, progress, question, terminal)? {
-            return Ok(false);
-        }
-    }
-    Ok(true)
+        )
+        && (question.id != "user-hosts" || progress.update_hosts.is_empty())
+        && selected_question(progress, question, options, quick)
+        && question.applicable(&progress.answers)
+        && (!answered(progress, question) || !options.resume)
 }
 
 fn choose_section<R: BufRead, W: Write>(
@@ -684,13 +754,16 @@ fn ask<R: BufRead, W: Write>(
     store: &ProgressStore,
     progress: &mut Conversation,
     question: &Question,
+    step: Option<(usize, usize)>,
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
+    super::host_windows::prepare(&mut progress.answers, question);
     persist(store, progress)?;
     let current = progress.answers.pointer(&question.key);
     let (value, origin) = loop {
-        let AnswerInput::Answered { value, origin } = terminal.ask(question, current)? else {
+        let AnswerInput::Answered { value, origin } = terminal.ask_step(question, current, step)?
+        else {
             return Ok(false);
         };
         if question.id == "user-context-description"
@@ -745,6 +818,11 @@ fn ask<R: BufRead, W: Write>(
     }
     if question.id == "user-wiki" && value == json!(false) {
         progress.index_rebuild_scope = None;
+    }
+    for key in super::host_windows::settle(&mut progress.answers, question)? {
+        if let Some(records) = progress.answers["preference_decisions"].as_object_mut() {
+            records.remove(&key);
+        }
     }
     let mut decision = PreferenceDecision::new(
         &value,
@@ -916,6 +994,7 @@ fn preview_apply<R: BufRead, W: Write>(
     progress: &mut Conversation,
     terminal: &mut Terminal<R, W>,
 ) -> Result<crate::ActionResult, SetupError> {
+    terminal.checking_apps()?;
     if progress.answers["persona"]["id"] != "custom" {
         progress.answers["persona"]
             .as_object_mut()
@@ -959,8 +1038,11 @@ fn preview_apply<R: BufRead, W: Write>(
     super::vector_choice::display(&progress.record, terminal)?;
     progress.phase = ProgressPhase::Previewed;
     persist(store, progress)?;
-    if options.dry_run || !terminal.confirm()? {
+    if options.dry_run {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
+    if !terminal.confirm()? {
+        return Ok(declined(terminal.language, "hive.setup-input-pending"));
     }
     if options
         .legacy_budget
@@ -1013,8 +1095,8 @@ fn record_bundle_acceptance(
     displayed: &hive_core::setup::QuestionCatalog,
 ) -> Result<(), SetupError> {
     // The bundle confirmation records acceptance only for choices displayed above.
-    let accepted_questions: Vec<_> = displayed
-        .questions
+    let expanded = super::host_windows::expand(&displayed.questions, &progress.answers);
+    let accepted_questions: Vec<_> = expanded
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(&progress.answers))
         .collect();
@@ -1043,10 +1125,40 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
     answers: &Value,
     terminal: &mut Terminal<R, W>,
 ) -> Result<hive_core::setup::QuestionCatalog, SetupError> {
-    terminal.say("적용 전 확인: 선택한 앱의 Hive 설정과 지침 갱신. 기존 사용자 자료 보존.","Preview: update Hive settings and instructions for the selected apps. Preserve existing user data.")?;
+    use super::layout::{self, Row};
+    let korean = terminal.language == InterfaceLanguage::Ko;
+    let mut lines = vec![
+        String::new(),
+        layout::title(if korean {
+            "적용 전 확인"
+        } else {
+            "Preview"
+        }),
+    ];
+    lines.extend(layout::block(
+        if korean {
+            "선택한 앱의 Hive 설정과 지침 갱신. 기존 사용자 자료 보존."
+        } else {
+            "Update Hive settings and instructions for the selected apps. Preserve existing user data."
+        },
+        layout::INDENT,
+    ));
     let displayed = catalog()?;
-    for question in displayed
-        .questions
+    let groups: [(&str, &str, &[&str]); 5] = [
+        (
+            "일반",
+            "General",
+            &[
+                "language", "setup", "persona", "review", "profile", "hosts", "updates",
+            ],
+        ),
+        ("기능", "Features", &["skills"]),
+        ("지식", "Knowledge", &["wiki", "vector"]),
+        ("사용량", "Usage", &["usage"]),
+        ("알림", "Notifications", &["notifications"]),
+    ];
+    let mut rows: Vec<Vec<Row>> = groups.iter().map(|_| Vec::new()).collect();
+    for question in super::host_windows::expand(&displayed.questions, answers)
         .iter()
         .filter(|q| q.scope == PreferenceScope::User && q.applicable(answers))
     {
@@ -1054,20 +1166,27 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
             .pointer(&question.key)
             .or_else(|| cleared_description(answers, question).then_some(&Value::Null))
         {
-            writeln!(
-                terminal.writer,
-                "{} {}",
-                question
-                    .prompt
-                    .get(terminal.language == InterfaceLanguage::Ko),
-                super::terminal::display_value(
-                    question,
-                    value,
-                    terminal.language == InterfaceLanguage::Ko
-                )
-            )
-            .map_err(|error| SetupError::Input(error.to_string()))?;
+            let group = groups
+                .iter()
+                .position(|(_, _, sections)| sections.contains(&question.section.as_str()))
+                .unwrap_or(0);
+            rows[group].push(Row {
+                name: layout::display_title(&question.id, korean),
+                values: layout::values(question, value, korean),
+            });
         }
+    }
+    for ((ko, en, _), rows) in groups.iter().zip(rows) {
+        if rows.is_empty() {
+            continue;
+        }
+        lines.push(String::new());
+        lines.push(layout::section(if korean { ko } else { en }));
+        lines.extend(layout::table(&rows).lines().map(str::to_owned));
+    }
+    for line in lines {
+        writeln!(terminal.writer, "{line}")
+            .map_err(|error| SetupError::Input(error.to_string()))?;
     }
     Ok(displayed)
 }
@@ -1097,6 +1216,15 @@ fn inspect_settings<R: BufRead, W: Write>(
                 .as_ref()
                 .and_then(|preview| preview.candidate.usage_guard.policy.as_ref())
         });
+    let usage_windows = config.map_or_else(Vec::new, |config| {
+        config
+            .selected_hosts
+            .iter()
+            .map(|host| {
+                crate::usage_control::host_window_summary(&config.usage_guard, host.as_str())
+            })
+            .collect::<Vec<_>>()
+    });
     let monitor = crate::usage_monitor::setup_status(root);
     let root_cap =
         crate::user_install::open_user_root_for_setup(root).map_err(SetupError::Conflict)?;
@@ -1137,7 +1265,7 @@ fn inspect_settings<R: BufRead, W: Write>(
             json!({"stored":config,"effective_usage":policy.map(|p| json!({"preflight":p.effective_preflight(),"midway":p.effective_midway()})),
             "pending":snapshot.progress.as_ref().filter(|p| p.phase != ProgressPhase::Complete),"actual_monitor_state":monitor,
             "feature_preferences":feature_preferences,"vector_runtime_verification":"not-performed",
-            "manual_usage_commands":manual_commands,
+            "manual_usage_commands":manual_commands,"usage_windows":usage_windows,
             "migration_preview":migration,"pending_questions":config.map_or_else(Vec::new, user_setup::migration::pending_questions)}),
         ),
         None,
@@ -1185,14 +1313,21 @@ pub(super) fn display_monitor<R: BufRead, W: Write>(
     Ok(())
 }
 
+/// A person declined at the final confirmation; JSON keeps the pending code for agents.
+pub(super) fn declined(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
+    let mut result = pending(language, code);
+    result.data = Some(serde_json::json!({"declined": true}));
+    result
+}
+
 pub(super) fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
     result(
         "needs-input",
         2,
         code,
         language,
-        "설정이 아직 끝나지 않았습니다. 터미널에서 이어서 진행해 주세요.",
-        "Setup is pending. Continue in a terminal.",
+        "설정이 아직 끝나지 않았습니다. AI 에이전트는 설정 요약(--show --summary)과 답변 파일 미리보기(--input-channel agent --dry-run)로, 사람은 터미널에서 이어서 진행할 수 있습니다.",
+        "Setup is pending. An AI agent continues with the setup summary (--show --summary) and an answer-file preview (--input-channel agent --dry-run); a person can continue in a terminal.",
         None,
         Some("hive setup --scope user --resume".to_owned()),
     )
@@ -1231,6 +1366,32 @@ fn result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pending_user_setup_offers_the_agent_path_before_the_terminal() {
+        for review in [false, true] {
+            let mut result = pending(InterfaceLanguage::En, "hive.setup-needs-input");
+            route_pending_to_agent(&mut result, "/tmp/u", review, InterfaceLanguage::En);
+            let next = result.next_action.as_deref().unwrap();
+            let data = result.data.as_ref().unwrap();
+            assert!(data["terminal_next_action"]
+                .as_str()
+                .unwrap()
+                .contains("--resume"));
+            assert_eq!(data["agent_next_actions"].as_array().unwrap().len(), 2);
+            if review {
+                assert!(next.contains("--review --dry-run"));
+                assert!(next.contains("--review-answers <answers-file>"));
+            } else {
+                assert!(next.contains("--show --summary"));
+                assert!(next.contains("--input-channel agent --dry-run"));
+                assert!(!next.contains("--resume"));
+            }
+        }
+        assert!(pending(InterfaceLanguage::En, "hive.setup-input-pending")
+            .message
+            .contains("--show --summary"));
+    }
     use std::io::Cursor;
 
     #[test]
@@ -1292,7 +1453,7 @@ mod tests {
             reader: Cursor::new(b"{\"missing\":30}\n{\"known-project\":101}\n{\"known-project\":19}\n{\"known-project\":40}\n"),
             writer: Vec::new(), language: InterfaceLanguage::En,
         };
-        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        assert!(ask(&store, &mut progress, question, None, &mut terminal).unwrap());
         let config =
             user_setup::parse_and_validate_config(&serde_json::to_vec(&progress.answers).unwrap())
                 .unwrap();
@@ -1513,6 +1674,92 @@ mod tests {
     }
 
     #[test]
+    fn usage_section_asks_each_selected_host_once_and_stores_its_windows() {
+        let cases: [(&[&str], &str, Value); 2] = [
+            (
+                &["claude"],
+                "yes\n3\n30\n10\n",
+                json!({"claude":{"five_hour_limit":true,"guard":"both",
+                    "five_hour_stop_remaining_percent":30,"weekly_stop_remaining_percent":10}}),
+            ),
+            (
+                &["codex", "claude", "antigravity"],
+                // Antigravity has only provider pools, so it gets one threshold question.
+                "no\n15\nyes\n1\n25\n5\n",
+                json!({"codex":{"five_hour_limit":false,"guard":"weekly",
+                        "weekly_stop_remaining_percent":15},
+                    "claude":{"five_hour_limit":true,"guard":"five-hour",
+                        "five_hour_stop_remaining_percent":25},
+                    "antigravity":{"five_hour_limit":false,"guard":"weekly",
+                        "weekly_stop_remaining_percent":5}}),
+            ),
+        ];
+        for (hosts, host_answers, expected) in cases {
+            let root = tempfile::tempdir().unwrap();
+            let store = ProgressStore::open(root.path(), None).unwrap();
+            let mut progress = conversation(&store);
+            progress.answers = super::super::default_answers(Some(InterfaceLanguage::Ko));
+            progress.answers["selected_hosts"] = json!(hosts);
+            progress.setup_mode = Some("custom".into());
+            progress.selected_section = Some("usage".into());
+            // Protection on, then defaults for notices, threshold and project thresholds.
+            let input = format!("yes\n\n\n\n{host_answers}{}", "\n".repeat(20));
+            let mut terminal = Terminal {
+                reader: Cursor::new(input.into_bytes()),
+                writer: Vec::new(),
+                language: InterfaceLanguage::Ko,
+            };
+            assert!(collect(
+                &store,
+                &mut progress,
+                &catalog().unwrap().questions,
+                &options(root.path()),
+                &mut terminal
+            )
+            .unwrap());
+            let screen = String::from_utf8(terminal.writer).unwrap();
+            let heading = |host: &str| {
+                let label = super::super::host_windows::host_label(host);
+                if host == super::super::host_windows::PROVIDER_ONLY_HOST {
+                    format!("{label} · 잔여량 기준")
+                } else {
+                    format!("{label} · 5시간 한도 여부")
+                }
+            };
+            let provider_only = hosts
+                .iter()
+                .filter(|host| **host == super::super::host_windows::PROVIDER_ONLY_HOST)
+                .count();
+            assert_eq!(
+                screen.matches("· 5시간 한도 여부").count(),
+                hosts.len() - provider_only
+            );
+            assert_eq!(screen.matches("· 잔여량 기준").count(), provider_only);
+            for (index, host) in hosts.iter().enumerate() {
+                assert_eq!(screen.matches(&heading(host)).count(), 1);
+                let position = screen.find(&heading(host)).expect("host heading");
+                if let Some(next) = hosts.get(index + 1) {
+                    assert!(position < screen.find(&heading(next)).unwrap());
+                }
+            }
+            assert!(screen
+                .lines()
+                .all(|line| super::super::layout::width(line) <= 80));
+            assert_eq!(progress.answers["usage_guard"]["host_windows"], expected);
+            let config = user_setup::parse_and_validate_config(
+                &serde_json::to_vec(&progress.answers).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(config.usage_guard.host_windows.len(), hosts.len());
+            assert_eq!(
+                progress.answers["preference_decisions"]
+                    ["/usage_guard/host_windows/claude/five_hour_limit"]["origin"],
+                "explicit"
+            );
+        }
+    }
+
+    #[test]
     fn profile_details_can_be_added_cleared_and_resumed_with_a_null_choice_record() {
         let root = tempfile::tempdir().unwrap();
         let store = ProgressStore::open(root.path(), None).unwrap();
@@ -1562,7 +1809,10 @@ mod tests {
         display_preview(&progress.answers, &mut preview).unwrap();
         assert!(String::from_utf8(preview.writer)
             .unwrap()
-            .contains("Describe any additional background. None"));
+            .lines()
+            .any(
+                |line| line.trim_start().starts_with("More background") && line.ends_with(": None")
+            ));
         let mut resume_options = options(root.path());
         resume_options.resume = true;
         let mut resumed = Terminal {
@@ -1668,11 +1918,71 @@ mod tests {
             "not-configured"
         );
         assert_eq!(data["actual_monitor_state"]["sensor_queries"], 0);
+        assert_eq!(data["usage_windows"][0]["mode"], "legacy");
+        assert_eq!(data["usage_windows"][0]["threshold_remaining_percent"], 5);
+        assert_eq!(
+            data["actual_monitor_state"]["usage_windows"],
+            data["usage_windows"][0]
+        );
         assert_eq!(terminal.reader.position(), 0);
         assert_eq!(terminal.writer, Vec::<u8>::new());
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert!(!root.path().join(".hive/runtime").exists());
         assert!(!root.path().join(".hive/config/setup-progress").exists());
+    }
+
+    #[test]
+    fn show_and_monitor_status_report_the_same_per_host_windows() {
+        let root = tempfile::tempdir().unwrap();
+        let mut stored = fresh_answers();
+        stored["interface_language"] = json!("en");
+        stored["selected_hosts"] = json!(["codex", "claude"]);
+        stored["usage_guard"]["host_windows"] = json!({
+            "codex":{"five_hour_limit":false,"guard":"weekly","weekly_stop_remaining_percent":12}});
+        let bytes = serde_json::to_vec(&stored).unwrap();
+        user_setup::parse_and_validate_config(&bytes).unwrap();
+        let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let mut options = options(root.path());
+        options.show = true;
+        options.interaction.json = true;
+        let mut terminal = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let data = execute(&options, InteractionMode::NonInteractive, &mut terminal)
+            .unwrap()
+            .data
+            .unwrap();
+        let codex = &data["usage_windows"][0];
+        assert_eq!(codex["host"], "codex");
+        assert_eq!(codex["mode"], "per-window");
+        assert_eq!(
+            codex["windows"],
+            json!([{"window":"weekly","threshold_remaining_percent":12}])
+        );
+        assert_eq!(data["usage_windows"][1]["mode"], "legacy");
+        assert_eq!(data["actual_monitor_state"]["usage_windows"], *codex);
+        let mut text = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        display_preview(&stored, &mut text).unwrap();
+        let screen = String::from_utf8(text.writer).unwrap();
+        assert!(!screen.contains("Codex · Weekly threshold"));
+        stored["usage_guard"]["enforcement_enabled"] = json!(true);
+        let mut text = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        display_preview(&stored, &mut text).unwrap();
+        let screen = String::from_utf8(text.writer).unwrap();
+        assert!(screen.contains("Codex · Weekly threshold"), "{screen}");
+        assert!(screen.contains("Codex · 5-hour limit"));
     }
 
     #[test]
@@ -2076,7 +2386,7 @@ mod tests {
             writer: Vec::new(),
             language: InterfaceLanguage::En,
         };
-        assert!(ask(&store, &mut progress, question, &mut terminal).unwrap());
+        assert!(ask(&store, &mut progress, question, None, &mut terminal).unwrap());
         assert_eq!(progress.answers["skills"], json!({"mode":"all"}));
         assert_eq!(progress.answered_questions.len(), 1);
         assert!(String::from_utf8(terminal.writer)

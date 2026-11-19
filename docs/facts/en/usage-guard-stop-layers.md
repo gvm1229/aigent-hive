@@ -9,9 +9,9 @@ summary: "The 0.13.2 source validates protocol compatibility and qualifies reset
 tags: [guard, history, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5e8568062b3902e2ae075b2170b43c65c8ef176e916f0b9cf42bb3f4a20b3fa5"
+  - "repo:crates/hive-cli/src/usage_monitor.rs#sha256:5dce6f068cc25d0cfb9fc416b81e1373a7440112365b7cb292b04adf2d6c408b"
   - "repo:crates/hive-cli/src/usage_monitor/state.rs#sha256:6effcddaa5061365989f4ce449664b30f59bebc1eaf15f6fdf08f2d9e741a102"
-  - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:9835d127c2115e3a597448e6bca2860c21cd219b3ab8990348c3a1af2659ba79"
+  - "repo:crates/hive-cli/src/usage_monitor/threshold.rs#sha256:4ede23854a3a77a60ac52d4f015b246e68273be35ee325ef10b20aaa3152e148"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/research/public-test-0.13.2.md#sha256:138f0f7939a701b13860e9aeaa3c32f85e2723387c4a183d40c5473e7d58435e"
@@ -19,7 +19,7 @@ sources:
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
   - "repo:docs/research/usage-guard-stop-comparison.md#sha256:6819e9b5a746e525e045d0a9f0a1e38509f9d9ab04e19efc9944e269c35b3203"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:4c71dbbc592620844bff81765151014d4a657924d03aea602c08bc517e1c8727"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:1940e4944e009c00e3de325a585597de9163392dede5920df0f08ccca0e89fbd"
   - "repo:tests/results/public-test-0.13.2-test.2.json#sha256:7eb3e11914f44421bbaa13db06d2b3edfc2c791170586eee259355ec75587005"
   - "repo:tests/results/release-0.13.1-stable.md#sha256:a8c2566122cb825217755f8c9901570e63517e114fbe7a484a7ce6af229e1420"
   - "repo:tests/results/usage-compatibility-live-0.13.2.json#sha256:76abaa5e2595b9aeee3797fd612694112e9c8efbbcb43ccfaed49653907aeafc"

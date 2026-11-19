@@ -3732,6 +3732,7 @@ mod tests {
             status: AssertionStatus::Verified,
             visibility,
             normalized_fact: format!("Portable fact {id_character} is verified."),
+            subject: None,
             provenance: ClaimProvenance {
                 source_kind: RememberSourceKind::ReviewedArtifact,
                 summary: format!("Reviewed portable fact {id_character}"),

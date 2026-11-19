@@ -289,6 +289,32 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertEqual(result["data"]["global_threshold_remaining_percent"], 0)
         self.assertEqual(result["data"]["threshold_remaining_percent"], 10)
 
+    def test_global_threshold_moves_every_guarded_host_window(self) -> None:
+        user_root = self.work_root / "windows-user"
+        config = user_root / ".hive/config/user-setup.yml"
+        config.parent.mkdir(parents=True)
+        config.write_text(USER_CONFIG.replace(
+            "  project_overrides: {}\n",
+            "  project_overrides: {}\n  host_windows:\n    codex:\n      five_hour_limit: true\n"
+            "      guard: both\n      five_hour_stop_remaining_percent: 30\n"
+            "      weekly_stop_remaining_percent: 10\n"), encoding="utf-8")
+        process, result = self.invoke("usage", "threshold", "--user-root", str(user_root),
+                                      "--remaining-percent", "15")
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["code"], "hive.usage-global-threshold-updated")
+        self.assertEqual(result["data"]["host_windows_updated"], ["codex"])
+        text = config.read_text(encoding="utf-8")
+        self.assertIn("five_hour_stop_remaining_percent: 15", text)
+        self.assertIn("weekly_stop_remaining_percent: 15", text)
+        status, result = self.invoke("usage", "status", "--target", str(self.consumer),
+                                    "--user-root", str(user_root), "--session-id", "windows-project",
+                                    "--process-id", "101")
+        self.assertEqual(status.returncode, 0, result)
+        self.assertEqual(result["data"]["threshold_remaining_percent"], 15)
+        self.assertEqual(result["data"]["guarded_windows"], [
+            {"window": "session", "threshold_remaining_percent": 15},
+            {"window": "weekly", "threshold_remaining_percent": 15}])
+
     def test_token_summary_preserves_historical_overrun_without_guard_authority(self) -> None:
         historical = json.loads((REPOSITORY_ROOT / "tests/results/readiness-host-acceptance-2026-09-27.json").read_text(encoding="utf-8"))
         request = {
@@ -1583,9 +1609,12 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         binding = ("--target", str(self.consumer), "--session-id", "session-bypass", "--process-id", "903")
         unknown, unknown_result = self.invoke("usage", "enforce", *binding,
                                              extra_environment={"PATH": str(empty_path)})
-        self.assertEqual(unknown.returncode, 3, unknown_result)
+        # A session opt-out turns a missing measurement into a non-blocking result without a halt.
+        self.assertEqual(unknown.returncode, 0, unknown_result)
         self.assertTrue(unknown_result["data"]["zero_quota_guard_enabled"])
-        self.assertEqual(unknown_result["code"], "hive.usage-unknown")
+        self.assertEqual(unknown_result["code"], "hive.usage-session-bypassed")
+        self.assertFalse(unknown_result["data"]["observation_available"])
+        self.assertFalse(any("halt" in path for path in unknown_result["changed_paths"]))
         opted_out, opt_out_result = self.invoke("usage", "session", *binding,
             "--action", "disable-zero-quota-guard", "--confirm-zero-quota-guard-disable")
         self.assertEqual(opted_out.returncode, 0, opt_out_result)
@@ -1623,6 +1652,11 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             "enable",
         )
         self.assertEqual(enabled.returncode, 0, enabled.stderr)
+        # The non-blocking unknown kept the latched measurement as the reset baseline, so the
+        # first recheck reports the increase once; the next request rechecks normally.
+        reset, reset_result = self.invoke("usage", "enforce", *binding, sensor_case="allow")
+        self.assertEqual(reset.returncode, 3, reset_result)
+        self.assertEqual(reset_result["code"], "hive.usage-reset")
         blocked, blocked_result = self.invoke(
             "usage",
             "enforce",

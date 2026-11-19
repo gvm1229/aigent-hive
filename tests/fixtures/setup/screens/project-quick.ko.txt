@@ -1,0 +1,82 @@
+설치된 앱 상태를 확인하는 중입니다. 잠시 걸릴 수 있습니다.
+
+[1/4] 설정 방식
+
+  설정 방식을 골라 주세요.
+    1. 빠른 설정 (현재값)
+    2. 맞춤 설정
+  Enter로 유지/선택: 빠른 설정
+
+>
+[2/4] 프로젝트 이름
+
+  프로젝트 이름을 입력해 주세요.
+  Enter로 유지/선택: snapshot-target
+
+>
+[3/4] 프로젝트 종류
+
+  프로젝트 설정 종류를 골라 주세요.
+    1. 코드
+    2. 문서
+    3. 일반 (현재값)
+    4. 직접 설정
+  Enter로 유지/선택: 일반
+
+>
+[4/4] 사용할 앱
+
+  이 프로젝트에서 사용할 앱을 골라 주세요.
+    1. Codex (현재값)
+    2. Claude Code
+    3. Antigravity
+  Enter로 유지/선택: Codex
+
+> 설치된 앱 상태를 확인하는 중입니다. 잠시 걸릴 수 있습니다.
+
+프로젝트 설정 미리보기
+  선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.
+  언어·문서·답변 방식은 전역 설정을 따르고, 기능은 프로젝트 권장 묶음을
+  사용합니다. 아래는 현재 적용값입니다.
+
+일반
+  언어           : 한국어
+  설정 방식      : 빠른 설정
+  지식 저장      : 예
+  지식 문서 언어 : 영어
+  답변 방식      : 균형
+  프로젝트 이름  : Snapshot project
+  프로젝트 종류  : 일반
+  사용할 앱      : Codex
+  잔여량 기준    : 20
+
+기능
+  기능 묶음 : 개별 선택 32개
+              adversarial-judge, aither, amend-directive, apollon, artemis,
+              athena, code-polish, demeter, eileithyia, hades, hephaistos,
+              humanize-kor, judge-evidence, knowledge-capture,
+              knowledge-maintain, knowledge-promote, knowledge-recall,
+              knowledge-scan, multi-goal, poseidon, product-update,
+              project-refresh, prompt-refine, quick-answer,
+              research-best-practices, run-checkpoint, run-handoff, run-resume,
+              ship, team-execution, usage-guard, verified-workflow
+  역할      : 없음
+  선택 기능 : 없음
+  후크      : 없음
+
+지식 경로
+  지식 포함 경로 : 없음
+  지식 제외 경로 : .env
+                   **/.env
+                   **/.env.*
+                   **/credentials*
+                   **/secrets/**
+  전역 공유 종류 : 없음
+  비공개 종류    : 없음
+
+변경 규모
+  변경 파일 수 : 101
+
+------------------------------------------------------------------------
+이 변경을 적용할까요? [예/아니요, 기본: 아니요]
+>

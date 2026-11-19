@@ -5,7 +5,8 @@ description: (knowledge-recall) Before a knowledge-dependent question or task, f
 
 # Search Knowledge (`knowledge-recall`)
 
-Run one required memory lookup, then continue the owning task route.
+Run one required memory lookup, at most two bounded follow-ups, then continue the owning task
+route.
 
 In a consumer project, apply `.agents/directives/00-project-harness.md`'s availability gate
 before this command-backed workflow. Ordinary collaboration skips it without installing Hive;
@@ -19,11 +20,20 @@ non-installation. Source-workspace and already activated user-level contracts re
 2. If the target contains `hive-source.json`, use `hive source-wiki` for the explicit
    source lookup; never use consumer knowledge paths in the source workspace.
 3. Otherwise resolve the bound `<user-root>`, keep the exact verified
-   `<current-project-root>`, and run exactly one automatic lookup:
+   `<current-project-root>`, and run one automatic lookup. Add `--expansions` with up to eight
+   comma-separated Korean, English and inflected forms of the query's key words, quoted as one
+   argument, for example `"디자인,design,styles"` for a short Korean query:
 
    ```text
-   hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json
+   hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --expansions "<term,term>" --top-k 5 --byte-budget 16384 --output json
    ```
+
+   A claim hit with a `subject` arrives with up to 16 more facts of that subject, newest
+   first; `top-k` counts these subject groups. `subject_truncated=true` on the group's first
+   hit means more facts exist: run one follow-up with the subject's words when they matter.
+   If the hits do not cover what the task needs, run at most two follow-up lookups with
+   different key words or expansions, never the same query again. Stop when hits repeat or a
+   lookup returns nothing new.
 
    Hive derives current-project authority from the verified target-to-registry mapping. Never
    supply or accept a caller-asserted current collection identifier. Use `project:<id>` or
@@ -35,7 +45,7 @@ non-installation. Source-workspace and already activated user-level contracts re
    If the target has no attached collection, the same `auto` request searches `user-root` and
    shared collections while excluding project-private knowledge. Never report retrieval as skipped
    solely because project setup, a Hive harness, a project marker, or a collection is absent.
-   Choose the search mode before this one lookup: keep default FTS for identifiers, dates,
+   Choose the search mode before the first lookup: keep default FTS for identifiers, dates,
    numbers, quotations and direct facts; add `--mode semantic` for similar meanings,
    paraphrases or cross-language discovery. Semantic mode combines an already enabled vector
    index with FTS and safely uses FTS alone when unavailable. Do not install, enable or rebuild

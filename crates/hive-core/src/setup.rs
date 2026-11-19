@@ -62,7 +62,21 @@ pub struct Condition {
     /// JSON Pointer to the prerequisite answer.
     pub key: String,
     /// Value that enables the question.
-    pub equals: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equals: Option<Value>,
+    /// Values of which any one enables the question; used instead of `equals`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub any_of: Vec<Value>,
+}
+
+impl Condition {
+    /// Whether the answer document satisfies this prerequisite.
+    #[must_use]
+    pub fn matches(&self, answers: &Value) -> bool {
+        answers
+            .pointer(&self.key)
+            .is_some_and(|value| self.equals.as_ref() == Some(value) || self.any_of.contains(value))
+    }
 }
 
 /// Canonical description used by terminals, answer files, and structured assistant input.
@@ -138,10 +152,10 @@ impl QuestionCatalog {
                     .minimum
                     .zip(question.maximum)
                     .is_some_and(|(min, max)| min > max)
-                || question
-                    .when
-                    .iter()
-                    .any(|condition| !pointer(&condition.key))
+                || question.when.iter().any(|condition| {
+                    !pointer(&condition.key)
+                        || condition.equals.is_some() != condition.any_of.is_empty()
+                })
             {
                 return Err("invalid or duplicate setup question".to_owned());
             }
@@ -181,9 +195,7 @@ impl Question {
     /// Whether the current answers satisfy this question's prerequisites.
     #[must_use]
     pub fn applicable(&self, answers: &Value) -> bool {
-        self.when
-            .iter()
-            .all(|condition| answers.pointer(&condition.key) == Some(&condition.equals))
+        self.when.iter().all(|condition| condition.matches(answers))
     }
 
     /// Validate a typed answer using the same rules as terminal input.
@@ -553,11 +565,20 @@ mod tests {
         let mut q = question(InputKind::Boolean);
         q.when.push(Condition {
             key: "/usage_guard/enforcement_enabled".to_owned(),
-            equals: json!(true),
+            equals: Some(json!(true)),
+            any_of: Vec::new(),
         });
         assert!(!q.applicable(&json!({})));
         assert!(!q.applicable(&json!({"usage_guard":{"enforcement_enabled":false}})));
         assert!(q.applicable(&json!({"usage_guard":{"enforcement_enabled":true}})));
+        q.when = vec![Condition {
+            key: "/guard".to_owned(),
+            equals: None,
+            any_of: vec![json!("weekly"), json!("both")],
+        }];
+        assert!(!q.applicable(&json!({})));
+        assert!(!q.applicable(&json!({"guard":"five-hour"})));
+        assert!(q.applicable(&json!({"guard":"both"})));
     }
 
     #[test]

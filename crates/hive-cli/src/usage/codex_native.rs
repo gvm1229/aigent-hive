@@ -671,9 +671,11 @@ fn normalize_window(value: &Value, now: u64) -> Result<NormalizedWindow, SensorE
         .and_then(Value::as_u64)
         .and_then(|value| u32::try_from(value).ok())
         .ok_or(SensorError::WrongWindows)?;
-    let (name, expected_minutes) = match minutes {
-        300 => ("session", 300),
-        10_080 => ("weekly", 10_080),
+    // The long-period limit fills the weekly slot. Codex 0.167 reports a 30-day window
+    // (43,200 minutes) for some plans; its real duration stays in `window_minutes`.
+    let name = match minutes {
+        300 => "session",
+        10_080 | 43_200 => "weekly",
         _ => return Err(SensorError::WrongWindows),
     };
     let resets_at = object
@@ -684,7 +686,7 @@ fn normalize_window(value: &Value, now: u64) -> Result<NormalizedWindow, SensorE
     Ok(NormalizedWindow {
         name,
         quota_pool: None,
-        window_minutes: Some(expected_minutes),
+        window_minutes: Some(minutes),
         remaining_percent: 100.0 - used,
         resets_at,
     })
@@ -758,6 +760,60 @@ mod tests {
         );
         assert_eq!(snapshot.windows[0].name, "weekly");
         assert!((snapshot.windows[0].remaining_percent - 78.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn a_thirty_day_window_fills_the_weekly_slot_and_other_shapes_fail_closed() {
+        // Shape observed from codex-cli 0.167.2 on 2026-11-19: one 43,200-minute primary window.
+        let account = json!({"account":{"type":"chatgpt","email":"private@example.invalid",
+            "planType":"free"}});
+        let limits = |primary: serde_json::Value, secondary: serde_json::Value| {
+            let limit = json!({"limitId":"codex","limitName":null,"planType":"free",
+                "primary":primary,"secondary":secondary,"credits":null,
+                "individualLimit":null,"normalModelSlug":null,"rateLimitReachedType":null,
+                "spendControlReached":null});
+            json!({"rateLimits":limit,"rateLimitsByLimitId":{"codex":limit}})
+        };
+        let window = |minutes: u64| json!({"usedPercent":12.0,"windowDurationMins":minutes,"resetsAt":2_000});
+        let snapshot = normalize(
+            &account,
+            &limits(window(43_200), json!(null)),
+            "0.167.2",
+            None,
+            1_000,
+        )
+        .expect("observed 30-day shape");
+        assert_eq!(snapshot.windows.len(), 1);
+        assert_eq!(snapshot.windows[0].name, "weekly");
+        assert_eq!(snapshot.windows[0].window_minutes, Some(43_200));
+        assert!((snapshot.windows[0].remaining_percent - 88.0).abs() < f64::EPSILON);
+        let both = normalize(
+            &account,
+            &limits(window(300), window(43_200)),
+            "0.167.2",
+            None,
+            1_000,
+        )
+        .expect("5-hour plus 30-day shape");
+        assert_eq!(both.windows[0].name, "session");
+        assert_eq!(both.windows[1].name, "weekly");
+        for (primary, secondary) in [
+            (window(10_080), window(43_200)),
+            (window(1_440), json!(null)),
+            (window(43_201), json!(null)),
+        ] {
+            assert_eq!(
+                normalize(
+                    &account,
+                    &limits(primary, secondary),
+                    "0.167.2",
+                    None,
+                    1_000
+                )
+                .unwrap_err(),
+                SensorError::WrongWindows
+            );
+        }
     }
 
     #[test]

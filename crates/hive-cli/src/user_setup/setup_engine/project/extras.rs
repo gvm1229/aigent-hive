@@ -283,3 +283,41 @@ pub(super) fn show_choices<R: BufRead, W: Write>(
     });
     writeln!(terminal.writer, "{shown}").map_err(|error| SetupError::Internal(error.to_string()))
 }
+
+/// Preview rows for approved optional features and hooks, one item per line.
+pub(super) fn choice_rows(records: &Value, korean: bool) -> Vec<super::super::layout::Row> {
+    let none = if korean { "없음" } else { "None" };
+    let items = |key: &str, describe: &dyn Fn(&Value) -> String| -> Vec<String> {
+        let values: Vec<String> = records[key]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(describe)
+            .collect();
+        if values.is_empty() {
+            vec![none.to_owned()]
+        } else {
+            values
+        }
+    };
+    let text = |record: &Value, key: &str| record[key].as_str().unwrap_or_default().to_owned();
+    vec![
+        super::super::layout::Row {
+            name: if korean {
+                "선택 기능"
+            } else {
+                "Optional features"
+            }
+            .to_owned(),
+            values: items("approved_optional_skills", &|record| {
+                format!("{} ({})", text(record, "name"), text(record, "source"))
+            }),
+        },
+        super::super::layout::Row {
+            name: if korean { "후크" } else { "Hooks" }.to_owned(),
+            values: items("approved_fallback_hooks", &|record| {
+                format!("{} ({})", text(record, "capability"), text(record, "event"))
+            }),
+        },
+    ]
+}

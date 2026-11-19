@@ -268,6 +268,49 @@ questions:
     help: {"ko":"등록된 식별자와 전역 기준 이상인 0~99 정수만 사용. 예: {\"my-project\":30}. {}는 별도 기준 없음. 프로젝트 파일 변경 없음.","en":"Use registered identities and integers from 0 to 99 at or above the global threshold, for example {\"my-project\":30}. {} means no overrides. Project files are not changed."}
     default: {}
     when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-host-five-hour-limit
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/host_windows/{host}/five_hour_limit"
+    input: "boolean"
+    prompt: {"ko":"{host} 구독에 5시간 사용 한도가 있나요?","en":"Does your {host} subscription have a 5-hour usage limit?"}
+    help: {"ko":"선택한 앱마다 한 번씩 질문. 아니요면 주간 한도만 보호.","en":"Asked once for each selected app. No means only the weekly limit is guarded."}
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true}]
+  - id: usage-host-guard
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/host_windows/{host}/guard"
+    input: "choice"
+    prompt: {"ko":"{host}에서 보호할 한도를 골라 주세요.","en":"Choose the limits to guard for {host}."}
+    help: {"ko":"보호하지 않는 한도의 소진이나 측정 없음은 작업을 막지 않음.","en":"An unguarded limit never blocks work, even when it is exhausted or unmeasured."}
+    options: [{"value":"five-hour","label":{"ko":"5시간 한도만","en":"5-hour limit only"}},{"value":"weekly","label":{"ko":"주간 한도만","en":"Weekly limit only"}},{"value":"both","label":{"ko":"둘 다, 기준은 각각","en":"Both, each with its own threshold"}}]
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/host_windows/{host}/five_hour_limit","equals":true}]
+  - id: usage-host-five-hour-threshold
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/host_windows/{host}/five_hour_stop_remaining_percent"
+    input: "integer"
+    prompt: {"ko":"{host}의 5시간 한도 잔여량 기준을 0부터 99 사이 정수로 입력해 주세요.","en":"Enter the {host} 5-hour remaining-quota threshold from 0 to 99."}
+    help: {"ko":"남은 비율이 이 값 이하이면 작업을 막음.","en":"Work is blocked when the remaining percentage is at or below this value."}
+    default: 20
+    minimum: 0
+    maximum: 99
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/host_windows/{host}/guard","any_of":["five-hour","both"]}]
+  - id: usage-host-weekly-threshold
+    revision: 1
+    scope: "user"
+    section: "usage"
+    key: "/usage_guard/host_windows/{host}/weekly_stop_remaining_percent"
+    input: "integer"
+    prompt: {"ko":"{host}의 주간 한도 잔여량 기준을 0부터 99 사이 정수로 입력해 주세요.","en":"Enter the {host} weekly remaining-quota threshold from 0 to 99."}
+    help: {"ko":"남은 비율이 이 값 이하이면 작업을 막음.","en":"Work is blocked when the remaining percentage is at or below this value."}
+    default: 20
+    minimum: 0
+    maximum: 99
+    when: [{"key":"/usage_guard/enforcement_enabled","equals":true},{"key":"/usage_guard/host_windows/{host}/guard","any_of":["weekly","both"]}]
   - id: usage-preflight-threshold
     revision: 1
     scope: "user"

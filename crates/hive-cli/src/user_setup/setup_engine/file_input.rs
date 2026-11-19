@@ -237,8 +237,7 @@ fn declarations(config: &UserSetupConfig) -> Result<BTreeMap<String, Value>, Set
     object.remove("preference_decisions");
     let mut declarations = BTreeMap::new();
     collect("", &value, &mut declarations);
-    for question in super::catalog()?
-        .questions
+    for question in super::host_windows::expand(&super::catalog()?.questions, &value)
         .into_iter()
         .filter(|q| q.scope == PreferenceScope::User)
     {

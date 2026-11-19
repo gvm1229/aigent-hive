@@ -9,7 +9,7 @@ summary: "Visibility and promotion settings do not grant global read-only storag
 tags: [index, knowledge, policy]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b3f259173a92bf050ca26df5b462330ea4ce9d96bb9bca431b6a54700ddfea36"
+  - "repo:crates/hive-cli/src/knowledge/remember.rs#sha256:b2dab4ddd8cc0336bccd28c1bd61ba66901a2984b5306040ef994cdf355b1e35"
   - "repo:crates/hive-wiki/src/shared.rs#sha256:5c3d1c60546484e1cee6f2efa7ea87950418f80e45a20356f4193373cffce963"
   - "repo:docs/plans/details/project-local-global-readonly/design.md#sha256:18defa9a2f898ab073eebdf6345a2e64a449619879f2b4f46af074708b335a12"
 links: [knowledge-cross-project-access, shared-index]

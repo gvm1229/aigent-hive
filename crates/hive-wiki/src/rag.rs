@@ -10,7 +10,7 @@ use crate::collection::{
 };
 use crate::scan::{ScanClaimMetadata, ScanPromotionStatus, ScanReviewStatus};
 use hive_core::sha256_digest;
-use rusqlite::{params, Connection, MAIN_DB};
+use rusqlite::{params, Connection, OptionalExtension, MAIN_DB};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
@@ -22,6 +22,10 @@ use std::str::FromStr;
 pub const RAG_SCHEMA_VERSION: u32 = 6;
 /// Version of the canonical typed-claim Markdown contract.
 pub const CLAIM_SCHEMA_VERSION: u32 = 1;
+/// Canonical claim Markdown schema for a claim that declares a subject.
+pub const CLAIM_SUBJECT_SCHEMA_VERSION: u32 = 2;
+/// Maximum bytes in one subject segment.
+pub const MAX_SUBJECT_SEGMENT_BYTES: usize = 40;
 
 /// Maximum size of one authenticated serialized `SQLite` RAG projection.
 ///
@@ -357,6 +361,9 @@ pub struct CanonicalClaim {
     pub visibility: RagVisibility,
     /// Normalized atomic fact.
     pub normalized_fact: String,
+    /// Optional one- or two-level subject, such as `design/visual-style`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
     /// Explicit provenance.
     pub provenance: ClaimProvenance,
     /// Typed scan review and promotion metadata, when this claim came from a scan.
@@ -625,6 +632,12 @@ pub struct RetrievalHit {
     /// Typed scan review metadata projected from the canonical claim.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scan_metadata: Option<ScanClaimMetadata>,
+    /// Subject of a claim hit; hits of one subject group are returned together.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+    /// On a group's first hit: the subject holds more visible claims than were returned.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub subject_truncated: bool,
     /// Current-source validation; absence never asserts current source freshness.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_freshness: Option<SourceFreshness>,
@@ -1163,6 +1176,9 @@ pub fn fuse_semantic_results_with_policy(
             identity.score = entry.0.score;
             identity.matched_field.clone_from(&entry.0.matched_field);
             identity.text.clone_from(&entry.0.text);
+            // Subject grouping is lexical presentation, not citation identity.
+            identity.subject.clone_from(&entry.0.subject);
+            identity.subject_truncated = entry.0.subject_truncated;
             if identity != entry.0
                 || !hit.untrusted_content
                 || !(entry.0.text.starts_with(&hit.text) || hit.text.starts_with(&entry.0.text))
@@ -1171,6 +1187,10 @@ pub fn fuse_semantic_results_with_policy(
                     "fusion citation changed".to_owned(),
                 ));
             }
+            if entry.0.subject.is_none() {
+                entry.0.subject.clone_from(&hit.subject);
+            }
+            entry.0.subject_truncated |= hit.subject_truncated;
             // Prefer the complete canonical text over a budget-truncated copy of the same item.
             if hit.text.len() > entry.0.text.len() {
                 entry.0.text.clone_from(&hit.text);
@@ -1292,6 +1312,9 @@ pub struct RememberRequest {
     pub visibility: RagVisibility,
     /// Atomic normalized fact selected for durable memory.
     pub normalized_fact: String,
+    /// Optional one- or two-level subject, such as `design/visual-style`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
     /// Explicit bounded provenance.
     pub provenance: ClaimProvenance,
     /// Source locators retained for citations.
@@ -1321,6 +1344,8 @@ pub enum RememberDisposition {
     Noop,
     /// The new claim explicitly replaces existing claims.
     Supersede,
+    /// The same active fact receives a new subject in place.
+    Update,
 }
 
 /// Pure canonical changes required by a remember request.
@@ -1460,6 +1485,8 @@ struct ClaimMarkdownEnvelope {
     kind: ClaimKind,
     status: AssertionStatus,
     visibility: RagVisibility,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    subject: Option<String>,
     provenance: ClaimProvenance,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     scan_metadata: Option<ScanClaimMetadata>,
@@ -1519,6 +1546,28 @@ pub fn claim_digest(claim: &CanonicalClaim) -> String {
     let mut supersedes = claim.supersedes.clone();
     supersedes.sort();
     supersedes.dedup();
+    if let Some(subject) = &claim.subject {
+        // Claims without a subject keep their claim-v2 digest byte for byte.
+        let material = serde_json::to_vec(&(
+            "claim-v3",
+            &claim.claim_key,
+            &claim.collection_id,
+            claim.kind,
+            claim.status,
+            claim.visibility,
+            &claim.normalized_fact,
+            subject,
+            &claim.provenance,
+            &claim.scan_metadata,
+            sources,
+            supersedes,
+            &claim.replacement,
+            &claim.observed_at,
+            &claim.verified_at,
+        ))
+        .expect("claim semantic tuple is serializable");
+        return sha256_digest(&material);
+    }
     let material = serde_json::to_vec(&(
         "claim-v2",
         &claim.claim_key,
@@ -1547,7 +1596,11 @@ pub fn claim_digest(claim: &CanonicalClaim) -> String {
 pub fn render_claim_markdown(claim: &CanonicalClaim) -> Result<String, RagError> {
     validate_claim(claim)?;
     let envelope = ClaimMarkdownEnvelope {
-        schema_version: CLAIM_SCHEMA_VERSION,
+        schema_version: if claim.subject.is_some() {
+            CLAIM_SUBJECT_SCHEMA_VERSION
+        } else {
+            CLAIM_SCHEMA_VERSION
+        },
         claim_id: claim.claim_id.clone(),
         claim_key: claim.claim_key.clone(),
         collection_id: claim.collection_id.clone(),
@@ -1555,6 +1608,7 @@ pub fn render_claim_markdown(claim: &CanonicalClaim) -> Result<String, RagError>
         kind: claim.kind,
         status: claim.status,
         visibility: claim.visibility,
+        subject: claim.subject.clone(),
         provenance: claim.provenance.clone(),
         scan_metadata: claim.scan_metadata.clone(),
         revision: claim.revision,
@@ -1590,7 +1644,12 @@ pub fn parse_claim_markdown(locator: &str, markdown: &str) -> Result<CanonicalCl
     })?;
     let envelope: ClaimMarkdownEnvelope = serde_yaml::from_str(frontmatter)
         .map_err(|error| RagError::InvalidInput(format!("parse claim frontmatter: {error}")))?;
-    if envelope.schema_version != CLAIM_SCHEMA_VERSION {
+    let expected_schema = if envelope.subject.is_some() {
+        CLAIM_SUBJECT_SCHEMA_VERSION
+    } else {
+        CLAIM_SCHEMA_VERSION
+    };
+    if envelope.schema_version != expected_schema {
         return Err(RagError::InvalidInput(format!(
             "unsupported claim schema_version {}",
             envelope.schema_version
@@ -1606,6 +1665,7 @@ pub fn parse_claim_markdown(locator: &str, markdown: &str) -> Result<CanonicalCl
         status: envelope.status,
         visibility: envelope.visibility,
         normalized_fact: body.trim().to_owned(),
+        subject: envelope.subject,
         provenance: envelope.provenance,
         scan_metadata: envelope.scan_metadata,
         revision: envelope.revision,
@@ -2162,6 +2222,11 @@ fn semantic_hit(
     score: f64,
 ) -> Result<RetrievalHit, RagError> {
     let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
+    let subject = if candidate.item_kind == "claim" {
+        claim_subject(connection, &candidate.item_id)?
+    } else {
+        None
+    };
     Ok(RetrievalHit {
         source_freshness: None,
         chunk_id: candidate.chunk_id,
@@ -2177,6 +2242,8 @@ fn semantic_hit(
         claim_kind: candidate.claim_kind,
         assertion_status: candidate.assertion_status,
         scan_metadata: candidate.scan_metadata,
+        subject,
+        subject_truncated: false,
         score,
         matched_field: "vector".to_owned(),
         sources,
@@ -2395,52 +2462,104 @@ fn retrieve_from_connection(
     }
     candidates.sort_by(|left, right| compare_candidates(left, right, &folded_query));
 
+    // The top-k budget counts groups: an unsubjected hit is its own group, and a claim
+    // hit with a subject brings every visible active claim of that subject with it.
     let mut hits = Vec::new();
+    let mut emitted = BTreeSet::new();
+    let mut groups = 0_usize;
     let mut returned_bytes = 0_usize;
     let mut insufficient_budget = false;
-    for candidate in candidates {
-        if hits.len() == request.top_k {
+    'groups: for candidate in candidates {
+        if emitted.contains(&candidate.chunk_id) {
+            continue;
+        }
+        if groups == request.top_k {
             insufficient_budget = true;
             break;
         }
-        let remaining = request.byte_budget.saturating_sub(returned_bytes);
-        if remaining == 0 {
-            insufficient_budget = true;
-            break;
-        }
-        let (text, truncated) = truncate_utf8(&candidate.text, remaining);
-        if text.is_empty() {
-            insufficient_budget = true;
-            break;
-        }
-        let sources = load_sources(connection, &candidate.item_kind, &candidate.item_id)?;
+        groups += 1;
         let matched_field = matched_field(&candidate, &folded_query);
         let rank_score = candidate_score(&candidate, &folded_query);
-        returned_bytes += text.len();
-        hits.push(RetrievalHit {
-            source_freshness: None,
-            chunk_id: candidate.chunk_id,
-            collection_id: candidate.collection_id,
-            item_id: candidate.item_id,
-            item_kind: candidate.item_kind,
-            locator: candidate.locator,
-            title: candidate.title,
-            text,
-            digest: candidate.digest,
-            visibility: candidate.visibility,
-            language: candidate.language,
-            claim_kind: candidate.claim_kind,
-            assertion_status: candidate.assertion_status,
-            scan_metadata: candidate.scan_metadata,
-            score: rank_score,
-            matched_field,
-            sources,
-            replacement: candidate.replacement,
-            untrusted_content: true,
-        });
-        if truncated {
-            insufficient_budget = true;
-            break;
+        let subject = if candidate.item_kind == "claim" {
+            claim_subject(connection, &candidate.item_id)?
+        } else {
+            None
+        };
+        let mut members = Vec::new();
+        let mut truncated = false;
+        if let Some(subject) = &subject {
+            let collection = by_id.get(candidate.collection_id.as_str()).ok_or_else(|| {
+                RagError::RepairRequired(format!(
+                    "indexed collection `{}` is absent from the registry",
+                    candidate.collection_id
+                ))
+            })?;
+            // Filter by visibility first, then cap by claim, newest first.
+            let mut member_claims = BTreeSet::new();
+            for member in subject_group_candidates(connection, &candidate.collection_id, subject)? {
+                if member.item_id == candidate.item_id
+                    || emitted.contains(&member.chunk_id)
+                    || !is_visible(&member, collection, &resolved_scope, request)
+                {
+                    continue;
+                }
+                if !member_claims.contains(&member.item_id) {
+                    if member_claims.len() == MAX_SUBJECT_GROUP {
+                        truncated = true;
+                        continue;
+                    }
+                    member_claims.insert(member.item_id.clone());
+                }
+                members.push(member);
+            }
+        }
+        let mut lead_truncated = truncated;
+        let group = std::iter::once((candidate, matched_field)).chain(
+            members
+                .into_iter()
+                .map(|member| (member, "subject".to_owned())),
+        );
+        for (member, member_field) in group {
+            let remaining = request.byte_budget.saturating_sub(returned_bytes);
+            if remaining == 0 {
+                insufficient_budget = true;
+                break 'groups;
+            }
+            let (text, truncated) = truncate_utf8(&member.text, remaining);
+            if text.is_empty() {
+                insufficient_budget = true;
+                break 'groups;
+            }
+            let sources = load_sources(connection, &member.item_kind, &member.item_id)?;
+            returned_bytes += text.len();
+            emitted.insert(member.chunk_id.clone());
+            hits.push(RetrievalHit {
+                source_freshness: None,
+                chunk_id: member.chunk_id,
+                collection_id: member.collection_id,
+                item_id: member.item_id,
+                item_kind: member.item_kind,
+                locator: member.locator,
+                title: member.title,
+                text,
+                digest: member.digest,
+                visibility: member.visibility,
+                language: member.language,
+                claim_kind: member.claim_kind,
+                assertion_status: member.assertion_status,
+                scan_metadata: member.scan_metadata,
+                subject: subject.clone(),
+                subject_truncated: std::mem::take(&mut lead_truncated),
+                score: rank_score,
+                matched_field: member_field,
+                sources,
+                replacement: member.replacement,
+                untrusted_content: true,
+            });
+            if truncated {
+                insufficient_budget = true;
+                break 'groups;
+            }
         }
     }
     Ok(RetrievalResult {
@@ -2673,6 +2792,7 @@ pub fn plan_remember(
         status: request.status,
         visibility: request.visibility,
         normalized_fact: request.normalized_fact.trim().to_owned(),
+        subject: request.subject.clone(),
         provenance: request.provenance.clone(),
         scan_metadata: None,
         revision,
@@ -2683,7 +2803,10 @@ pub fn plan_remember(
         verified_at: request.verified_at.clone(),
         digest: String::new(),
     };
-    let pre_id_digest = claim_digest(&seed);
+    // The subject is a mutable label: it never changes a claim's identity.
+    let mut identity_seed = seed.clone();
+    identity_seed.subject = None;
+    let pre_id_digest = claim_digest(&identity_seed);
     if seed.claim_id.is_empty() {
         seed.claim_id = format!("claim-{}", raw_digest(&pre_id_digest));
         seed.locator = format!(
@@ -2701,16 +2824,39 @@ pub fn plan_remember(
                 && claim.status != AssertionStatus::Superseded
         })
         .collect::<Vec<_>>();
-    if let Some(exact) = active.iter().find(|claim| {
-        claim.claim_key == seed.claim_key
-            && claim.digest == seed.digest
-            && claim.normalized_fact == seed.normalized_fact
-    }) {
-        if seed.supersedes.is_empty() {
-            let _ = exact;
+    if seed.supersedes.is_empty() {
+        if let Some(same) = active.iter().find(|claim| {
+            claim.claim_key == seed.claim_key && claim.normalized_fact == seed.normalized_fact
+        }) {
+            // A changed visibility, status, kind or time is a new truth, never a silent no-op.
+            if same.kind != seed.kind
+                || same.status != seed.status
+                || same.visibility != seed.visibility
+                || same.observed_at != seed.observed_at
+                || same.verified_at != seed.verified_at
+                || same.scan_metadata != seed.scan_metadata
+            {
+                return Err(RagError::Conflict(format!(
+                    "current truth `{}` already has an active claim with different metadata; provide explicit supersedes",
+                    seed.claim_key
+                )));
+            }
+            // Same truth restated: no subject keeps the stored one, a new subject relabels it.
+            if seed.subject.is_none() || same.subject == seed.subject {
+                return Ok(RememberPlan {
+                    disposition: RememberDisposition::Noop,
+                    new_claim: None,
+                    superseded_claims: Vec::new(),
+                });
+            }
+            let mut relabeled = (*same).clone();
+            relabeled.subject.clone_from(&seed.subject);
+            relabeled.revision = revision;
+            relabeled.digest = claim_digest(&relabeled);
+            validate_claim(&relabeled)?;
             return Ok(RememberPlan {
-                disposition: RememberDisposition::Noop,
-                new_claim: None,
+                disposition: RememberDisposition::Update,
+                new_claim: Some(relabeled),
                 superseded_claims: Vec::new(),
             });
         }
@@ -2786,6 +2932,214 @@ pub fn plan_remember(
         new_claim: Some(seed),
         superseded_claims,
     })
+}
+
+/// Maximum number of facts accepted by one batch remember request.
+pub const MAX_REMEMBER_BATCH: usize = 8;
+
+/// Plan several independent remember requests against one canonical snapshot.
+///
+/// Each request is planned against the snapshot plus every earlier plan in the batch,
+/// so the result is identical to applying the requests one by one. Two requests for the
+/// same collection and current-truth key are rejected because their order would decide
+/// the surviving truth. Any failure rejects the whole batch.
+///
+/// # Errors
+///
+/// Returns an error for an empty or oversized batch, a duplicate current-truth key, or
+/// any request rejected by [`plan_remember`].
+pub fn plan_remember_batch(
+    existing: &[CanonicalClaim],
+    requests: &[RememberRequest],
+    revision: u64,
+) -> Result<Vec<RememberPlan>, RagError> {
+    if requests.is_empty() {
+        return Err(RagError::InvalidInput(
+            "remember batch requires at least one fact".to_owned(),
+        ));
+    }
+    if requests.len() > MAX_REMEMBER_BATCH {
+        return Err(RagError::InvalidInput(format!(
+            "remember batch accepts at most {MAX_REMEMBER_BATCH} facts"
+        )));
+    }
+    let mut keys = BTreeSet::new();
+    for request in requests {
+        if !keys.insert((request.collection_id.as_str(), request.claim_key.as_str())) {
+            return Err(RagError::InvalidInput(format!(
+                "remember batch repeats current-truth key `{}`",
+                request.claim_key
+            )));
+        }
+    }
+    let mut working = existing.to_vec();
+    let mut plans = Vec::with_capacity(requests.len());
+    for (index, request) in requests.iter().enumerate() {
+        let plan = plan_remember(&working, request, revision).map_err(|error| match error {
+            RagError::InvalidInput(message) => {
+                RagError::InvalidInput(format!("batch fact {}: {message}", index + 1))
+            }
+            RagError::Conflict(message) => {
+                RagError::Conflict(format!("batch fact {}: {message}", index + 1))
+            }
+            other => other,
+        })?;
+        for rewritten in &plan.superseded_claims {
+            if let Some(slot) = working
+                .iter_mut()
+                .find(|claim| claim.claim_id == rewritten.claim_id)
+            {
+                *slot = rewritten.clone();
+            }
+        }
+        if let Some(new_claim) = &plan.new_claim {
+            if let Some(slot) = working
+                .iter_mut()
+                .find(|claim| claim.claim_id == new_claim.claim_id)
+            {
+                *slot = new_claim.clone();
+            } else {
+                working.push(new_claim.clone());
+            }
+        }
+        plans.push(plan);
+    }
+    Ok(plans)
+}
+
+/// One existing subject offered while recording a fact.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SubjectSuggestion {
+    /// Existing subject.
+    pub subject: String,
+    /// Active claims already filed under the subject.
+    pub active_claims: usize,
+    /// Distinct words the fact shares with the subject and its facts.
+    pub shared_words: usize,
+}
+
+/// Subject guidance for one fact: known subjects to reuse and near duplicates to avoid.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SubjectAdvice {
+    /// Subject requested for the fact, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested: Option<String>,
+    /// Whether the requested subject already holds an active claim.
+    pub existing: bool,
+    /// Existing subjects ranked by shared words.
+    pub suggestions: Vec<SubjectSuggestion>,
+    /// Existing subjects that look like a different spelling of the requested subject.
+    pub near_duplicates: Vec<String>,
+}
+
+fn subject_words(text: &str) -> BTreeSet<String> {
+    text.split(|character: char| !character.is_alphanumeric())
+        .filter(|word| word.chars().count() >= 2)
+        .map(str::to_lowercase)
+        .collect()
+}
+
+fn compact_subject(subject: &str) -> String {
+    subject
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .collect()
+}
+
+/// Rank existing subjects for a fact and flag near-duplicate spellings, without inference.
+///
+/// Only active claims of `collection_id` count. The result is deterministic for the same
+/// claims and input.
+#[must_use]
+pub fn advise_subject(
+    existing: &[CanonicalClaim],
+    collection_id: &str,
+    fact: &str,
+    requested: Option<&str>,
+    limit: usize,
+) -> SubjectAdvice {
+    let mut subjects: BTreeMap<&str, (usize, BTreeSet<String>)> = BTreeMap::new();
+    for claim in existing.iter().filter(|claim| {
+        claim.collection_id == collection_id && claim.status != AssertionStatus::Superseded
+    }) {
+        if let Some(subject) = claim.subject.as_deref() {
+            let entry = subjects.entry(subject).or_default();
+            entry.0 += 1;
+            entry
+                .1
+                .extend(subject_words(&subject_search_words(subject)));
+            entry.1.extend(subject_words(&claim.normalized_fact));
+        }
+    }
+    let mut wanted = subject_words(fact);
+    if let Some(subject) = requested {
+        wanted.extend(subject_words(&subject_search_words(subject)));
+    }
+    let mut suggestions = subjects
+        .iter()
+        .map(|(subject, (count, words))| SubjectSuggestion {
+            subject: (*subject).to_owned(),
+            active_claims: *count,
+            shared_words: words.intersection(&wanted).count(),
+        })
+        .filter(|suggestion| suggestion.shared_words > 0)
+        .collect::<Vec<_>>();
+    suggestions.sort_by(|left, right| {
+        right
+            .shared_words
+            .cmp(&left.shared_words)
+            .then(right.active_claims.cmp(&left.active_claims))
+            .then(left.subject.cmp(&right.subject))
+    });
+    suggestions.truncate(limit);
+    // Only a different spelling of the same words counts: `design/visualstyle` vs
+    // `design/visual-style`. Shared leaves such as `ops/release` and `workflow/release` differ.
+    let near_duplicates = requested.map_or_else(Vec::new, |requested| {
+        subjects
+            .keys()
+            .filter(|subject| **subject != requested)
+            .filter(|subject| compact_subject(subject) == compact_subject(requested))
+            .map(|subject| (*subject).to_owned())
+            .collect()
+    });
+    SubjectAdvice {
+        requested: requested.map(str::to_owned),
+        existing: requested.is_some_and(|subject| subjects.contains_key(subject)),
+        suggestions,
+        near_duplicates,
+    }
+}
+
+/// Rule-based first-pass subject for an existing claim, before host review.
+///
+/// The first two meaningful ASCII words of the claim key form the subject. A key without
+/// such words gets no proposal: a shared catch-all subject would group unrelated facts.
+#[must_use]
+pub fn propose_subject(claim: &CanonicalClaim) -> Option<String> {
+    const STOPWORDS: [&str; 10] = [
+        "the", "and", "to", "of", "for", "a", "an", "user", "hive", "is",
+    ];
+    let words = claim
+        .claim_key
+        .split(|character: char| !character.is_ascii_alphanumeric())
+        .map(str::to_ascii_lowercase)
+        .filter(|word| {
+            word.len() >= 2
+                && !word.bytes().all(|byte| byte.is_ascii_digit())
+                && (word.len() < 16 || !word.bytes().all(|byte| byte.is_ascii_hexdigit()))
+                && !STOPWORDS.contains(&word.as_str())
+        })
+        .map(|word| {
+            word.chars()
+                .take(MAX_SUBJECT_SEGMENT_BYTES)
+                .collect::<String>()
+        })
+        .take(2)
+        .collect::<Vec<_>>();
+    let candidate = words.join("/");
+    (!words.is_empty() && validate_subject(&candidate).is_ok()).then_some(candidate)
 }
 
 /// Select active current truth without interpreting or merging claim text.
@@ -3420,11 +3774,17 @@ fn insert_claim(connection: &Connection, claim: &CanonicalClaim) -> Result<(), R
             ],
         )
         .map_err(sqlite_error)?;
+    let subject_tags = claim
+        .subject
+        .as_deref()
+        .map(subject_tag)
+        .into_iter()
+        .collect::<Vec<_>>();
     insert_search_metadata(
         connection,
         "claim",
         &claim.claim_id,
-        &[],
+        &subject_tags,
         &[],
         &[],
         &claim.sources,
@@ -3570,6 +3930,62 @@ fn document_chunks(document: &CanonicalDocument) -> Vec<IndexedChunk> {
         .collect()
 }
 
+fn claim_chunk_tags(claim: &CanonicalClaim) -> String {
+    match &claim.subject {
+        Some(subject) => format!("{} {}", claim.kind.as_str(), subject_search_words(subject)),
+        None => claim.kind.as_str().to_owned(),
+    }
+}
+
+/// Searchable words of a subject: its segments with separators replaced by spaces.
+fn subject_search_words(subject: &str) -> String {
+    subject.replace(['/', '-'], " ")
+}
+
+/// The search-metadata tag that records a claim's subject in the derived index.
+#[must_use]
+pub fn subject_tag(subject: &str) -> String {
+    format!("subject:{subject}")
+}
+
+/// Validate a one- or two-level lowercase subject such as `design/visual-style`.
+///
+/// # Errors
+///
+/// Returns an error for an empty subject, more than two levels, or a segment outside
+/// lowercase ASCII letters, digits and single inner hyphens.
+pub fn validate_subject(subject: &str) -> Result<(), RagError> {
+    let segments = subject.split('/').collect::<Vec<_>>();
+    let valid_segment = |segment: &&str| {
+        !segment.is_empty()
+            && segment.len() <= MAX_SUBJECT_SEGMENT_BYTES
+            && !segment.starts_with('-')
+            && !segment.ends_with('-')
+            && !segment.contains("--")
+            && segment
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    };
+    if segments.is_empty() || segments.len() > 2 || !segments.iter().all(valid_segment) {
+        return Err(RagError::InvalidInput(format!(
+            "subject must have one or two lowercase segments such as design/visual-style; got `{subject}`"
+        )));
+    }
+    if segments
+        .iter()
+        .any(|segment| segment.len() >= 24 && segment.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    {
+        return Err(RagError::InvalidInput(
+            "subject contains likely credential material".to_owned(),
+        ));
+    }
+    super::reject_likely_credentials(subject.as_bytes()).map_err(|error| {
+        RagError::InvalidInput(format!(
+            "subject contains likely credential material: {error}"
+        ))
+    })
+}
+
 fn claim_chunks(claim: &CanonicalClaim) -> Vec<IndexedChunk> {
     split_text_chunks(&claim.normalized_fact)
         .into_iter()
@@ -3591,7 +4007,7 @@ fn claim_chunks(claim: &CanonicalClaim) -> Vec<IndexedChunk> {
                 digest: claim.digest.clone(),
                 visibility: claim.visibility,
                 language: RagLanguage::Und,
-                tags: claim.kind.as_str().to_owned(),
+                tags: claim_chunk_tags(claim),
                 aliases: claim.claim_key.clone(),
                 claim_kind: Some(claim.kind),
                 assertion_status: Some(claim.status),
@@ -4131,9 +4547,25 @@ fn build_fts_query(query: &str, expansions: &[String]) -> Result<String, RagErro
             "retrieval query must contain searchable Unicode text".to_owned(),
         ));
     }
+    // A non-ASCII token of two or more characters also matches longer stored words, so a
+    // Korean stem finds its particle forms (`남색` finds `남색과`). An ASCII token needs four
+    // or more characters (`font` finds `fonts`), so short English words such as `do` or `is`
+    // stay exact and do not pull in unrelated documents.
     Ok(tokens
         .into_iter()
-        .map(|token| format!("\"{}\"", token.replace('"', "\"\"")))
+        .map(|token| {
+            let quoted = format!("\"{}\"", token.replace('"', "\"\""));
+            let prefix = if token.is_ascii() {
+                token.len() >= 4
+            } else {
+                token.chars().count() >= 2
+            };
+            if prefix {
+                format!("{quoted}*")
+            } else {
+                quoted
+            }
+        })
         .collect::<Vec<_>>()
         .join(" OR "))
 }
@@ -4166,6 +4598,54 @@ fn search_tokens(value: &str) -> Vec<String> {
         tokens.push(current);
     }
     tokens
+}
+
+/// Maximum claims returned with one subject group's first hit.
+const MAX_SUBJECT_GROUP: usize = 16;
+/// Maximum indexed chunks inspected for one subject group before visibility filtering.
+const MAX_SUBJECT_GROUP_SCAN: usize = 512;
+
+fn claim_subject(connection: &Connection, claim_id: &str) -> Result<Option<String>, RagError> {
+    let tag = connection
+        .query_row(
+            "SELECT tag FROM tags WHERE item_kind = 'claim' AND item_id = ?1 AND tag LIKE 'subject:%' ORDER BY tag LIMIT 1",
+            [claim_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(sqlite_error)?;
+    Ok(tag.and_then(|tag| tag.strip_prefix("subject:").map(str::to_owned)))
+}
+
+fn subject_group_candidates(
+    connection: &Connection,
+    collection_id: &str,
+    subject: &str,
+) -> Result<Vec<Candidate>, RagError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT c.chunk_id, c.item_kind, c.item_id, c.collection_id, c.title, c.text, c.locator, c.digest, c.visibility, c.language, c.tags, c.aliases, c.claim_kind, c.assertion_status, c.scan_metadata_json, c.replacement, 0.0 AS rank
+             FROM chunks c
+             JOIN tags t ON t.item_kind = 'claim' AND t.item_id = c.item_id
+             WHERE c.item_kind = 'claim'
+               AND c.collection_id = ?1
+               AND t.tag = ?2
+               AND c.replacement IS NULL
+             ORDER BY c.revision DESC, c.title ASC, c.item_id ASC, c.ordinal ASC
+             LIMIT ?3",
+        )
+        .map_err(sqlite_error)?;
+    let rows = statement
+        .query_map(
+            params![
+                collection_id,
+                subject_tag(subject),
+                sql_i64_usize("subject group scan limit", MAX_SUBJECT_GROUP_SCAN)?
+            ],
+            candidate_from_row,
+        )
+        .map_err(sqlite_error)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(sqlite_error)
 }
 
 fn candidate_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Candidate> {
@@ -4388,6 +4868,9 @@ fn validate_claim(claim: &CanonicalClaim) -> Result<(), RagError> {
             "claim revision must be greater than zero".to_owned(),
         ));
     }
+    if let Some(subject) = &claim.subject {
+        validate_subject(subject)?;
+    }
     validate_provenance(&claim.provenance)?;
     if let Some(metadata) = &claim.scan_metadata {
         validate_scan_metadata(metadata)?;
@@ -4556,6 +5039,9 @@ fn validate_remember_request(request: &RememberRequest, revision: u64) -> Result
             "provenance.summary contains likely credential material: {error}"
         ))
     })?;
+    if let Some(subject) = &request.subject {
+        validate_subject(subject)?;
+    }
     Ok(())
 }
 
@@ -4775,6 +5261,8 @@ mod tests {
             claim_kind: None,
             assertion_status: None,
             scan_metadata: None,
+            subject: None,
+            subject_truncated: false,
             score,
             matched_field: "text".to_owned(),
             sources: vec!["reviewed-test".to_owned()],
@@ -4878,6 +5366,21 @@ mod tests {
         assert!(!numbered_literal_token("alpha-beta"));
         assert!(!numbered_literal_token("3개"));
         assert!(!numbered_literal_token("b12"));
+    }
+
+    #[test]
+    fn fusion_accepts_a_subject_on_one_side_and_keeps_it() {
+        let (request, mut lexical, semantic) = literal_fusion_fixture();
+        lexical.hits[0].subject = Some("design/visual-style".to_owned());
+        let fused = fuse_semantic_results_with_policy(&request, lexical, &semantic)
+            .expect("subject-bearing lexical hit fuses with its semantic copy");
+        let first = fused
+            .result
+            .hits
+            .iter()
+            .find(|hit| hit.chunk_id == "first")
+            .expect("fused first hit");
+        assert_eq!(first.subject.as_deref(), Some("design/visual-style"));
     }
 
     #[test]
@@ -5082,6 +5585,7 @@ mod tests {
             status: AssertionStatus::UserStated,
             visibility: RagVisibility::ProjectPrivate,
             normalized_fact: fact.to_owned(),
+            subject: None,
             provenance: provenance(fact),
             sources: vec!["request:editor".to_owned()],
             supersedes: Vec::new(),
@@ -5108,6 +5612,7 @@ mod tests {
             status: AssertionStatus::UserStated,
             visibility,
             normalized_fact: fact.to_owned(),
+            subject: None,
             provenance: provenance(seed),
             scan_metadata: None,
             revision: 1,
@@ -5120,6 +5625,238 @@ mod tests {
         };
         claim.digest = claim_digest(&claim);
         claim
+    }
+
+    fn subject_claim(collection_id: &str, seed: &str, fact: &str, subject: &str) -> CanonicalClaim {
+        let mut claim = claim(
+            collection_id,
+            seed,
+            &format!("key-{seed}"),
+            fact,
+            RagVisibility::Shared,
+        );
+        claim.subject = Some(subject.to_owned());
+        claim.digest = claim_digest(&claim);
+        claim
+    }
+
+    #[test]
+    fn subject_validation_accepts_one_or_two_lowercase_levels_only() {
+        for valid in ["design", "design/visual-style", "web3/color-2"] {
+            validate_subject(valid).unwrap_or_else(|error| panic!("{valid}: {error}"));
+        }
+        for invalid in [
+            "",
+            "Design",
+            "design/",
+            "/design",
+            "a/b/c",
+            "design/visual_style",
+            "design/-style",
+            "design/style-",
+            "design/visual--style",
+            "디자인",
+            &"x".repeat(MAX_SUBJECT_SEGMENT_BYTES + 1),
+        ] {
+            assert!(validate_subject(invalid).is_err(), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn subjectless_claims_keep_schema_one_and_their_claim_v2_digest() {
+        let plain = claim(
+            USER_ROOT_COLLECTION_ID,
+            "plain",
+            "plain-key",
+            "Use concise output.",
+            RagVisibility::Shared,
+        );
+        let mut sources = plain.sources.clone();
+        sources.sort();
+        let legacy = sha256_digest(
+            &serde_json::to_vec(&(
+                "claim-v2",
+                &plain.claim_key,
+                &plain.collection_id,
+                plain.kind,
+                plain.status,
+                plain.visibility,
+                &plain.normalized_fact,
+                &plain.provenance,
+                &plain.scan_metadata,
+                sources,
+                Vec::<String>::new(),
+                &plain.replacement,
+                &plain.observed_at,
+                &plain.verified_at,
+            ))
+            .expect("legacy tuple"),
+        );
+        assert_eq!(plain.digest, legacy);
+        let markdown = render_claim_markdown(&plain).expect("render");
+        assert!(markdown.contains("schema_version: 1\n"));
+        assert!(!markdown.contains("subject:"));
+        assert_eq!(
+            parse_claim_markdown(&plain.locator, &markdown).expect("parse"),
+            plain
+        );
+
+        let with_subject = subject_claim(
+            USER_ROOT_COLLECTION_ID,
+            "plain",
+            "Use concise output.",
+            "writing/output-style",
+        );
+        assert_ne!(with_subject.digest, plain.digest);
+        let markdown = render_claim_markdown(&with_subject).expect("render subject");
+        assert!(markdown.contains("schema_version: 2\n"));
+        assert!(markdown.contains("subject: writing/output-style\n"));
+        assert_eq!(
+            parse_claim_markdown(&with_subject.locator, &markdown).expect("parse subject"),
+            with_subject
+        );
+        // A schema-one claim cannot smuggle a subject, and schema two requires one.
+        let smuggled = markdown.replacen("schema_version: 2\n", "schema_version: 1\n", 1);
+        assert!(parse_claim_markdown(&with_subject.locator, &smuggled).is_err());
+        let plain_markdown = render_claim_markdown(&plain).expect("render");
+        let bumped = plain_markdown.replacen("schema_version: 1\n", "schema_version: 2\n", 1);
+        assert!(parse_claim_markdown(&plain.locator, &bumped).is_err());
+        // A changed subject breaks the stored digest.
+        let tampered = markdown.replacen(
+            "subject: writing/output-style\n",
+            "subject: writing/other\n",
+            1,
+        );
+        assert!(parse_claim_markdown(&with_subject.locator, &tampered).is_err());
+        let mut invalid = with_subject.clone();
+        invalid.subject = Some("Writing".to_owned());
+        invalid.digest = claim_digest(&invalid);
+        assert!(render_claim_markdown(&invalid).is_err());
+    }
+
+    #[test]
+    fn subject_index_rebuild_is_deterministic_and_tags_subjects() {
+        let registry = registry();
+        let claims = vec![
+            subject_claim(
+                USER_ROOT_COLLECTION_ID,
+                "style",
+                "Pages use a minimal style.",
+                "design/visual-style",
+            ),
+            subject_claim(
+                USER_ROOT_COLLECTION_ID,
+                "color",
+                "Pages use muted blue.",
+                "design/visual-style",
+            ),
+            claim(
+                USER_ROOT_COLLECTION_ID,
+                "plain",
+                "plain-key",
+                "Use concise output.",
+                RagVisibility::Shared,
+            ),
+        ];
+        let snapshot = RagSnapshot {
+            schema_version: RAG_SCHEMA_VERSION,
+            generation: 1,
+            registry,
+            documents: Vec::new(),
+            claims: claims.clone(),
+        };
+        let first = build_rag_index(&snapshot).expect("first index");
+        let mut reversed = snapshot.clone();
+        reversed.claims.reverse();
+        let second = build_rag_index(&reversed).expect("second index");
+        assert_eq!(first.sqlite_bytes, second.sqlite_bytes);
+        assert_eq!(first.manifest, second.manifest);
+
+        let directory = tempfile::tempdir().expect("index directory");
+        let path = directory.path().join("index.sqlite3");
+        std::fs::write(&path, &first.sqlite_bytes).expect("write index");
+        let connection = Connection::open(&path).expect("open index");
+        let mut statement = connection
+            .prepare(
+                "SELECT item_id FROM tags WHERE item_kind = 'claim' AND tag = ?1 ORDER BY item_id",
+            )
+            .expect("tag query");
+        let tagged = statement
+            .query_map([subject_tag("design/visual-style")], |row| {
+                row.get::<_, String>(0)
+            })
+            .expect("tag rows")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("tags");
+        let mut expected = vec![claims[0].claim_id.clone(), claims[1].claim_id.clone()];
+        expected.sort();
+        assert_eq!(tagged, expected);
+    }
+
+    #[test]
+    fn subject_advice_reuses_existing_subjects_and_flags_near_duplicates() {
+        let claims = vec![
+            subject_claim(
+                USER_ROOT_COLLECTION_ID,
+                "style",
+                "HTML pages use a minimal visual style.",
+                "design/visual-style",
+            ),
+            subject_claim(
+                USER_ROOT_COLLECTION_ID,
+                "color",
+                "HTML pages use a muted palette.",
+                "design/color",
+            ),
+            subject_claim(
+                USER_ROOT_COLLECTION_ID,
+                "deploy",
+                "Deploys run on Fridays.",
+                "ops/deploy",
+            ),
+        ];
+        let advice = advise_subject(
+            &claims,
+            USER_ROOT_COLLECTION_ID,
+            "HTML pages avoid drop shadows.",
+            None,
+            5,
+        );
+        assert_eq!(advice.suggestions[0].subject, "design/color");
+        assert!(advice
+            .suggestions
+            .iter()
+            .all(|item| item.subject != "ops/deploy"));
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
+        let advice = advise_subject(
+            &claims,
+            USER_ROOT_COLLECTION_ID,
+            "HTML pages use thin borders.",
+            Some("design/visualstyle"),
+            5,
+        );
+        assert!(!advice.existing);
+        assert_eq!(
+            advice.near_duplicates,
+            vec!["design/visual-style".to_owned()]
+        );
+        let advice = advise_subject(
+            &claims,
+            USER_ROOT_COLLECTION_ID,
+            "Release notes stay short.",
+            Some("docs/color"),
+            5,
+        );
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
+        let advice = advise_subject(
+            &claims,
+            USER_ROOT_COLLECTION_ID,
+            "x",
+            Some("design/color"),
+            5,
+        );
+        assert!(advice.existing);
+        assert_eq!(advice.near_duplicates, Vec::<String>::new());
     }
 
     #[test]
@@ -5182,6 +5919,55 @@ mod tests {
             replacement_plan.superseded_claims[0].status,
             AssertionStatus::Superseded
         );
+    }
+
+    #[test]
+    fn restatement_is_noop_or_relabel_only_when_the_truth_metadata_matches() {
+        let collection = USER_ROOT_COLLECTION_ID;
+        let first = plan_remember(&[], &remember_request(collection, "Use tabs."), 1)
+            .expect("insert")
+            .new_claim
+            .expect("claim");
+        let existing = vec![first.clone()];
+        let same =
+            plan_remember(&existing, &remember_request(collection, "Use tabs."), 2).expect("noop");
+        assert_eq!(same.disposition, RememberDisposition::Noop);
+        let mut labeled = remember_request(collection, "Use tabs.");
+        labeled.subject = Some("tools/editor".to_owned());
+        let relabel = plan_remember(&existing, &labeled, 2).expect("update");
+        assert_eq!(relabel.disposition, RememberDisposition::Update);
+        assert_eq!(
+            relabel.new_claim.expect("relabeled").claim_id,
+            first.claim_id
+        );
+        let mut confidential = remember_request(collection, "Use tabs.");
+        confidential.visibility = RagVisibility::Confidential;
+        assert!(matches!(
+            plan_remember(&existing, &confidential, 2),
+            Err(RagError::Conflict(_))
+        ));
+        let mut verified = remember_request(collection, "Use tabs.");
+        verified.status = AssertionStatus::Verified;
+        verified.verified_at = Some("2026-11-16T00:00:00Z".to_owned());
+        assert!(matches!(
+            plan_remember(&existing, &verified, 2),
+            Err(RagError::Conflict(_))
+        ));
+    }
+
+    #[test]
+    fn fts_prefix_matching_skips_short_ascii_words() {
+        let query = build_fts_query("do is font 남색 색", &[]).expect("query");
+        assert_eq!(
+            query,
+            "\"do\" OR \"is\" OR \"font\"* OR \"남색\"* OR \"색\""
+        );
+    }
+
+    #[test]
+    fn subject_validation_rejects_credential_like_segments() {
+        assert!(validate_subject(&format!("keys/{}", "a1b2c3d4".repeat(4))).is_err());
+        assert!(validate_subject("design/visual-style").is_ok());
     }
 
     #[test]

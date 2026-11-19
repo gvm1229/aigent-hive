@@ -9,7 +9,7 @@ summary: "Codex·Claude Code·Gemini Antigravity의 연동과 실제 검증 범�
 tags: [host, support]
 aliases: ["Host 지원"]
 sources:
-  - "repo:docs/overview/product.md#sha256:d319ff6c624af8aa01d94e2daeeb8c7f4c3b9ccd1a16c3fd7d03514d9ff69a4a"
+  - "repo:docs/overview/product.md#sha256:fba59d6e2de4a1d193ef14c48be138358af9410ffabe4c079938cc52f08b68b6"
   - "repo:docs/research/overhaul/OV150-001.md#sha256:3d4b1d642c7c3dfe3be45e8f4df4191994bdbe8832a586b729370eaa108192d9"
 links: [product-purpose, usage-sensor-policy]
 reviewed_revision: "git:5ac2241398eece800912f20c25e84bc13332304a"

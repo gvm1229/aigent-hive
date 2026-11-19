@@ -10,8 +10,8 @@ tags: [installation, migration, projection, update]
 aliases: ["Post-update projection refresh"]
 sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:0653e7f8726d66b01b155e761f705055c4a9857a49e57a4c79bca2c95579be66"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:307f40fbc24d404398dc5852f746f03f8599379fd22716f54cfc1ae13a3600af"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:34e8f7c0d827e90ed98a1b8832f8a2ab4b19f736ea67135f6fe71f728bf87287"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:78a72f681ee0b81c56872449d08e5dc633a3c8f98c8540026eb6799c510bb12c"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:082645d4de44857f384e5613bbee10866928140c3932115fb3181baa7c3e27cb"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
 links: [interactive-binary-update, multi-host-user-install, projection-upgrade-purge]

@@ -25,6 +25,47 @@ pub(super) fn defaults(
         "approved_optional_skills":[],"approved_fallback_hooks":[],"preference_decisions":{}})
 }
 
+/// Whether the project flow still asks `question` with the current answers.
+fn will_ask(
+    question: &Question,
+    progress: &SetupProgress,
+    global: &hive_render::GlobalProjectPreferences,
+    review_sharing: bool,
+    review_roles: bool,
+) -> bool {
+    if question.scope != PreferenceScope::Project {
+        return false;
+    }
+    if question.id == "project-mode" {
+        return !super::super::interactive::answered(progress, question);
+    }
+    let quick = progress.answers["setup_mode"] == "expedited";
+    let quick_question = matches!(
+        question.id.as_str(),
+        "project-name" | "project-kind" | "project-host"
+    ) || (review_sharing && question.id == "project-knowledge-promotion")
+        || (review_roles && question.id == "project-roles");
+    if matches!(
+        question.id.as_str(),
+        "project-role-update"
+            | "project-knowledge-root"
+            | "project-extras"
+            | "project-extras-input"
+            | "project-extras-confirm"
+    ) || (quick && !quick_question)
+    {
+        return false;
+    }
+    question.applicable(&progress.answers)
+        && !(super::super::interactive::answered(progress, question)
+            && progress
+                .answers
+                .pointer(&question.key)
+                .is_some_and(|value| {
+                    super::input::error(question, &progress.answers, value, global).is_none()
+                }))
+}
+
 pub(super) fn collect<R: BufRead, W: Write>(
     store: &ProgressStore,
     snapshot: &mut ProgressSnapshot,
@@ -36,56 +77,44 @@ pub(super) fn collect<R: BufRead, W: Write>(
     let review_sharing = progress.step == "project-knowledge-root";
     let review_roles = progress.step == "project-role-update";
     let catalog = super::super::catalog()?;
+    let mut asked = 0;
+    // Step number and the total still planned with the answers so far.
+    let step = |asked: usize, from: usize, progress: &SetupProgress| {
+        let remaining = catalog.questions[from..]
+            .iter()
+            .filter(|q| will_ask(q, progress, global, review_sharing, review_roles))
+            .count();
+        Some((asked + 1, asked + remaining.max(1)))
+    };
     let mode = catalog
         .questions
         .iter()
         .find(|q| q.id == "project-mode")
         .expect("project mode");
-    if !super::super::interactive::answered(progress, mode)
-        && !ask(store, snapshot, progress, mode, global, terminal)?
-    {
-        return Ok(false);
+    if !super::super::interactive::answered(progress, mode) {
+        let numbered = step(asked, 0, progress);
+        if !ask(store, snapshot, progress, mode, global, numbered, terminal)? {
+            return Ok(false);
+        }
+        asked += 1;
     }
     let quick = progress.answers["setup_mode"] == "expedited";
     if !quick {
         seed_overrides(&mut progress.answers, global);
     }
-    for question in catalog
-        .questions
-        .iter()
-        .filter(|q| q.scope == PreferenceScope::Project)
-    {
-        let quick_question = matches!(
-            question.id.as_str(),
-            "project-name" | "project-kind" | "project-host"
-        ) || (review_sharing && question.id == "project-knowledge-promotion")
-            || (review_roles && question.id == "project-roles");
-        if matches!(
-            question.id.as_str(),
-            "project-mode"
-                | "project-role-update"
-                | "project-knowledge-root"
-                | "project-extras"
-                | "project-extras-input"
-                | "project-extras-confirm"
-        ) || (quick && !quick_question)
+    for (index, question) in catalog.questions.iter().enumerate() {
+        if question.id == "project-mode"
+            || !will_ask(question, progress, global, review_sharing, review_roles)
         {
             continue;
         }
-        if !question.applicable(&progress.answers)
-            || (super::super::interactive::answered(progress, question)
-                && progress
-                    .answers
-                    .pointer(&question.key)
-                    .is_some_and(|value| {
-                        super::input::error(question, &progress.answers, value, global).is_none()
-                    }))
-        {
-            continue;
-        }
-        if !ask(store, snapshot, progress, question, global, terminal)? {
+        let numbered = step(asked, index, progress);
+        if !ask(
+            store, snapshot, progress, question, global, numbered, terminal,
+        )? {
             return Ok(false);
         }
+        asked += 1;
         if question.id == "project-language" {
             terminal.language = if progress.answers["interface_language"] == "ko" {
                 InterfaceLanguage::Ko
@@ -145,44 +174,92 @@ pub(super) fn seed_overrides(answers: &mut Value, global: &hive_render::GlobalPr
         .or_insert_with(|| json!({"mode":"individual","selected":global.selected_project_skills}));
 }
 
+/// Preview of the effective project values, grouped into titled sections of `name: value` rows.
 pub(super) fn preview<R: BufRead, W: Write>(
     answers: &Value,
     global: &hive_render::GlobalProjectPreferences,
+    changed_files: usize,
     terminal: &mut Terminal<R, W>,
 ) -> Result<(), SetupError> {
+    use super::super::layout::{self, Row};
+    let korean = terminal.language == InterfaceLanguage::Ko;
     let mut shown = answers.clone();
+    let mut lines = Vec::new();
     if shown["setup_mode"] == "expedited" {
-        terminal.say(
-            "언어·문서·답변 방식은 전역 설정을 따르고, 기능은 프로젝트 권장 묶음을 사용합니다. 아래는 현재 적용값입니다.",
-            "Language, documents, and response style inherit global settings; features use the project default bundle. Current effective values follow.",
-        )?;
+        lines.extend(layout::block(
+            if korean {
+                "언어·문서·답변 방식은 전역 설정을 따르고, 기능은 프로젝트 권장 묶음을 사용합니다. 아래는 현재 적용값입니다."
+            } else {
+                "Language, documents, and response style inherit global settings; features use the project default bundle. Current effective values follow."
+            },
+            layout::INDENT,
+        ));
         seed_overrides(&mut shown, global);
         shown["usage_stop_remaining_percent"] = json!(global.usage_stop_remaining_percent);
     }
     let catalog = super::super::catalog()?;
+    let (mut general, mut features, mut knowledge) = (Vec::new(), Vec::new(), Vec::new());
     for question in catalog
         .questions
         .iter()
         .filter(|q| q.scope == PreferenceScope::Project && q.applicable(&shown))
     {
-        if let Some(value) = shown.pointer(&question.key) {
-            writeln!(
-                terminal.writer,
-                "{} {}",
-                question
-                    .prompt
-                    .get(terminal.language == InterfaceLanguage::Ko),
-                super::super::terminal::display_value(
-                    question,
-                    value,
-                    terminal.language == InterfaceLanguage::Ko
-                )
-            )
-            .map_err(|error| SetupError::Internal(error.to_string()))?;
+        let Some(value) = shown.pointer(&question.key) else {
+            continue;
+        };
+        let row = Row {
+            name: layout::question_title(&question.id, korean).to_owned(),
+            values: super::super::layout::values(question, value, korean),
+        };
+        match question.section.as_str() {
+            "skills" | "roles" | "extensions" => features.push(row),
+            "knowledge" => knowledge.push(row),
+            _ => general.push(row),
         }
     }
-    terminal.say("선택 기능과 후크:", "Optional features and hooks:")?;
-    super::extras::show_choices(answers, terminal)?;
+    features.extend(super::extras::choice_rows(answers, korean));
+    let none = if korean { "없음" } else { "None" };
+    let sections = [
+        (if korean { "일반" } else { "General" }, general),
+        (if korean { "기능" } else { "Features" }, features),
+        (
+            if korean {
+                "지식 경로"
+            } else {
+                "Knowledge paths"
+            },
+            knowledge,
+        ),
+        (
+            if korean {
+                "변경 규모"
+            } else {
+                "Change size"
+            },
+            vec![Row {
+                name: if korean {
+                    "변경 파일 수"
+                } else {
+                    "Changed file count"
+                }
+                .to_owned(),
+                values: vec![changed_files.to_string()],
+            }],
+        ),
+    ];
+    for (name, rows) in sections {
+        lines.push(String::new());
+        lines.push(layout::section(name));
+        if rows.is_empty() {
+            lines.push(format!("{}{none}", layout::INDENT));
+        } else {
+            lines.extend(layout::table(&rows).lines().map(str::to_owned));
+        }
+    }
+    for line in lines {
+        writeln!(terminal.writer, "{line}")
+            .map_err(|error| SetupError::Internal(error.to_string()))?;
+    }
     Ok(())
 }
 
@@ -192,6 +269,7 @@ fn ask<R: BufRead, W: Write>(
     progress: &mut SetupProgress,
     question: &Question,
     global: &hive_render::GlobalProjectPreferences,
+    step: Option<(usize, usize)>,
     terminal: &mut Terminal<R, W>,
 ) -> Result<bool, SetupError> {
     progress.step.clone_from(&question.id);
@@ -220,7 +298,7 @@ fn ask<R: BufRead, W: Write>(
                     "Detected: {names} ({}). Is this correct?",
                     profile.project_kind()
                 );
-                match terminal.ask(&confirmation, None)? {
+                match terminal.ask_step(&confirmation, None, step)? {
                     AnswerInput::Answered {
                         value: Value::Bool(true),
                         ..
@@ -249,7 +327,9 @@ fn ask<R: BufRead, W: Write>(
                     && super::input::error(question, &progress.answers, value, global).is_none()
             })
             .or(fallback.as_ref());
-        let AnswerInput::Answered { mut value, origin } = terminal.ask(question, current)? else {
+        let AnswerInput::Answered { mut value, origin } =
+            terminal.ask_step(question, current, step)?
+        else {
             return Ok(false);
         };
         super::input::normalize(question, &mut value);

@@ -14,6 +14,7 @@
 - [시작 근거](../../research/overhaul/stage-2-start.md) · [기존 결과·한계](../../research/overhaul/stage-2-closeout.md) · [검토](../../research/overhaul/stage-2-review.md)
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
+- 단계 5: 2026-11-15 cloud 세션 시작, `feature/overhaul-5-0.15.3-memory`. [시작 근거](../../research/overhaul/OV153-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV153-001–009 완료(검토·develop 병합·0.15.3-test.1 세 OS 수용), OV153-010은 [local 넘기기](../../research/overhaul/OV153-local-handoff.md)
 - 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
 
 ## 승인
@@ -26,7 +27,7 @@
 1. [07](../../../.agents/directives/07-installed-usage-guard.md) 사용량 사전 확인, 차단 시 즉시 중단
 2. 단계 파일·브랜치 확인. 부재 시 아래 새 단계 절차
 3. [재조정](../../../.agents/directives/references/plan-reconciliation.md): 계획·소스·시험·커밋 대조, 완료 근거 반영·불확실 항목 미완료
-4. 첫 `- [ ]`·`state: agent-owned` 중 의존성 완료 항목 선택
+4. 첫 `- [ ]`·`state: agent-owned` 중 의존성 완료 항목 선택. [실행 장소](venue.md)가 현재 세션과 맞는 항목만
 5. [06](../../../.agents/directives/06-session-coordination.md) 세션 기록에 수정 경로 예약
 6. 항목 범위 실행, 설계 문제는 소유자 보고·임의 확장 금지
 7. 확인 실행. 실패는 미완료·중단 메모, 문서 변경은 documentation 검사와 문체 종료 0 필수
@@ -38,6 +39,8 @@
 2026-11-10 승인: 단계 브랜치·push·원격 삭제·버전 시작·정식 출시. [브랜치 규칙](../../guides/branching-rules.md) 승인 예외, 제공자 실행은 ADR-0026 적용.
 
 2026-11-12 재정비 상시 승인: 정식 배포 포함 전 항목 사전 승인. 구조 선택도 권고안으로 진행·이유 기록, 응답 대기 없음. 검사·수용·계획 순서 통과 시 정식·main·게시·설치 승인 기록. 재정비 밖은 AGENTS·01 그대로. [승인 반영·검증](../../research/overhaul/autonomy-default.md)
+
+2026-11-19 확대: 관리자 대화형 확인(호스트 Skill·앱 표시·터미널 화면)도 에이전트가 화면 조작·`codex exec`·가상 터미널로 대리 수행이 기본. 사람 개입 최소, 대리 확인은 증거에 범위·한계 명시. 수행 불가 항목만 미검증 기록 뒤 진행
 
 - 단계별 브랜치·타 단계 구현 금지. 단계 3 왕복 검증 우선
 - 새 단계: 이전 develop 병합 확인 → `git switch develop` → `git pull --ff-only` → `python scripts/branch-policy.py create <단계 브랜치>` → 현재 위치 갱신
@@ -57,7 +60,7 @@
 | 2 | `test/overhaul-2-baseline` |
 | 3 | `feature/overhaul-3-0.15.0-orchestrator` |
 | 4 | `feature/overhaul-4-0.15.1-detection` |
-| 5 | `feature/overhaul-5-0.15.2-memory` |
+| 5 | `feature/overhaul-5-0.15.3-memory` |
 | 6 | `feature/overhaul-6-0.16.0-mediation` |
 | 7 | `feature/overhaul-7-0.17.0-overnight-loop` |
 
@@ -94,11 +97,12 @@
 | 3 호스트 참조 처리기 | [0.15.0-host-reference.md](../active/0.15.0-host-reference.md) | 있음 | OV150-001·OV150-006, 정식 전 | 1/1 |
 | 3 컴파일러 호환 | [0.15.0-qualification.md](../active/0.15.0-qualification.md) | 있음 | 첫 원격 CI | 1/1 |
 | 3 운영체제 시험 도구 | [0.15.0-windows-qualification.md](../active/0.15.0-windows-qualification.md) | 없음 | 원격 CI 실패 | 4/4 |
-| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 9/12 |
+| 4 0.15.1 판별 | [0.15.1-detection.md](../active/0.15.1-detection.md) | 있음 | 0.15.0 정식 | 12/12 |
 | 4 CLI·업데이트 설명 | [0.15.1-human-output.md](../active/0.15.1-human-output.md) | 있음 | 2026-11-13 최우선 요청·2026-11-14 재확인(다른 모든 작업보다 먼저) | 6/6 |
-| 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 9/10 |
-| 5 0.15.2 기억 | [0.15.2-memory.md](0.15.2-memory.md) | 있음 | 0.15.1 정식 | 0/10 |
-| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.2 정식 | 0/11 |
+| 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 10/10 |
+| 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 10/10·정식 |
+| 5 0.15.3 기억 | [0.15.3-memory.md](../active/0.15.3-memory.md) | 있음 | 0.15.2 정식 | 9/10 |
+| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 0/11 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |
 
 ## 불변 조건

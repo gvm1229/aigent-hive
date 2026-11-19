@@ -41,6 +41,26 @@ Task당 one-shot 확인 1회. Tool·mutation·push·최종 응답 전 반복 gat
 Exit `3`, `hive.usage-limited`, `hive.usage-unknown`: guard control·동의한 fallback recovery 외
 작업 중단.
 
+## 0.15.3 호스트별 5시간·주간 보호
+
+사용량 보호를 켜면 `hive setup --scope user --section usage`가 선택한 앱마다 한 번씩, 앱 순서대로 질문.
+제목은 `[n/N] Claude Code · 5시간 한도 여부`처럼 앱 이름 표시.
+
+1. 이 앱 구독에 5시간 한도가 있는지: 예/아니요
+2. 예이면 보호할 한도: 1 5시간만(A) · 2 주간만(B) · 3 둘 다(C). 아니요이면 이 질문 없이 주간만
+3. 잔여량 기준(0~99): A·B·주간만은 1개, C는 5시간·주간 기준을 각각 질문
+
+Antigravity는 5시간·주간 구분 없이 사용량 묶음(provider pool)만 알려 주므로 잔여량 기준 1개만 질문.
+저장은 `five_hour_limit: false`·`guard: weekly` 모양, 평가는 모든 묶음에 그 기준 적용. `--show`에는 `guard: provider`로 표시.
+
+- 저장: `usage_guard.host_windows.<host>`. 앱 항목이 없는 이전 설정은 단일 기준의 기존 동작 유지(5시간 우선, 없으면 주간)
+- 평가: 보호하기로 고른 한도만 각자의 기준으로 확인. 고르지 않은 한도의 소진·측정 없음은 차단 사유 아님. 0%·초기화 보호도 고른 한도에만 적용. 프로젝트별 기준은 각 한도의 하한을 올림
+- 측정 없음: 고른 한도의 측정이 없으면 `hive.usage-unknown` 유지. 결과의 `missing_windows`와 문구가 빠진 한도를 표시하고 `next_action`이 세션 기록 설정·세션 해제·동의한 대체 조회를 안내
+- 세션 해제 뒤: `hive usage session --action disable --confirm-session-disable` 뒤 같은 연결의 `enforce`: 측정이 없어도 `hive.usage-session-bypassed`(종료 코드 0), 새 차단 기록 없음. `status`와 자동 실행 직전 재확인도 같은 판단(같은 연결이 계속 해제 상태일 때만). 측정된 0%는 0% 보호의 별도 해제 전까지 차단
+- 표시 기준: `enforce`·`status`의 `threshold_remaining_percent`는 고른 한도 기준 중 가장 높은 값, `guarded_windows`에 한도별 기준
+- 실행 중 감시(Codex): 시작 전 검사와 같은 앱별 선택·한도별 기준 적용. 앱 항목이 없으면 단일 기준. `hive usage monitor status`와 `hive setup --scope user --show`의 `usage_windows`에 같은 선택 표시
+- Codex 30일 한도: codex-cli 0.167의 43,200분 단일 창은 주간 자리의 긴 한도로 해석. 그 밖의 알 수 없는 창 길이는 계속 차단
+
 ## Quota Reset Guard
 
 - `0.11.0` 개발 범위: `usage_guard.quota_reset_guard_enabled` 기본값 `true`
@@ -75,6 +95,10 @@ hive usage threshold --user-root <user-root> --remaining-percent <0..99>
 ```text
 hive usage threshold --target <project-root> --remaining-percent <0..99>
 ```
+
+0.15.3부터 global 변경은 기본 기준과 함께, 앱별 한도 선택이 저장된 모든 앱의 보호 한도 기준을 같은 값으로 변경.
+결과의 `host_windows_updated`에 바뀐 앱 표시. 앱·한도마다 다른 기준은 `hive setup --scope user --section usage`로 설정.
+0.15.2는 `host_windows`가 있는 `user-setup.yml`을 알 수 없는 항목으로 거부하므로 0.15.2로 되돌리기 전 해당 항목 제거 필요.
 
 0.13.2의 허용 범위0~99%.0%는 비활성화가 아닌 소진 보호, 양수 할당량 실행과 크레딧 잔액에 무관한0% 차단. 더 높은 프로젝트 하한 유지.
 

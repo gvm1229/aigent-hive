@@ -20,6 +20,7 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
             "--query",
             "--top-k",
             "--byte-budget",
+            "--expansions",
             "--mode",
             "--authorization-id",
             "--authorization-token",
@@ -116,9 +117,15 @@ pub(super) fn parse_retrieval_request(
     default_scope: RetrievalScope,
 ) -> Result<RetrievalRequest, WikiError> {
     let request_path = optional(options, "--request");
-    let inline_present = ["--scope", "--query", "--top-k", "--byte-budget"]
-        .iter()
-        .any(|option| optional(options, option).is_some());
+    let inline_present = [
+        "--scope",
+        "--query",
+        "--top-k",
+        "--byte-budget",
+        "--expansions",
+    ]
+    .iter()
+    .any(|option| optional(options, option).is_some());
     if request_path.is_some() && inline_present {
         return Err(WikiError::InvalidInput(
             "--request cannot be combined with inline retrieval options".to_owned(),
@@ -133,7 +140,15 @@ pub(super) fn parse_retrieval_request(
             })?,
             current_collection_id: None,
             query: required(options, "--query")?.to_owned(),
-            query_expansions: Vec::new(),
+            // Host-supplied Korean, English and inflected variants, separated by `,`.
+            query_expansions: optional(options, "--expansions").map_or_else(Vec::new, |value| {
+                value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|term| !term.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            }),
             top_k: parse_bounded_usize(optional(options, "--top-k"), 5, 1, 100, "--top-k")?,
             byte_budget: parse_bounded_usize(
                 optional(options, "--byte-budget"),

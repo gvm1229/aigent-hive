@@ -888,10 +888,71 @@ impl RagStore {
     /// Returns an error for a malformed or stale plan, unknown collection, unsafe
     /// canonical source, dirty store, failed index publication, or failed rollback.
     pub fn apply_remember_plan(&self, plan: &RememberPlan) -> Result<StoreCommit, WikiError> {
+        self.apply_remember_plans(std::slice::from_ref(plan))
+    }
+
+    /// Atomically write ordered remember plans with one canonical commit and one index publication.
+    ///
+    /// Plans must come from one batch planning pass: each plan is validated against the
+    /// loaded claims plus every earlier plan. Any invalid or stale plan writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a malformed or stale plan, unknown collection, unsafe
+    /// canonical source, dirty store, failed index publication, or failed rollback.
+    pub fn apply_remember_plans(&self, plans: &[RememberPlan]) -> Result<StoreCommit, WikiError> {
         let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
         self.reject_dirty_mutation()?;
-        validate_remember_plan_shape(plan)?;
-        if plan.disposition == RememberDisposition::Noop {
+        for plan in plans {
+            validate_remember_plan_shape(plan)?;
+        }
+        if plans
+            .iter()
+            .all(|plan| plan.disposition == RememberDisposition::Noop)
+        {
+            return self.current_commit();
+        }
+        let registry = self.load_registry()?;
+        let known = registry
+            .collections
+            .iter()
+            .map(|collection| collection.collection_id.as_str())
+            .collect::<BTreeSet<_>>();
+        let mut current = self
+            .load_claims(&registry)?
+            .into_iter()
+            .map(|claim| (claim.claim_id.clone(), claim))
+            .collect::<BTreeMap<_, _>>();
+        let mut writes = BTreeMap::new();
+        for plan in plans {
+            if plan.disposition == RememberDisposition::Noop {
+                continue;
+            }
+            stage_remember_plan_writes(plan, &known, &mut current, &mut writes)?;
+        }
+        if writes.is_empty() {
+            return self.current_commit();
+        }
+        self.commit_canonical_writes_locked(writes.into_iter().collect())
+    }
+
+    /// Atomically replace active claims whose current canonical value is exactly known.
+    ///
+    /// Each pair is `(current, replacement)`. The replacement keeps the claim identity,
+    /// collection, locator and active status; only reviewed metadata such as the subject,
+    /// revision and digest may differ. Any stale pair writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a stale or changed claim, an identity change, an unknown
+    /// collection, a dirty store, failed publication, or failed rollback.
+    pub fn replace_active_claims(
+        &self,
+        replacements: &[(CanonicalClaim, CanonicalClaim)],
+    ) -> Result<StoreCommit, WikiError> {
+        let _lock = crate::CapabilityKnowledgeLock::acquire(&self.root)?;
+        self.reject_dirty_mutation()?;
+        if replacements.is_empty() {
             return self.current_commit();
         }
         let registry = self.load_registry()?;
@@ -906,73 +967,35 @@ impl RagStore {
             .map(|claim| (claim.claim_id.clone(), claim))
             .collect::<BTreeMap<_, _>>();
         let mut writes = BTreeMap::new();
-        let mut rewritten_ids = plan
-            .superseded_claims
-            .iter()
-            .map(|claim| claim.claim_id.clone())
-            .collect::<Vec<_>>();
-        rewritten_ids.sort();
-        rewritten_ids.dedup();
-        if rewritten_ids.len() != plan.superseded_claims.len()
-            || plan.new_claim.as_ref().is_some_and(|claim| {
-                let mut supersedes = claim.supersedes.clone();
-                supersedes.sort();
-                supersedes.dedup();
-                supersedes != rewritten_ids
-            })
-        {
-            return Err(WikiError::InvalidInput(
-                "remember plan supersedes do not match its rewritten claims".to_owned(),
-            ));
-        }
-        let replacement_id = plan.new_claim.as_ref().map(|claim| claim.claim_id.as_str());
-        if let Some(new_claim) = &plan.new_claim {
-            validate_store_claim(new_claim, &known)?;
-            if let Some(existing) = current.get(&new_claim.claim_id) {
-                if existing != new_claim {
-                    return Err(WikiError::Conflict(format!(
-                        "claim `{}` changed after remember planning",
-                        new_claim.claim_id
-                    )));
-                }
-            } else {
-                insert_claim_write(&mut writes, new_claim)?;
+        let mut seen = BTreeSet::new();
+        for (expected, replacement) in replacements {
+            if !seen.insert(expected.claim_id.as_str()) {
+                return Err(WikiError::InvalidInput(format!(
+                    "claim `{}` is replaced more than once",
+                    expected.claim_id
+                )));
             }
-        }
-        for rewritten in &plan.superseded_claims {
-            validate_store_claim(rewritten, &known)?;
-            if rewritten.status != AssertionStatus::Superseded {
-                return Err(WikiError::InvalidInput(
-                    "superseded claim rewrites must have superseded status".to_owned(),
-                ));
-            }
-            let existing = current.get(&rewritten.claim_id).ok_or_else(|| {
-                WikiError::Conflict(format!(
-                    "claim `{}` disappeared after remember planning",
-                    rewritten.claim_id
-                ))
+            let stored = current.get(&expected.claim_id).ok_or_else(|| {
+                WikiError::Conflict(format!("claim `{}` no longer exists", expected.claim_id))
             })?;
-            if existing.status == AssertionStatus::Superseded
-                || existing.claim_key != rewritten.claim_key
-                || existing.collection_id != rewritten.collection_id
+            if stored != expected {
+                return Err(WikiError::Conflict(format!(
+                    "claim `{}` changed after review",
+                    expected.claim_id
+                )));
+            }
+            if expected.status == AssertionStatus::Superseded
+                || !is_subject_relabel(expected, replacement)
             {
-                return Err(WikiError::Conflict(format!(
-                    "claim `{}` is not the planned active current truth",
-                    rewritten.claim_id
+                return Err(WikiError::InvalidInput(format!(
+                    "claim `{}` replacement changes more than its subject",
+                    expected.claim_id
                 )));
             }
-            let mut expected = existing.clone();
-            expected.status = AssertionStatus::Superseded;
-            expected.replacement = replacement_id.map(str::to_owned);
-            expected.revision = rewritten.revision;
-            expected.digest = claim_digest(&expected);
-            if expected != *rewritten {
-                return Err(WikiError::Conflict(format!(
-                    "claim `{}` changed after supersede planning",
-                    rewritten.claim_id
-                )));
+            validate_store_claim(replacement, &known)?;
+            if replacement != expected {
+                insert_claim_write(&mut writes, replacement)?;
             }
-            insert_claim_write(&mut writes, rewritten)?;
         }
         if writes.is_empty() {
             return self.current_commit();
@@ -1083,7 +1106,8 @@ impl RagStore {
                     let mut promoted = promoted_claim_from_plan(&plan, &claims, &request)?;
                     writes.extend(remember_plan_writes(&plan, &known)?);
                     apply_remember_plan_to_claims(&mut claims, &plan);
-                    if plan.new_claim.is_some() {
+                    // A subject relabel never stamps scan metadata onto an existing claim.
+                    if plan.new_claim.is_some() && plan.disposition != RememberDisposition::Update {
                         promoted
                             .scan_metadata
                             .clone_from(&promoted_source.scan_metadata);
@@ -3732,6 +3756,7 @@ fn reviewed_to_claim(
         status,
         visibility: collection.default_visibility.into(),
         normalized_fact: reviewed.statement.trim().to_owned(),
+        subject: None,
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::ReviewedArtifact,
             summary,
@@ -3989,6 +4014,7 @@ fn automatic_scan_promotion_request(source: &CanonicalClaim) -> Result<RememberR
         status: source.status,
         visibility: RagVisibility::Shared,
         normalized_fact: source.normalized_fact.clone(),
+        subject: source.subject.clone(),
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::ReviewedArtifact,
             summary: "Automatically promoted reviewed scan claim".to_owned(),
@@ -4017,6 +4043,119 @@ fn advance_scan_promotion_status(
     Ok(source)
 }
 
+/// True when `relabeled` equals the active `existing` claim except subject, revision and digest.
+fn is_subject_relabel(existing: &CanonicalClaim, relabeled: &CanonicalClaim) -> bool {
+    let mut expected = existing.clone();
+    expected.subject.clone_from(&relabeled.subject);
+    expected.revision = relabeled.revision;
+    expected.digest = claim_digest(&expected);
+    existing.status != AssertionStatus::Superseded && expected == *relabeled
+}
+
+fn stage_remember_plan_writes(
+    plan: &RememberPlan,
+    known: &BTreeSet<&str>,
+    current: &mut BTreeMap<String, CanonicalClaim>,
+    writes: &mut BTreeMap<PathBuf, Vec<u8>>,
+) -> Result<(), WikiError> {
+    let mut rewritten_ids = plan
+        .superseded_claims
+        .iter()
+        .map(|claim| claim.claim_id.clone())
+        .collect::<Vec<_>>();
+    rewritten_ids.sort();
+    rewritten_ids.dedup();
+    if rewritten_ids.len() != plan.superseded_claims.len()
+        || plan.new_claim.as_ref().is_some_and(|claim| {
+            let mut supersedes = claim.supersedes.clone();
+            supersedes.sort();
+            supersedes.dedup();
+            supersedes != rewritten_ids
+        })
+    {
+        return Err(WikiError::InvalidInput(
+            "remember plan supersedes do not match its rewritten claims".to_owned(),
+        ));
+    }
+    let replacement_id = plan.new_claim.as_ref().map(|claim| claim.claim_id.as_str());
+    if plan.disposition == RememberDisposition::Update {
+        let relabeled = plan.new_claim.as_ref().ok_or_else(|| {
+            WikiError::InvalidInput("subject update requires its relabeled claim".to_owned())
+        })?;
+        validate_store_claim(relabeled, known)?;
+        let existing = current.get(&relabeled.claim_id).ok_or_else(|| {
+            WikiError::Conflict(format!(
+                "claim `{}` disappeared after remember planning",
+                relabeled.claim_id
+            ))
+        })?;
+        if !is_subject_relabel(existing, relabeled) {
+            return Err(WikiError::Conflict(format!(
+                "claim `{}` changed after subject planning",
+                relabeled.claim_id
+            )));
+        }
+        insert_claim_write(writes, relabeled)?;
+        current.insert(relabeled.claim_id.clone(), relabeled.clone());
+        return Ok(());
+    }
+    if let Some(new_claim) = &plan.new_claim {
+        validate_store_claim(new_claim, known)?;
+        if let Some(existing) = current.get(&new_claim.claim_id) {
+            if existing != new_claim {
+                return Err(WikiError::Conflict(format!(
+                    "claim `{}` changed after remember planning",
+                    new_claim.claim_id
+                )));
+            }
+        } else {
+            insert_claim_write(writes, new_claim)?;
+        }
+    }
+    for rewritten in &plan.superseded_claims {
+        validate_store_claim(rewritten, known)?;
+        if rewritten.status != AssertionStatus::Superseded {
+            return Err(WikiError::InvalidInput(
+                "superseded claim rewrites must have superseded status".to_owned(),
+            ));
+        }
+        let existing = current.get(&rewritten.claim_id).ok_or_else(|| {
+            WikiError::Conflict(format!(
+                "claim `{}` disappeared after remember planning",
+                rewritten.claim_id
+            ))
+        })?;
+        if existing.status == AssertionStatus::Superseded
+            || existing.claim_key != rewritten.claim_key
+            || existing.collection_id != rewritten.collection_id
+        {
+            return Err(WikiError::Conflict(format!(
+                "claim `{}` is not the planned active current truth",
+                rewritten.claim_id
+            )));
+        }
+        let mut expected = existing.clone();
+        expected.status = AssertionStatus::Superseded;
+        expected.replacement = replacement_id.map(str::to_owned);
+        expected.revision = rewritten.revision;
+        expected.digest = claim_digest(&expected);
+        if expected != *rewritten {
+            return Err(WikiError::Conflict(format!(
+                "claim `{}` changed after supersede planning",
+                rewritten.claim_id
+            )));
+        }
+        insert_claim_write(writes, rewritten)?;
+    }
+    for rewritten in &plan.superseded_claims {
+        current.insert(rewritten.claim_id.clone(), rewritten.clone());
+    }
+    if let Some(new_claim) = &plan.new_claim {
+        current.insert(new_claim.claim_id.clone(), new_claim.clone());
+    }
+    Ok(())
+}
+
 fn apply_remember_plan_to_claims(claims: &mut Vec<CanonicalClaim>, plan: &RememberPlan) {
     for rewritten in &plan.superseded_claims {
         replace_loaded_claim(claims, rewritten.clone());
@@ -4040,7 +4179,7 @@ fn validate_remember_plan_shape(plan: &RememberPlan) -> Result<(), WikiError> {
         {
             Ok(())
         }
-        RememberDisposition::Insert
+        RememberDisposition::Insert | RememberDisposition::Update
             if plan.new_claim.is_some() && plan.superseded_claims.is_empty() =>
         {
             Ok(())
@@ -5079,6 +5218,7 @@ mod tests {
                 status: AssertionStatus::UserStated,
                 visibility: RagVisibility::ProjectPrivate,
                 normalized_fact: format!("Prefer {seed} output."),
+                subject: None,
                 provenance: ClaimProvenance {
                     source_kind: RememberSourceKind::UserStatement,
                     summary: format!("Reviewed user preference for {seed}"),
@@ -6875,6 +7015,7 @@ mod tests {
             status: source.status,
             visibility: RagVisibility::Shared,
             normalized_fact: source.normalized_fact.clone(),
+            subject: None,
             provenance: ClaimProvenance {
                 source_kind: RememberSourceKind::ReviewedArtifact,
                 summary: "Explicitly approved reviewed scan promotion".to_owned(),

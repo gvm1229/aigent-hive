@@ -1,0 +1,18 @@
+
+[5/9] Claude Code · 5-hour limit
+
+  Does your Claude Code subscription have a 5-hour usage limit?
+  Asked once for each selected app. No means only the weekly limit is guarded.
+  yes/no
+
+>
+[6/9] Claude Code · Guarded limits
+
+  Choose the limits to guard for Claude Code.
+  An unguarded limit never blocks work, even when it is exhausted or unmeasured.
+    1. 5-hour limit only
+    2. Weekly limit only
+    3. Both, each with its own threshold (current)
+  Enter to keep/select: Both, each with its own threshold
+
+>

@@ -362,7 +362,12 @@ fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
         "{}",
         String::from_utf8_lossy(&terminal.writer)
     );
-    let output = String::from_utf8(terminal.writer).unwrap();
+    // Long messages wrap at 80 columns; compare words, not line breaks.
+    let output = String::from_utf8(terminal.writer)
+        .unwrap()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(output.contains("Enable global knowledge storage"));
     assert!(output.contains("below the global threshold"));
     assert!(output.contains("relative to this project"));
@@ -1147,4 +1152,141 @@ fn compact_project_creates_knowledge_only_when_first_used() {
         .all(|issue| issue.severity != hive_wiki::LintSeverity::Error));
     std::fs::remove_file(target.path().join(".hive/knowledge/suppression.yml")).unwrap();
     assert!(hive_wiki::rebuild_index(target.path()).is_err());
+}
+
+#[test]
+fn an_untouched_terminal_draft_still_offers_the_agent_setup() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    let global = global(root.path());
+    let store = ProgressStore::open(root.path(), Some(target.path())).unwrap();
+    let draft = store
+        .new_progress(
+            "project".into(),
+            questions::defaults(target.path(), &global, "codex"),
+        )
+        .unwrap();
+    store.save(&store.load().unwrap(), &draft).unwrap();
+    let mut opts = options(root.path(), target.path());
+    opts.show = true;
+    let result = preferences::inspect(&opts, &store, None, InterfaceLanguage::En).unwrap();
+    let data = result.data.unwrap();
+    assert_eq!(data["agent_setup"]["terminal_draft"], "superseded-on-apply");
+    assert!(result.next_action.is_some());
+    assert_eq!(store.load().unwrap().progress, Some(draft));
+}
+
+/// OV153-013: right after a terminal quick setup, a project upgrade scan finds nothing to change.
+#[test]
+fn a_fresh_terminal_quick_setup_has_no_project_upgrade() {
+    let root = crate::test_tempdir();
+    let target = crate::test_tempdir();
+    global(root.path());
+    let mut opts = options(root.path(), target.path());
+    opts.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+    );
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nMy project\n\n\nyes\n".to_vec()),
+        writer: Vec::new(),
+        language: InterfaceLanguage::En,
+    };
+    let result = execute(&opts, InteractionMode::Terminal, &mut terminal).unwrap();
+    assert_eq!(
+        result.exit_code,
+        0,
+        "{}\n{}",
+        result.message,
+        String::from_utf8_lossy(&terminal.writer)
+    );
+    assert!(target
+        .path()
+        .join(".hive/config/project-base.json")
+        .is_file());
+    let plugin =
+        crate::user_install::validated_project_plugin_files(root.path()).unwrap_or_default();
+    let (changed, reasons) = crate::project_upgrade::scan_changes_for_test(target.path(), &plugin);
+    assert_eq!(changed, Vec::<String>::new(), "{reasons:?}");
+    assert!(!target
+        .path()
+        .join(".hive/config/project-overrides.json")
+        .exists());
+}
+
+/// OV153-012: the quick project screen at 80 columns without colour, compared with a snapshot.
+fn quick_project_screen(language: InterfaceLanguage) -> String {
+    let root = crate::test_tempdir();
+    let parent = crate::test_tempdir();
+    let target = parent.path().join("snapshot-target");
+    std::fs::create_dir(&target).unwrap();
+    let mut answers = super::super::default_answers(None);
+    answers["interface_language"] = json!(if language == InterfaceLanguage::Ko {
+        "ko"
+    } else {
+        "en"
+    });
+    let path = root.path().join(user_setup::USER_SETUP_RELATIVE);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, serde_json::to_vec(&answers).unwrap()).unwrap();
+    let mut opts = options(root.path(), &target);
+    opts.capabilities = Some(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/setup/capabilities-codex-host-native.json"),
+    );
+    let mut terminal = Terminal {
+        reader: Cursor::new(b"\nSnapshot project\n\n\nno\n".to_vec()),
+        writer: Vec::new(),
+        language,
+    };
+    let result = execute(&opts, InteractionMode::Terminal, &mut terminal).unwrap();
+    assert_eq!(result.code, "hive.project-setup-input-pending");
+    String::from_utf8(terminal.writer).unwrap()
+}
+
+#[test]
+fn quick_project_screen_matches_the_plain_80_column_snapshot() {
+    for (language, name) in [
+        (InterfaceLanguage::Ko, "project-quick.ko.txt"),
+        (InterfaceLanguage::En, "project-quick.en.txt"),
+    ] {
+        let screen = quick_project_screen(language);
+        assert!(!screen.contains('\u{1b}'), "{screen}");
+        assert!(screen.chars().all(|c| c == '\n' || !c.is_control()));
+        for line in screen.lines() {
+            assert!(
+                super::super::layout::width(line) <= super::super::layout::WIDTH,
+                "{line}"
+            );
+        }
+        for step in ["[1/4]", "[2/4]", "[3/4]", "[4/4]"] {
+            assert!(screen.contains(step), "{step}");
+        }
+        super::super::layout::assert_snapshot(name, &screen);
+    }
+}
+
+#[test]
+fn the_unverified_runtime_note_fits_an_80_column_terminal() {
+    for note in super::UNVERIFIED_RUNTIME_NOTE {
+        for line in note.lines() {
+            assert!(
+                super::super::layout::width(line) <= super::super::layout::WIDTH,
+                "{line}"
+            );
+        }
+    }
+}
+
+#[test]
+fn decoration_only_adds_colour_around_the_same_lines() {
+    super::super::layout::force_decoration(true);
+    let decorated = quick_project_screen(InterfaceLanguage::En);
+    super::super::layout::force_decoration(false);
+    assert!(decorated.contains("\u{1b}[1;36m[1/4] Setup mode\u{1b}[0m"));
+    let stripped = decorated
+        .replace("\u{1b}[1;36m", "")
+        .replace("\u{1b}[1m", "")
+        .replace("\u{1b}[0m", "");
+    assert_eq!(stripped, quick_project_screen(InterfaceLanguage::En));
 }

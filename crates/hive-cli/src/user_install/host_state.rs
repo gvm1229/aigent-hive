@@ -1330,14 +1330,7 @@ pub(super) fn reconcile_claude_marketplace(
         after.marketplace = None;
         current = run_claude_reconciliation_step(
             context,
-            &[
-                "plugin",
-                "marketplace",
-                "remove",
-                "aigent-hive",
-                "--scope",
-                "user",
-            ],
+            &["plugin", "marketplace", "remove", "aigent-hive"],
             HostMutation::ClaudeMarketplaceAdded,
             &current,
             &after,

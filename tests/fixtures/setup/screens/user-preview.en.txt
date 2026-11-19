@@ -1,0 +1,27 @@
+
+Preview
+  Update Hive settings and instructions for the selected apps. Preserve existing
+  user data.
+
+General
+  Response style     : Balanced
+  Independent review : Only when requested
+  Background         : General knowledge work
+  Apps               : Codex
+  Update check       : no
+
+Features
+  Feature bundle : All
+
+Knowledge
+  Knowledge storage  : yes
+  Knowledge language : English
+
+Usage
+  Usage protection          : no
+  Usage notices             : yes
+  Remaining-quota threshold : 20
+
+Notifications
+  CodexBar fallback : no
+  Discord notices   : no

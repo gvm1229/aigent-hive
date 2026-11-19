@@ -96,7 +96,7 @@ fn errors_explain_missing_input_and_how_to_recover_in_both_languages() {
     let value = json!({"action":"QueryKnowledge","status":"error","exit_code":2,
         "message":"knowledge query requires --target","code":"hive.invalid-input"});
     assert_eq!(render(&value, InterfaceLanguage::Ko, "knowledge"),
-        "처리 실패: 지식 검색. 필요한 옵션 --target을(를) 지정하지 않았습니다.\n다음 단계: --target 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 --help로 볼 수 있습니다.");
+        "처리 실패: 지식 검색. 필요한 옵션 --target을(를) 지정하지 않았습니다.\n예시: hive knowledge lint --target .\n다음 단계: --target 값을 넣어 같은 명령을 다시 실행하세요. 사용법은 hive knowledge --help로 볼 수 있습니다.");
     let english = render(&value, InterfaceLanguage::En, "knowledge");
     assert!(english.starts_with("Failed. The required option --target is missing."));
     assert!(english.contains("Next:"));
@@ -337,5 +337,52 @@ fn a_wrong_output_value_keeps_its_cause() {
         "code":"hive.storage-input-invalid","message":"--output accepts only json"});
     for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
         assert!(render(&value, language, "storage").contains("--output accepts only json"));
+    }
+}
+
+#[test]
+fn a_declined_setup_is_not_reported_as_a_failure() {
+    let declined = json!({"action":"SetupHarness","status":"needs-input","exit_code":2,
+        "code":"hive.project-setup-input-pending","message":"Project setup is pending.",
+        "next_action":"hive setup --target '/p' --user-root '/u' --show --summary --output json",
+        "data":{"declined":true,"terminal_next_action":"hive setup --target '/p' --user-root '/u' --resume"}});
+    for (language, expected) in [
+        (
+            InterfaceLanguage::Ko,
+            "적용하지 않았습니다. 바뀐 것은 없습니다.
+나중에 이어서 하려면: hive setup --target '/p' --user-root '/u' --resume",
+        ),
+        (
+            InterfaceLanguage::En,
+            "Not applied. Nothing changed.
+To continue later: hive setup --target '/p' --user-root '/u' --resume",
+        ),
+    ] {
+        assert_eq!(render(&declined, language, "setup"), expected);
+    }
+    // An update that stopped at its confirmation keeps the update resume path and failure view.
+    let mut update = declined.clone();
+    update["action"] = json!("UpdateHiveUser");
+    assert!(!render(&update, InterfaceLanguage::En, "update").starts_with("Not applied"));
+}
+
+#[test]
+fn a_pending_setup_shows_the_agent_path_and_the_terminal_resume() {
+    let pending = json!({"action":"SetupHarness","status":"needs-input","exit_code":2,
+        "code":"hive.project-setup-input-pending","message":"Project setup is pending.",
+        "next_action":"hive setup --target '/p' --user-root '/u' --show --summary --output json\nhive setup --target '/p' --user-root '/u' --answers <patch-file> --input-channel agent --dry-run --output json",
+        "data":{"terminal_next_action":"hive setup --target '/p' --user-root '/u' --resume"}});
+    for (language, label) in [
+        (InterfaceLanguage::En, "Continue in a terminal: "),
+        (InterfaceLanguage::Ko, "터미널에서 이어가기: "),
+    ] {
+        let text = render(&pending, language, "setup");
+        assert!(text.contains("--show --summary"), "{text}");
+        assert!(
+            text.contains(&format!(
+                "{label}hive setup --target '/p' --user-root '/u' --resume"
+            )),
+            "{text}"
+        );
     }
 }

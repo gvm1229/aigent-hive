@@ -9,12 +9,12 @@ summary: "자동 조회 격리, 명시 collection 직접 조회, 검토된 일�
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["자동 지식 승격", "프로젝트 간 지식"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:83139680efc6f06e7accaec5c445d8c8a9481af51b6550ffe7cd6f9c81f38bfa"
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a72952ecc2423f82bd6710e9d88a88cd6b59f0d87500b30c1a1d68151879bcf1"
-  - "repo:crates/hive-wiki/src/rag.rs#sha256:9dccca8c3ab3a2e8d72a463a08e16479031416a31b3818511c925d2b783b46ba"
-  - "repo:crates/hive-wiki/src/store.rs#sha256:8fd4d92714fc65bf19d53aee4f0cd0ee29689b105d6979e7a63299587c1a402b"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32db20fc6252cd4a5dcf6fac16ff4e7da275a8c0ca41ddd93c3eb6f6b1f28f68"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a0cf1b55b6cfc9d02920f117d25fb752e25267093d1be960b33267b8f6b0a94c"
+  - "repo:crates/hive-wiki/src/rag.rs#sha256:631d823968b135efa90bb0515185fed724c1c1522af3623aa1a26e7c9842d1a7"
+  - "repo:crates/hive-wiki/src/store.rs#sha256:812c302031f36694ad109479698f9d89b125392dba55468c0131e52d45f47b44"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
-  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:b1c993c5c9332596f2f71f0db2e40f42a434e210f71f4e8bb9f38da763c4b673"
+  - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:d80f5871428941be1d05b12d488857f40bb894752c0c4354cee12f15a46578f6"
   - "repo:harness/skills/knowledge-scan/SKILL.md#sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"

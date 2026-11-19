@@ -85,7 +85,8 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
                     "--user-root" => options.root = PathBuf::from(value),
                     "--output" if value == "json" => options.interaction.json = true,
                     "--section" => options.section = Some(value.clone()),
-                    "--question" => options.question = Some(value.clone()),
+                    // Agents often pass the answer key (`project_kind`); question ids use hyphens.
+                    "--question" => options.question = Some(value.replace('_', "-")),
                     "--capabilities" => options.capabilities = Some(PathBuf::from(value)),
                     _ => {
                         return Err(SetupError::Input(
@@ -151,7 +152,15 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
                 .map_err(SetupError::Input)?;
             let mut result = execute(&options, mode, &mut terminal)
                 .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
-            if result.exit_code != 0 {
+            let routed_user_setup = result
+                .data
+                .as_ref()
+                .is_some_and(|data| data.get("agent_next_actions").is_some());
+            if result.code == "hive.project-setup-input-pending" {
+                route_pending_to_agent(&mut result, &options);
+            } else if result.status == "needs-input" && routed_user_setup {
+                // Global setup pending inside project setup keeps its user-scope agent path.
+            } else if result.exit_code != 0 {
                 result.next_action = Some(resume_command(&options));
             }
             Ok(result)
@@ -166,17 +175,68 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
     crate::emit_action_result(&result)
 }
 
+fn quote(path: &Path) -> String {
+    if cfg!(windows) {
+        path.to_string_lossy().replace('\'', "''")
+    } else {
+        path.to_string_lossy().replace('\'', "'\"'\"'")
+    }
+}
+
 fn resume_command(options: &Options) -> String {
-    let quote = |path: &Path| {
-        if cfg!(windows) {
-            path.to_string_lossy().replace('\'', "''")
-        } else {
-            path.to_string_lossy().replace('\'', "'\"'\"'")
-        }
-    };
     format!(
         "hive setup --target '{}' --user-root '{}' --resume",
         quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+/// An AI agent applies supplied choices without a capability file; the CLI resolves capabilities.
+fn agent_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --apply --summary --output json",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+/// An agent previews its answer patch before applying; the preview never writes the target.
+fn agent_preview_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --answers <patch-file> --input-channel agent --dry-run --output json",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+fn status_command(options: &Options) -> String {
+    format!(
+        "hive setup --target '{}' --user-root '{}' --show --summary --output json",
+        quote(&options.target),
+        quote(&options.root)
+    )
+}
+
+/// A pending project setup never points only to a terminal: the agent path comes first and the
+/// terminal resume stays available for a person.
+fn route_pending_to_agent(result: &mut ActionResult, options: &Options) {
+    let agent = [status_command(options), agent_preview_command(options)];
+    result.next_action = Some(agent.join("\n"));
+    let mut data = result.data.take().unwrap_or_else(|| json!({}));
+    if let Some(object) = data.as_object_mut() {
+        object.insert("agent_next_actions".into(), json!(agent));
+        object.insert(
+            "terminal_next_action".into(),
+            json!(resume_command(options)),
+        );
+    }
+    result.data = Some(data);
+}
+
+/// Global setup must exist first; the agent finishes it through the user-scope path.
+fn user_setup_command(options: &Options) -> String {
+    format!(
+        "hive setup --scope user --user-root '{}' --show --summary --output json",
         quote(&options.root)
     )
 }
@@ -188,11 +248,25 @@ fn pending(language: InterfaceLanguage) -> ActionResult {
         "hive.project-setup-input-pending",
         language,
         [
-            "프로젝트 설정이 아직 끝나지 않았습니다. 터미널에서 이어서 진행해 주세요.",
-            "Project setup is pending. Continue in a terminal.",
+            "프로젝트 설정이 아직 끝나지 않았습니다. AI 에이전트는 설정 요약(--show --summary)과 답변 파일 미리보기(--input-channel agent --dry-run)로, 사람은 터미널에서 이어서 진행할 수 있습니다. 능력 파일(--capabilities)은 선택 사항입니다.",
+            "Project setup is pending. An AI agent continues with the setup summary (--show --summary) and an answer-file preview (--input-channel agent --dry-run); a person can continue in a terminal. A capability file (--capabilities) is optional.",
         ],
         None,
     )
+}
+
+/// Shown when host execution support was not checked; each line fits an 80-column terminal.
+const UNVERIFIED_RUNTIME_NOTE: [&str; 2] = [
+    "앱 실행 파일 확인과 실행 기능 지원은 별개입니다.
+실행 기능은 아직 검증되지 않았습니다.",
+    "Executable presence is separate from execution support.
+Execution capabilities remain unverified.",
+];
+
+/// A person declined at the final confirmation: nothing failed, so the terminal says so.
+fn declined(mut result: ActionResult) -> ActionResult {
+    result.data = Some(json!({"declined": true}));
+    result
 }
 
 fn report(
@@ -241,6 +315,7 @@ fn execute<R: BufRead, W: Write>(
     if mode != InteractionMode::Terminal {
         return resume_without_input(options, &store, terminal.language);
     }
+    terminal.checking_apps()?;
     if global_config.is_none() {
         terminal.say(
             "프로젝트에 사용할 전역 설정부터 진행합니다.",
@@ -370,32 +445,42 @@ fn prepare_files(
     answers: &Value,
 ) -> Result<(tempfile::NamedTempFile, tempfile::NamedTempFile, Value), SetupError> {
     let answer_file = write_answers(answers)?;
-    let (matrix, facts) = if let Some(path) = &options.capabilities {
-        let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
-        hive_core::run::CapabilityResolution::parse_json(&bytes)
-            .map_err(|e| SetupError::Verification(e.to_string()))?;
-        (
-            serde_json::from_slice(&bytes)
-                .map_err(|_| SetupError::Input("invalid capabilities".into()))?,
-            json!({"capabilities":"provided-document"}),
-        )
-    } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {
-        (
-            matrix,
-            json!({"capabilities":"stored-project-document","execution_capabilities_revalidated":false}),
-        )
-    } else {
-        capabilities::inspect(
-            answers["primary_host"]
-                .as_str()
-                .ok_or_else(|| SetupError::Input("project host missing".into()))?,
-        )?
-    };
+    let (matrix, facts) = resolve_capabilities(options, answers)?;
     let mut capability_file =
         tempfile::NamedTempFile::new().map_err(|e| SetupError::Internal(e.to_string()))?;
     serde_json::to_writer(capability_file.as_file_mut(), &matrix)
         .map_err(|e| SetupError::Internal(e.to_string()))?;
     Ok((answer_file, capability_file, facts))
+}
+
+/// Terminal and agent file setup share one capability source order: supplied, saved, detected.
+fn resolve_capabilities(options: &Options, answers: &Value) -> Result<(Value, Value), SetupError> {
+    if let Some(path) = &options.capabilities {
+        let bytes = user_setup::read_bounded_regular(path, user_setup::MAX_USER_SETUP_BYTES)?;
+        hive_core::run::CapabilityResolution::parse_json(&bytes).map_err(|e| {
+            SetupError::Verification(format!("{e}; {}", file_input::OPTIONAL_CAPABILITIES))
+        })?;
+        Ok((
+            serde_json::from_slice(&bytes).map_err(|_| {
+                SetupError::Input(format!(
+                    "invalid capabilities; {}",
+                    file_input::OPTIONAL_CAPABILITIES
+                ))
+            })?,
+            json!({"capabilities":"provided-document"}),
+        ))
+    } else if let Some(matrix) = existing::capabilities(&options.target, answers)? {
+        Ok((
+            matrix,
+            json!({"capabilities":"stored-project-document","execution_capabilities_revalidated":false}),
+        ))
+    } else {
+        capabilities::inspect(
+            answers["primary_host"]
+                .as_str()
+                .ok_or_else(|| SetupError::Input("project host missing".into()))?,
+        )
+    }
 }
 
 fn write_answers(answers: &Value) -> Result<tempfile::NamedTempFile, SetupError> {
@@ -498,36 +583,45 @@ fn apply<R: BufRead, W: Write>(
     global: &hive_render::GlobalProjectPreferences,
     terminal: &mut Terminal<R, W>,
 ) -> Result<ActionResult, SetupError> {
+    terminal.checking_apps()?;
     let (answers, caps, facts) = prepare_files(options, &progress.answers)?;
     let preview = prepare_settings(options, answers.path(), caps.path(), global)?.outcome;
-    terminal.say(
-        "프로젝트 설정 미리보기: 선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.",
-        "Project preview: write Hive files only in the selected target; preserve user files.",
-    )?;
-    questions::preview(&progress.answers, global, terminal)?;
+    let korean = terminal.language == InterfaceLanguage::Ko;
     writeln!(
         terminal.writer,
-        "{}: {}",
-        if terminal.language == InterfaceLanguage::Ko {
-            "변경 파일 수"
+        "\n{}",
+        super::layout::title(if korean {
+            "프로젝트 설정 미리보기"
         } else {
-            "Changed file count"
-        },
-        preview.changed_paths.len()
+            "Project preview"
+        })
     )
     .map_err(|e| SetupError::Internal(e.to_string()))?;
+    terminal.say(
+        "  선택한 대상에만 Hive 파일 작성. 사용자 파일 보존.",
+        "  Write Hive files only in the selected target; preserve user files.",
+    )?;
+    questions::preview(
+        &progress.answers,
+        global,
+        preview.changed_paths.len(),
+        terminal,
+    )?;
     if facts["capabilities"] == "stored-project-document" {
         terminal.say(
             "기존 프로젝트의 기능 자료를 사용합니다. 실제 실행 지원을 새로 검증한 결과는 아닙니다.",
             "Using the project's saved capability data. Runtime support was not revalidated.",
         )?;
     } else if options.capabilities.is_none() {
-        terminal.say("앱 실행 파일 확인과 실행 기능 지원은 별개입니다. 실행 기능은 아직 검증되지 않았습니다.","Executable presence is separate from execution support. Execution capabilities remain unverified.")?;
+        terminal.say(UNVERIFIED_RUNTIME_NOTE[0], UNVERIFIED_RUNTIME_NOTE[1])?;
     }
     progress.phase = ProgressPhase::Previewed;
     *snapshot = store.save(snapshot, progress)?;
-    if options.dry_run || !terminal.confirm()? {
+    if options.dry_run {
         return Ok(pending(terminal.language));
+    }
+    if !terminal.confirm()? {
+        return Ok(declined(pending(terminal.language)));
     }
     let cap = crate::user_install::open_user_root_for_setup(&options.root)
         .map_err(SetupError::Conflict)?;

@@ -364,6 +364,16 @@ impl InstallError {
             | Self::Internal(message) => message,
         }
     }
+
+    fn with_suffix(self, suffix: &str) -> Self {
+        match self {
+            Self::Input(message) => Self::Input(message + suffix),
+            Self::Conflict(message) => Self::Conflict(message + suffix),
+            Self::Unsupported(message) => Self::Unsupported(message + suffix),
+            Self::Verification(message) => Self::Verification(message + suffix),
+            Self::Internal(message) => Self::Internal(message + suffix),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -738,15 +748,33 @@ fn execute_uninstall(
     }
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
+    let mut installed = Vec::new();
     for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
         let manifest_relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
         let manifest = read_installed_manifest(&arguments.root_cap, &manifest_relative, host)?;
         let host_evidence = manifest.is_some()
             || owned_path_exists(&arguments.root_cap, host_uninstall_root(host))?;
-        if host_evidence {
-            remove_host_activation(host, runner)?;
+        installed.push((host, manifest_relative, manifest, host_evidence));
+    }
+    // Remove every host activation before deleting any Hive file, so a host that refuses
+    // deactivation leaves all projections and ownership manifests in place for a re-apply.
+    for (host, _, _, host_evidence) in &installed {
+        if *host_evidence {
+            remove_host_activation(*host, runner).map_err(|error| {
+                let restore = if removed_hosts.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "; Hive files were kept; restore the deactivated hosts with hive install --scope user --hosts {} --apply",
+                        removed_hosts.join(",")
+                    )
+                };
+                error.with_suffix(&restore)
+            })?;
             removed_hosts.push(host.as_str());
         }
+    }
+    for (_, manifest_relative, manifest, _) in installed {
         if let Some(manifest) = manifest {
             for entry in manifest.entries {
                 let path = PathBuf::from(entry.path);
@@ -857,14 +885,7 @@ fn remove_host_activation(host: UserHost, runner: &impl CommandRunner) -> Result
                 "--scope",
                 "user",
             ],
-            &[
-                "plugin",
-                "marketplace",
-                "remove",
-                "aigent-hive",
-                "--scope",
-                "user",
-            ],
+            &["plugin", "marketplace", "remove", "aigent-hive"],
         ],
         UserHost::Antigravity => &[&["plugin", "uninstall", "aigent-hive"]],
     };
@@ -1805,16 +1826,69 @@ pub(crate) fn authenticated_saved_projection_hosts(
     Ok(hosts)
 }
 
+/// Authenticate a projection written by an earlier Hive release with the same release inventory
+/// and installed-byte checks the install path applies before it replaces prior ownership.
+fn authenticate_prior_release_projection_host(
+    arguments: &UserArguments,
+    manifest: &UserOwnershipManifest,
+) -> Result<(), InstallError> {
+    let recomputed = inventory_digest(
+        manifest.host,
+        &manifest.product_version,
+        &manifest.host_version_range,
+        Path::new(&manifest.guidance_path),
+        &manifest.source_release_digest,
+        &manifest.entries,
+    );
+    if manifest.host != arguments.host || manifest.plan_digest != recomputed {
+        return Err(InstallError::Conflict(format!(
+            "installed ownership manifest is not internally reproducible: {}",
+            arguments.host.as_str()
+        )));
+    }
+    let desired = build_desired_user_files(arguments, arguments.setup_override.as_ref())?;
+    let current_entries = ownership_entries(&desired.files);
+    let current_source_release_digest = source_release_digest(&desired.files);
+    let authenticated = authenticated_user_inventory(
+        manifest.host,
+        &InventoryAuthentication {
+            product_version: &manifest.product_version,
+            installed_host_version_range: &manifest.host_version_range,
+            source_release_digest: &manifest.source_release_digest,
+            installed_entries: &manifest.entries,
+            installed_guidance_path: Path::new(&manifest.guidance_path),
+            current_guidance_path: &desired.guidance_relative,
+            current_source_release_digest: &current_source_release_digest,
+            current_entries: &current_entries,
+            authenticated_prior: None,
+        },
+    )
+    .ok_or_else(|| {
+        InstallError::Conflict(format!(
+            "installed ownership manifest does not match an authenticated Hive release: {}",
+            arguments.host.as_str()
+        ))
+    })?;
+    validate_manifest_against_authenticated_inventory(manifest, &authenticated)?;
+    validate_authenticated_installed_bytes(&arguments.root_cap, &authenticated)
+}
+
 fn authenticate_saved_projection_host(
     arguments: &UserArguments,
     manifest: &UserOwnershipManifest,
 ) -> Result<(), InstallError> {
     if manifest.product_version != env!("CARGO_PKG_VERSION") {
-        return Err(InstallError::Conflict(format!(
-            "installed ownership manifest is not bound to the running Hive product: {}",
-            arguments.host.as_str()
-        )));
+        return authenticate_prior_release_projection_host(arguments, manifest);
     }
+    authenticate_current_projection_host(arguments, manifest).or_else(|current_error| {
+        authenticate_prior_release_projection_host(arguments, manifest).map_err(|_| current_error)
+    })
+}
+
+fn authenticate_current_projection_host(
+    arguments: &UserArguments,
+    manifest: &UserOwnershipManifest,
+) -> Result<(), InstallError> {
     if manifest.plan_digest
         != inventory_digest(
             manifest.host,
@@ -3550,12 +3624,12 @@ fn render_user_guidance(
                 "disabled"
             };
             let memory_gate_en = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for one safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, prefer `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json` exactly once; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for each safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, split it into atomic facts with one condition each and give every fact one subject of one or two lowercase English levels, such as `design/visual-style`; facts that answer the same later question share a subject, and an existing subject from `hive knowledge subjects list --user-root <user-root> --output json` is reused. A lasting preference or rule (from now on, always, never, remember) must be recorded before the final response. Run `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` once for one fact, or `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` once for two to eight facts, each with its `subject`; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`, adding `--expansions \"<term,term>\"` for Korean, English and inflected key words; claim hits arrive with their whole subject group, and at most two follow-up lookups with new key words are allowed when hits are insufficient. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge.\n"
             };
             let memory_gate_ko = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과 1개를 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화에는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --output json`을 정확히 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과를 각각 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화는 조건 하나씩의 원자 사실로 나누고, 각 사실에 `design/visual-style`처럼 소문자 영어 1–2단계 주제 부여. 나중에 같은 질문에 답할 사실은 같은 주제를 쓰고, `hive knowledge subjects list --user-root <user-root> --output json`의 기존 주제를 재사용. 앞으로·항상·금지·기억 같은 지속 선호·규칙은 최종 응답 전 반드시 기록. 사실 1개는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` 1회, 사실 2–8개는 사실마다 `subject`를 담은 `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행하고 한국어·영어·어형 핵심어는 `--expansions \"<term,term>\"`으로 전달. 주제가 있는 사실은 같은 주제 묶음으로 반환되며, 부족하면 새 핵심어로 후속 조회 최대 2회. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
             };
@@ -3930,6 +4004,9 @@ fn authenticated_user_inventory(
     {
         return Some(developer);
     }
+    if let Some(sibling) = same_product_package_inventory(host, request) {
+        return Some(sibling);
+    }
     if let Some(historical) = test_three_user_inventory(host, request) {
         return Some(historical);
     }
@@ -3991,7 +4068,8 @@ fn authenticated_user_inventory(
 /// A local `-dev` binary is intentionally not a public release identity. It may therefore use
 /// the currently installed, internally reproducible user manifest as its three-way base, but
 /// only after the ordinary manifest and live-byte checks in `validate_prior_ownership` run.
-/// Public stable and `-test[.N]` builds never enter this branch.
+/// Public stable and `-test[.N]` builds never enter this branch; they use the narrower
+/// `same_product_package_inventory` for another package of the same product version.
 fn developer_authenticated_user_inventory(
     host: UserHost,
     request: &InventoryAuthentication<'_>,
@@ -4003,6 +4081,62 @@ fn developer_authenticated_user_inventory(
             && request.installed_host_version_range != host.pre_0_15_2_version_range())
         || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
         || request.installed_entries.is_empty()
+        || request.source_release_digest
+            != source_release_digest_from_entries(request.installed_entries)
+    {
+        return None;
+    }
+
+    Some(AuthenticatedUserInventory {
+        product_version: request.product_version.to_owned(),
+        host,
+        host_version_range: request.installed_host_version_range.to_owned(),
+        source_release_digest: request.source_release_digest.to_owned(),
+        guidance_path: portable(request.installed_guidance_path),
+        entries: request.installed_entries.to_vec(),
+    })
+}
+
+/// Authenticate a projection written by another package of the running product version, such as
+/// a numbered public test before its stable promotion. Every installed entry must name a path the
+/// running product owns with the same ownership and mode, so the replacement can only rewrite
+/// files the running product itself owns; paths added by the running product are allowed. A path
+/// the running product dropped is accepted only as a managed file inside Hive's own `.hive/` tree
+/// (never knowledge or configuration), where retiring it cannot touch user-authored files.
+fn retirable_hive_tree_entry(entry: &UserOwnershipEntry) -> bool {
+    let path = Path::new(&entry.path);
+    is_managed_ownership(&entry.ownership)
+        && path.starts_with(".hive")
+        && !path.starts_with(".hive/knowledge")
+        && !path.starts_with(".hive/config")
+        && !entry.path.contains("..")
+}
+
+fn same_product_package_inventory(
+    host: UserHost,
+    request: &InventoryAuthentication<'_>,
+) -> Option<AuthenticatedUserInventory> {
+    let current = request
+        .current_entries
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry))
+        .collect::<BTreeMap<_, _>>();
+    let same_layout = request.installed_entries.iter().all(|installed| {
+        current.get(installed.path.as_str()).map_or_else(
+            || retirable_hive_tree_entry(installed),
+            |entry| {
+                installed.ownership == entry.ownership
+                    && installed.executable == entry.executable
+                    && installed.unix_mode == entry.unix_mode
+            },
+        )
+    });
+    if request.product_version != env!("CARGO_PKG_VERSION")
+        || (request.installed_host_version_range != host.version_range()
+            && request.installed_host_version_range != host.pre_0_15_2_version_range())
+        || portable(request.installed_guidance_path) != portable(request.current_guidance_path)
+        || request.installed_entries.is_empty()
+        || !same_layout
         || request.source_release_digest
             != source_release_digest_from_entries(request.installed_entries)
     {
@@ -9060,6 +9194,197 @@ mod tests {
         assert!(error.contains("installed ownership manifest is malformed"));
     }
 
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_authenticated_prior_release_hosts() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let historical = seed_historical_user_install(temporary.path(), UserHost::Codex);
+        assert_ne!(historical.product_version, env!("CARGO_PKG_VERSION"));
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("prior scope");
+        assert_eq!(hosts, ["codex"]);
+
+        let protected = historical
+            .entries
+            .iter()
+            .find(|entry| is_managed_ownership(&entry.ownership))
+            .expect("managed entry");
+        fs::write(temporary.path().join(&protected.path), b"tampered\n").expect("tamper");
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    struct ClaudeRefusingRunner<'a> {
+        inner: &'a StatefulHostRunner,
+        qualified: Mutex<String>,
+    }
+
+    impl CommandRunner for ClaudeRefusingRunner<'_> {
+        fn qualify(&self, program: &str) -> Result<QualifiedExecutable, SensorError> {
+            *self.qualified.lock().expect("qualified") = program.to_owned();
+            self.inner.qualify(program)
+        }
+
+        fn run(
+            &self,
+            program: &QualifiedExecutable,
+            arguments: &[&str],
+            timeout: Duration,
+            output_limit: usize,
+        ) -> Result<CommandOutput, SensorError> {
+            if *self.qualified.lock().expect("qualified") == "claude" {
+                return Err(SensorError::Failed);
+            }
+            self.inner.run(program, arguments, timeout, output_limit)
+        }
+    }
+
+    #[test]
+    fn uninstall_keeps_every_hive_file_when_a_later_host_refuses_deactivation() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            let install = args(temporary.path(), host, UserMode::Apply);
+            execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        }
+        let refusing = ClaudeRefusingRunner {
+            inner: &runner,
+            qualified: Mutex::new(String::new()),
+        };
+
+        let error = execute_uninstall(&uninstall_args(temporary.path()), &refusing)
+            .err()
+            .expect("claude refusal must stop uninstall");
+
+        assert!(error.message().contains(
+            "restore the deactivated hosts with hive install --scope user --hosts codex --apply"
+        ));
+        assert!(temporary.path().join(".hive/install/codex.json").exists());
+        assert!(temporary.path().join(".hive/install/claude.json").exists());
+    }
+
+    #[test]
+    fn claude_activation_removal_clears_a_marketplace_known_only_outside_user_settings() {
+        let temporary = tempdir().expect("tempdir");
+        let runner =
+            StatefulHostRunner::new(temporary.path(), HostSabotage::DanglingClaudeMarketplace);
+
+        remove_host_activation(UserHost::Claude, &runner).expect("known-list marketplace removed");
+
+        assert!(!*runner.marketplace_installed.lock().expect("marketplace"));
+    }
+
+    fn rewrite_as_sibling_package(root: &Path, extra_path: Option<&str>) {
+        let manifest_path = root.join(".hive/install/codex.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("manifest")).expect("JSON");
+        let index = manifest
+            .entries
+            .iter()
+            .position(|entry| is_managed_ownership(&entry.ownership))
+            .expect("managed entry");
+        let bytes = b"earlier package of the same product\n";
+        fs::write(root.join(&manifest.entries[index].path), bytes).expect("sibling bytes");
+        manifest.entries[index].digest = sha256_digest(bytes);
+        if let Some(path) = extra_path {
+            let mut extra = manifest.entries[index].clone();
+            extra.path = path.to_owned();
+            fs::create_dir_all(root.join(path).parent().expect("parent")).expect("parent");
+            fs::write(root.join(path), bytes).expect("extra bytes");
+            manifest.entries.push(extra);
+            manifest
+                .entries
+                .sort_by(|left, right| left.path.cmp(&right.path));
+        }
+        manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(&manifest_path, json_line(&manifest).expect("JSON")).expect("manifest");
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_sibling_package_of_the_same_product() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), None);
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("sibling");
+        assert_eq!(hosts, ["codex"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_accepts_sibling_package_paths_dropped_from_hive_tree() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(
+            temporary.path(),
+            Some(".hive/marketplaces/codex/plugins/aigent-hive/skills/retired/SKILL.md"),
+        );
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path()).expect("dropped path");
+        assert_eq!(hosts, ["codex"]);
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_sibling_package_claiming_knowledge() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), Some(".hive/knowledge/Claims/user.md"));
+
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_sibling_package_claiming_foreign_paths() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        let install = args(temporary.path(), UserHost::Codex, UserMode::Apply);
+        execute(UserOperation::Install, &install, &runner).expect("install selected host");
+        rewrite_as_sibling_package(temporary.path(), Some("notes/user-owned.md"));
+
+        assert!(authenticated_saved_projection_hosts(temporary.path()).is_err());
+    }
+
+    #[test]
+    fn authenticated_saved_projection_scope_rejects_forged_prior_release_manifest() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex"]);
+        let mut forged = seed_historical_user_install(temporary.path(), UserHost::Codex);
+        forged.product_version = "0.5.9".to_owned();
+        forged.plan_digest = inventory_digest(
+            forged.host,
+            &forged.product_version,
+            &forged.host_version_range,
+            Path::new(&forged.guidance_path),
+            &forged.source_release_digest,
+            &forged.entries,
+        );
+        fs::write(
+            temporary.path().join(".hive/install/codex.json"),
+            json_line(&forged).expect("forged manifest JSON"),
+        )
+        .expect("forged manifest");
+
+        let error = authenticated_saved_projection_hosts(temporary.path()).expect_err("forged");
+        assert!(error.contains("does not match an authenticated Hive release"));
+    }
+
     fn seed_historical_user_install(root: &Path, host: UserHost) -> UserOwnershipManifest {
         let historical = historical_user_inventory(host);
         let mut manifest = UserOwnershipManifest {
@@ -9401,6 +9726,7 @@ mod tests {
                 policy: None,
                 discord: DiscordGuardPreferences::default(),
                 project_overrides: BTreeMap::new(),
+                host_windows: BTreeMap::new(),
             },
             preference_decisions: BTreeMap::new(),
         };
@@ -10082,6 +10408,7 @@ mod tests {
                 ("0.14.2", 77),
                 ("0.15.0", 95),
                 ("0.15.1", 95),
+                ("0.15.2", 95),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10253,6 +10580,7 @@ mod tests {
                         | "0.14.2"
                         | "0.15.0"
                         | "0.15.1"
+                        | "0.15.2"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")

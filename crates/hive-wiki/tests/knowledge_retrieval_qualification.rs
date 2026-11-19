@@ -112,6 +112,7 @@ fn remember(
         status: AssertionStatus::UserStated,
         visibility,
         normalized_fact: fact.to_owned(),
+        subject: None,
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::UserStatement,
             summary: format!("Reviewed durable statement for {claim_key}"),
@@ -312,6 +313,7 @@ fn portarefolium_style_turn_keeps_global_background_and_rejects_unregistered_pro
         status: AssertionStatus::UserStated,
         visibility: RagVisibility::ProjectPrivate,
         normalized_fact: project_fact.to_owned(),
+        subject: None,
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::UserStatement,
             summary: "Reviewed project-specific resume convention".to_owned(),
@@ -365,6 +367,7 @@ fn disabled_secret_and_ambiguous_paths_fail_closed_without_claim_mutation() {
         status: AssertionStatus::UserStated,
         visibility: RagVisibility::Shared,
         normalized_fact: secret_fact.to_owned(),
+        subject: None,
         provenance: ClaimProvenance {
             source_kind: RememberSourceKind::UserStatement,
             summary: "Reviewed candidate secret statement".to_owned(),

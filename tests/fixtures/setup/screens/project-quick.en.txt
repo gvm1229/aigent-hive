@@ -1,0 +1,83 @@
+Checking the installed apps. This can take a moment.
+
+[1/4] Setup mode
+
+  Choose a setup mode.
+    1. Quick setup (current)
+    2. Custom setup
+  Enter to keep/select: Quick setup
+
+>
+[2/4] Project name
+
+  Enter the project name.
+  Enter to keep/select: snapshot-target
+
+>
+[3/4] Project kind
+
+  Choose the project configuration kind.
+    1. Coding
+    2. Documents
+    3. General (current)
+    4. Custom
+  Enter to keep/select: General
+
+>
+[4/4] App
+
+  Choose the app for this project.
+    1. Codex (current)
+    2. Claude Code
+    3. Antigravity
+  Enter to keep/select: Codex
+
+> Checking the installed apps. This can take a moment.
+
+Project preview
+  Write Hive files only in the selected target; preserve user files.
+  Language, documents, and response style inherit global settings; features use
+  the project default bundle. Current effective values follow.
+
+General
+  Language                  : English
+  Setup mode                : Quick setup
+  Knowledge storage         : yes
+  Knowledge language        : English
+  Response style            : Balanced
+  Project name              : Snapshot project
+  Project kind              : General
+  App                       : Codex
+  Remaining-quota threshold : 20
+
+Features
+  Feature bundle    : Individual, 32
+                      adversarial-judge, aither, amend-directive, apollon,
+                      artemis, athena, code-polish, demeter, eileithyia, hades,
+                      hephaistos, humanize-kor, judge-evidence,
+                      knowledge-capture, knowledge-maintain, knowledge-promote,
+                      knowledge-recall, knowledge-scan, multi-goal, poseidon,
+                      product-update, project-refresh, prompt-refine,
+                      quick-answer, research-best-practices, run-checkpoint,
+                      run-handoff, run-resume, ship, team-execution,
+                      usage-guard, verified-workflow
+  Roles             : None
+  Optional features : None
+  Hooks             : None
+
+Knowledge paths
+  Knowledge include paths : None
+  Knowledge exclude paths : .env
+                            **/.env
+                            **/.env.*
+                            **/credentials*
+                            **/secrets/**
+  Globally shared kinds   : None
+  Confidential kinds      : None
+
+Change size
+  Changed file count : 101
+
+------------------------------------------------------------------------
+Apply these changes? [yes/no, default: no]
+>

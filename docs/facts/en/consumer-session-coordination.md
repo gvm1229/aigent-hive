@@ -9,12 +9,12 @@ summary: "Hive coordinates overlapping automated consumer-project edits through 
 tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:d3a387b8364633333832c10b7c4e682b09f2343b916957b0e63d555eb3999fb4"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:81c8223df0cba01511f0da69e8bc2b79bca26a22fa0439af874f6b4ed320606e"
   - "repo:crates/hive-cli/src/session.rs#sha256:017435bb594baffef5c36d9b90404aa676429ef00bd674173b4fd46a982f0aae"
   - "repo:docs/archive/plans/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:harness/directives/03-session-coordination.md#sha256:bdef62f4f837e3c0c84a794a9f4c7bca1b8947a92b5b3ea66ff8314bb2c7dfec"
-  - "repo:harness/skills/project-setup/SKILL.md#sha256:0d1ff1e14d772e9a89065a5b54b54d717b9549a07a0ba1e0f6333e1917ab16c6"
+  - "repo:harness/skills/project-setup/SKILL.md#sha256:01cf16fb17646efbb3fa714d6f851dcb6b19b22914547f5316136fafb145611a"
   - "repo:tests/conformance/integration/test_project_lifecycle.py#sha256:d1a1e8c7f69b67beb679881340ed3258c2549fa926e105639eee9e69a47af7eb"
 links: [knowledge-preservation, project-onboarding]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"

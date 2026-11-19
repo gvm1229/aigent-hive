@@ -616,11 +616,11 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 29] = [
+    const SUPPORTED: [&str; 30] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
         "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0",
         "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2", "0.14.0", "0.14.1", "0.14.2", "0.15.0",
-        "0.15.1",
+        "0.15.1", "0.15.2",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -1287,9 +1287,9 @@ fn localized_skill_text(
         ),
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",
-            "(knowledge-capture) At the end of a Wiki-enabled turn, keep one useful fact, preference, or workflow that will help later work; never save secrets, raw conversations, or uncertain guesses.",
+            "(knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work; never save secrets, raw conversations, or uncertain guesses.",
             "유용한 지식 남기기",
-            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식 하나를 골라 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
+            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식을 골라 한 번에 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
         ),
         "knowledge-recall" => (
             "Search knowledge (knowledge-recall)",
@@ -3436,7 +3436,7 @@ description: Inspect one local file without changing it.
         assert!(english_metadata.contains("(knowledge-capture) At the end of a Wiki-enabled turn"));
         assert!(korean_metadata.contains("display_name: \"유용한 지식 남기기\""));
         assert!(korean_metadata.contains("(knowledge-capture) 대화를 마칠 때"));
-        assert!(korean_metadata.contains("사실·선호·방식 하나를 골라"));
+        assert!(korean_metadata.contains("사실·선호·방식을 골라 한 번에"));
     }
 
     #[test]
@@ -3592,6 +3592,7 @@ description: Inspect one local file without changing it.
             ("0.14.2", 28),
             ("0.15.0", 37),
             ("0.15.1", 37),
+            ("0.15.2", 37),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");
