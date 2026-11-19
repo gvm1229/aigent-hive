@@ -362,7 +362,12 @@ fn custom_inputs_retry_only_invalid_context_and_bind_sorted_sharing_choices() {
         "{}",
         String::from_utf8_lossy(&terminal.writer)
     );
-    let output = String::from_utf8(terminal.writer).unwrap();
+    // Long messages wrap at 80 columns; compare words, not line breaks.
+    let output = String::from_utf8(terminal.writer)
+        .unwrap()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(output.contains("Enable global knowledge storage"));
     assert!(output.contains("below the global threshold"));
     assert!(output.contains("relative to this project"));
@@ -1258,6 +1263,18 @@ fn quick_project_screen_matches_the_plain_80_column_snapshot() {
             assert!(screen.contains(step), "{step}");
         }
         super::super::layout::assert_snapshot(name, &screen);
+    }
+}
+
+#[test]
+fn the_unverified_runtime_note_fits_an_80_column_terminal() {
+    for note in super::UNVERIFIED_RUNTIME_NOTE {
+        for line in note.lines() {
+            assert!(
+                super::super::layout::width(line) <= super::super::layout::WIDTH,
+                "{line}"
+            );
+        }
     }
 }
 

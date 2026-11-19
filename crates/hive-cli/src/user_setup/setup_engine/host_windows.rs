@@ -82,6 +82,10 @@ pub(super) fn selected_hosts(answers: &Value) -> Vec<String> {
 pub(super) fn expand(questions: &[Question], answers: &Value) -> Vec<Question> {
     let templates: Vec<&Question> = questions.iter().filter(|q| is_template(q)).collect();
     let hosts = selected_hosts(answers);
+    // A new per-app threshold starts from the global threshold the person already chose.
+    let global = answers["usage_guard"]["stop_remaining_percent"]
+        .as_u64()
+        .map(Value::from);
     let mut expanded = Vec::with_capacity(questions.len() + templates.len() * hosts.len());
     let mut inserted = false;
     for question in questions {
@@ -93,7 +97,17 @@ pub(super) fn expand(questions: &[Question], answers: &Value) -> Vec<Question> {
                 expanded.extend(
                     templates
                         .iter()
-                        .filter_map(|template| instantiate(template, host)),
+                        .filter_map(|template| instantiate(template, host))
+                        .map(|mut question| {
+                            if global.is_some()
+                                && instance(&question.id).is_some_and(|(template, _)| {
+                                    [FIVE_HOUR_THRESHOLD, WEEKLY_THRESHOLD].contains(&template)
+                                })
+                            {
+                                question.default.clone_from(&global);
+                            }
+                            question
+                        }),
                 );
             }
         }
@@ -212,6 +226,22 @@ mod tests {
         }
         let off = json!({"selected_hosts":["claude"],"usage_guard":{"enforcement_enabled":false}});
         assert!(usage_questions(&off).is_empty());
+    }
+
+    #[test]
+    fn per_app_thresholds_start_from_the_global_threshold() {
+        let answers = json!({"selected_hosts":["claude","antigravity"],
+            "usage_guard":{"enforcement_enabled":true,"stop_remaining_percent":10,
+                "host_windows":{"claude":{"five_hour_limit":true,"guard":"both"}}}});
+        let thresholds: Vec<Question> = usage_questions(&answers)
+            .into_iter()
+            .filter(|q| {
+                instance(&q.id)
+                    .is_some_and(|(t, _)| [FIVE_HOUR_THRESHOLD, WEEKLY_THRESHOLD].contains(&t))
+            })
+            .collect();
+        assert_eq!(thresholds.len(), 3);
+        assert!(thresholds.iter().all(|q| q.default == Some(json!(10))));
     }
 
     #[test]

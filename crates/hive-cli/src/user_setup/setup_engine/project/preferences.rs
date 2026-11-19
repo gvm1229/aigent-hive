@@ -167,12 +167,19 @@ pub(super) fn inspect(
     }
     let mut data = if options.describe {
         let selected_section = if let Some(id) = &options.question {
-            super::super::catalog()?
+            let project: Vec<_> = super::super::catalog()?
                 .questions
                 .into_iter()
-                .find(|q| q.scope == PreferenceScope::Project && q.id == *id)
-                .map(|q| q.section)
-                .ok_or_else(|| SetupError::Input("unknown project setup question".into()))?
+                .filter(|q| q.scope == PreferenceScope::Project)
+                .collect();
+            let found = project
+                .iter()
+                .find(|q| q.id == *id)
+                .map(|q| q.section.clone());
+            found.ok_or_else(|| {
+                let ids: Vec<&str> = project.iter().map(|q| q.id.as_str()).collect();
+                super::super::unknown_question(id, &ids)
+            })?
         } else {
             options.section.clone().ok_or_else(|| {
                 SetupError::Input("project describe requires --section or --question".into())

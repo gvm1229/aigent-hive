@@ -17,7 +17,26 @@ impl<R: BufRead, W: Write> Terminal<R, W> {
         } else {
             en
         };
-        writeln!(self.writer, "{line}").map_err(|error| io_error(&error))
+        // Long sentences wrap at word boundaries, keeping their indent, so no line exceeds 80 columns.
+        for part in line.split('\n') {
+            if layout::width(part) <= layout::WIDTH {
+                writeln!(self.writer, "{part}").map_err(|error| io_error(&error))?;
+                continue;
+            }
+            let indent = &part[..part.len() - part.trim_start().len()];
+            for wrapped in layout::wrap(part, indent, indent) {
+                writeln!(self.writer, "{wrapped}").map_err(|error| io_error(&error))?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Said before work that may wait on installed apps, so a slow app CLI never looks frozen.
+    pub fn checking_apps(&mut self) -> Result<(), SetupError> {
+        self.say(
+            "설치된 앱 상태를 확인하는 중입니다. 잠시 걸릴 수 있습니다.",
+            "Checking the installed apps. This can take a moment.",
+        )
     }
 
     pub fn ask(
@@ -237,6 +256,25 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::io::Cursor;
+
+    #[test]
+    fn long_sentences_wrap_within_80_columns_and_keep_their_indent() {
+        let mut terminal = Terminal {
+            reader: Cursor::new(Vec::new()),
+            writer: Vec::new(),
+            language: InterfaceLanguage::Ko,
+        };
+        let long = format!("  {}", "가나다라마 바사아자차 ".repeat(12));
+        terminal.say(&format!("짧은 줄\n{long}"), "").unwrap();
+        let output = String::from_utf8(terminal.writer).unwrap();
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines[0], "짧은 줄");
+        assert!(lines.len() > 2);
+        for line in &lines[1..] {
+            assert!(layout::width(line) <= layout::WIDTH, "{line}");
+            assert!(line.starts_with("  "), "{line}");
+        }
+    }
 
     #[test]
     fn structured_defaults_remain_valid_json_when_copied_back_into_the_question() {

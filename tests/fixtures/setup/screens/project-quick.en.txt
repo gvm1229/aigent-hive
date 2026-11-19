@@ -1,3 +1,4 @@
+Checking the installed apps. This can take a moment.
 
 [1/4] Setup mode
 
@@ -31,7 +32,8 @@
     3. Antigravity
   Enter to keep/select: Codex
 
->
+> Checking the installed apps. This can take a moment.
+
 Project preview
   Write Hive files only in the selected target; preserve user files.
   Language, documents, and response style inherit global settings; features use

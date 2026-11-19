@@ -341,6 +341,32 @@ fn a_wrong_output_value_keeps_its_cause() {
 }
 
 #[test]
+fn a_declined_setup_is_not_reported_as_a_failure() {
+    let declined = json!({"action":"SetupHarness","status":"needs-input","exit_code":2,
+        "code":"hive.project-setup-input-pending","message":"Project setup is pending.",
+        "next_action":"hive setup --target '/p' --user-root '/u' --show --summary --output json",
+        "data":{"declined":true,"terminal_next_action":"hive setup --target '/p' --user-root '/u' --resume"}});
+    for (language, expected) in [
+        (
+            InterfaceLanguage::Ko,
+            "적용하지 않았습니다. 바뀐 것은 없습니다.
+나중에 이어서 하려면: hive setup --target '/p' --user-root '/u' --resume",
+        ),
+        (
+            InterfaceLanguage::En,
+            "Not applied. Nothing changed.
+To continue later: hive setup --target '/p' --user-root '/u' --resume",
+        ),
+    ] {
+        assert_eq!(render(&declined, language, "setup"), expected);
+    }
+    // An update that stopped at its confirmation keeps the update resume path and failure view.
+    let mut update = declined.clone();
+    update["action"] = json!("UpdateHiveUser");
+    assert!(!render(&update, InterfaceLanguage::En, "update").starts_with("Not applied"));
+}
+
+#[test]
 fn a_pending_setup_shows_the_agent_path_and_the_terminal_resume() {
     let pending = json!({"action":"SetupHarness","status":"needs-input","exit_code":2,
         "code":"hive.project-setup-input-pending","message":"Project setup is pending.",

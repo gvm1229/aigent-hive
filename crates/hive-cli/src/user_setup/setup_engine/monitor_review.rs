@@ -162,7 +162,7 @@ pub(super) fn run<R: BufRead, W: Write>(
         displayed["usage_guard"]["midway"]["enabled"] = json!(false);
         interactive::display_preview(&displayed, terminal)?;
         if !terminal.confirm()? {
-            return Ok(interactive::pending(
+            return Ok(interactive::declined(
                 terminal.language,
                 "hive.setup-input-pending",
             ));

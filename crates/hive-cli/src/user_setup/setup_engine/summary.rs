@@ -16,7 +16,7 @@ pub(crate) fn arguments(input: &[String]) -> Result<(Vec<String>, bool), SetupEr
                 )
             }))
     {
-        return Err(SetupError::Input("--summary requires JSON setup status, apply, validation or resume; approval previews and describe remain separate".into()));
+        return Err(SetupError::Input("--summary requires JSON setup status, apply, validation or resume; approval previews and describe remain separate. Run the same command without --summary".into()));
     }
     Ok((
         input

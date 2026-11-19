@@ -65,6 +65,17 @@ pub(in crate::user_setup) fn failure(
     language: InterfaceLanguage,
 ) -> ActionResult {
     let mut result = user_setup::failure(error);
+    if let Some(hint) = error.message().strip_prefix(super::UNKNOWN_QUESTION_HINT) {
+        result.message = if language == InterfaceLanguage::Ko {
+            format!("알 수 없는 설정 질문입니다. 혹시 이것인가요? {hint}")
+        } else {
+            format!("Unknown setup question. Did you mean: {hint}")
+        };
+        result.data = Some(
+            json!({"interface_language":language,"diagnostic":{"original_message":error.message()}}),
+        );
+        return result;
+    }
     let messages = match error.message() {
         "unknown setup question section" | "unknown setup question section id" =>
             ["알 수 없는 설정 항목입니다. --section 값을 확인하거나 대화형 설정에서 항목을 다시 골라 주세요.", "Unknown settings group. Check --section or choose a group in interactive setup."],
@@ -72,6 +83,8 @@ pub(in crate::user_setup) fn failure(
             ["대화형 입력과 무입력 또는 JSON 출력을 함께 선택할 수 없습니다.", "Interactive input cannot be combined with non-interactive mode or JSON output."],
         "unknown interactive setup option" | "unknown project setup option" =>
             ["알 수 없는 설정 옵션입니다. hive setup --help로 사용할 옵션을 확인해 주세요.", "Unknown setup option. Run hive setup --help to inspect the available options."],
+        message if message.starts_with("--summary requires") =>
+            ["--summary는 미리보기(--dry-run)·질문 설명(--describe)·진행 확인(--progress)과 함께 쓸 수 없습니다. --summary 없이 같은 명령을 다시 실행해 주세요.", "--summary cannot be combined with --dry-run, --describe or --progress. Run the same command without --summary."],
         "duplicate setup option" | "duplicate project setup option" =>
             ["같은 설정 옵션을 두 번 지정했습니다. 중복된 입력을 지워 주세요.", "A setup option was supplied twice. Remove the duplicate input."],
         "turn off Codex background monitoring before deselecting Codex" =>
@@ -93,6 +106,28 @@ pub(in crate::user_setup) fn failure(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unknown_questions_and_summary_misuse_say_how_to_fix_them() {
+        let hint = failure(
+            &super::super::unknown_question("projct-knd", &["project-kind", "project-name"]),
+            InterfaceLanguage::Ko,
+        );
+        assert_eq!(
+            hint.message,
+            "알 수 없는 설정 질문입니다. 혹시 이것인가요? project-kind"
+        );
+        let summary = failure(
+            &SetupError::Input("--summary requires JSON setup status, apply, validation or resume; approval previews and describe remain separate. Run the same command without --summary".into()),
+            InterfaceLanguage::En,
+        );
+        assert!(
+            summary.message.contains("without --summary"),
+            "{}",
+            summary.message
+        );
+    }
+
     #[test]
     fn language_lookup_is_read_only_and_uses_pending_project_then_global_choices() {
         let root = crate::test_tempdir();
