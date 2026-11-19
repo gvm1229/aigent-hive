@@ -115,6 +115,9 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
                 value
             }
         });
+    if data["declined"] == true && matches!(action, "SetupHarness" | "SetupHiveUser") {
+        return declined(value, language);
+    }
     if failed {
         return failure(value, language, &ko, family);
     }
@@ -354,6 +357,29 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, family: &str) -
     ));
     output.push_str(&terminal_resume(value, language));
     output
+}
+
+/// A person said no at the final confirmation: not a failure, and the agent path is not theirs.
+fn declined(value: &Value, language: InterfaceLanguage) -> String {
+    let mut text = choose(
+        language,
+        "적용하지 않았습니다. 바뀐 것은 없습니다.",
+        "Not applied. Nothing changed.",
+    );
+    if let Some(terminal) = value["data"]["terminal_next_action"]
+        .as_str()
+        .filter(|next| !next.is_empty())
+    {
+        text.push_str(&choose(
+            language,
+            "
+나중에 이어서 하려면: ",
+            "
+To continue later: ",
+        ));
+        text.push_str(&readable_command(terminal));
+    }
+    text
 }
 
 /// A pending setup lists the agent path first; a person still sees the terminal resume.

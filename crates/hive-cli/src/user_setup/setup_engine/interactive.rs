@@ -994,6 +994,7 @@ fn preview_apply<R: BufRead, W: Write>(
     progress: &mut Conversation,
     terminal: &mut Terminal<R, W>,
 ) -> Result<crate::ActionResult, SetupError> {
+    terminal.checking_apps()?;
     if progress.answers["persona"]["id"] != "custom" {
         progress.answers["persona"]
             .as_object_mut()
@@ -1037,8 +1038,11 @@ fn preview_apply<R: BufRead, W: Write>(
     super::vector_choice::display(&progress.record, terminal)?;
     progress.phase = ProgressPhase::Previewed;
     persist(store, progress)?;
-    if options.dry_run || !terminal.confirm()? {
+    if options.dry_run {
         return Ok(pending(terminal.language, "hive.setup-input-pending"));
+    }
+    if !terminal.confirm()? {
+        return Ok(declined(terminal.language, "hive.setup-input-pending"));
     }
     if options
         .legacy_budget
@@ -1307,6 +1311,13 @@ pub(super) fn display_monitor<R: BufRead, W: Write>(
         )?;
     }
     Ok(())
+}
+
+/// A person declined at the final confirmation; JSON keeps the pending code for agents.
+pub(super) fn declined(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {
+    let mut result = pending(language, code);
+    result.data = Some(serde_json::json!({"declined": true}));
+    result
 }
 
 pub(super) fn pending(language: InterfaceLanguage, code: &'static str) -> crate::ActionResult {

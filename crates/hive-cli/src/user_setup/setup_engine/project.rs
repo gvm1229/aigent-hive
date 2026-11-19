@@ -85,7 +85,8 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
                     "--user-root" => options.root = PathBuf::from(value),
                     "--output" if value == "json" => options.interaction.json = true,
                     "--section" => options.section = Some(value.clone()),
-                    "--question" => options.question = Some(value.clone()),
+                    // Agents often pass the answer key (`project_kind`); question ids use hyphens.
+                    "--question" => options.question = Some(value.replace('_', "-")),
                     "--capabilities" => options.capabilities = Some(PathBuf::from(value)),
                     _ => {
                         return Err(SetupError::Input(
@@ -254,6 +255,20 @@ fn pending(language: InterfaceLanguage) -> ActionResult {
     )
 }
 
+/// Shown when host execution support was not checked; each line fits an 80-column terminal.
+const UNVERIFIED_RUNTIME_NOTE: [&str; 2] = [
+    "앱 실행 파일 확인과 실행 기능 지원은 별개입니다.
+실행 기능은 아직 검증되지 않았습니다.",
+    "Executable presence is separate from execution support.
+Execution capabilities remain unverified.",
+];
+
+/// A person declined at the final confirmation: nothing failed, so the terminal says so.
+fn declined(mut result: ActionResult) -> ActionResult {
+    result.data = Some(json!({"declined": true}));
+    result
+}
+
 fn report(
     status: &'static str,
     exit_code: u8,
@@ -300,6 +315,7 @@ fn execute<R: BufRead, W: Write>(
     if mode != InteractionMode::Terminal {
         return resume_without_input(options, &store, terminal.language);
     }
+    terminal.checking_apps()?;
     if global_config.is_none() {
         terminal.say(
             "프로젝트에 사용할 전역 설정부터 진행합니다.",
@@ -567,6 +583,7 @@ fn apply<R: BufRead, W: Write>(
     global: &hive_render::GlobalProjectPreferences,
     terminal: &mut Terminal<R, W>,
 ) -> Result<ActionResult, SetupError> {
+    terminal.checking_apps()?;
     let (answers, caps, facts) = prepare_files(options, &progress.answers)?;
     let preview = prepare_settings(options, answers.path(), caps.path(), global)?.outcome;
     let korean = terminal.language == InterfaceLanguage::Ko;
@@ -596,12 +613,15 @@ fn apply<R: BufRead, W: Write>(
             "Using the project's saved capability data. Runtime support was not revalidated.",
         )?;
     } else if options.capabilities.is_none() {
-        terminal.say("앱 실행 파일 확인과 실행 기능 지원은 별개입니다. 실행 기능은 아직 검증되지 않았습니다.","Executable presence is separate from execution support. Execution capabilities remain unverified.")?;
+        terminal.say(UNVERIFIED_RUNTIME_NOTE[0], UNVERIFIED_RUNTIME_NOTE[1])?;
     }
     progress.phase = ProgressPhase::Previewed;
     *snapshot = store.save(snapshot, progress)?;
-    if options.dry_run || !terminal.confirm()? {
+    if options.dry_run {
         return Ok(pending(terminal.language));
+    }
+    if !terminal.confirm()? {
+        return Ok(declined(pending(terminal.language)));
     }
     let cap = crate::user_install::open_user_root_for_setup(&options.root)
         .map_err(SetupError::Conflict)?;
