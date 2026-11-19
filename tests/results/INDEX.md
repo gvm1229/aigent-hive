@@ -1525,3 +1525,5 @@
 | [passed](runs/20261118T214055-4757d9fd43a7.md) | OV153 단계 검토 반영 뒤 Rust 전체 단위 시험 | 50eee283a454bdc04448ed3641860a2000d27a88 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261118T214729-6fab47922b07.md) | OV153 test.3 전 문서 lane | 1aef466de2852ab710d5baf6e46457cd1f5f28d4 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T214914-2a104ea0ab62.md) | OV153 test.3 전 문서 lane 재실행 | 0a26a502a721746b8c3752452cf2aad362a22eef | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T222522-7612db6756ce.md) | OV153 test.3 전 contract lane | 08c2cbbe83326a94eb29f7a84d7e0216957979ab | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261119T180451-aec0cc3f3312.md) | Python conformance: documentation | 66705a9977f6b09c893521b921861c878bd3210e | Windows-11-10.0.26300-SP0 |
