@@ -12,7 +12,7 @@
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-16 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
@@ -47,7 +47,7 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.15.3 (released 2026-11-16)
+AIgent Hive v0.15.3 (released 2026-11-20)
 ```
 
 ### macOS and Linux with curl
@@ -111,6 +111,11 @@ This option installs only the current stable release.
 - Give a fact a subject such as `design/visual-style`. A matching fact returns up to 16 more facts of the same subject, and `hive knowledge subjects list|preview|apply|restore` manages subjects.
 - Short Korean search words find stored sentences with particles, so `남색` finds `남색과`. The recall Skill passes Korean and English variants with `--expansions`.
 - After a fact receives a subject, Hive 0.15.2 and earlier refuse that knowledge store. Downgrade is unsupported.
+- Usage protection asks, for each app you selected, whether its subscription has a 5-hour limit, then whether to guard the 5-hour limit, the weekly limit, or both with separate thresholds. Antigravity gets one threshold, and new per-app thresholds start from your global threshold. Codex's 30-day window counts as the weekly limit.
+- A mistyped command or option suggests up to three close matches without any AI, for example `hive instal` → `install`. `hive --help` is now a short grouped list.
+- `hive update` works after `npm install -g` installs a new version over the previous public release. If a reinstall fails, Hive files stay and the error names the restore command.
+- Saying no at the last setup confirmation now reports that nothing changed and shows how to continue, instead of a failure. JSON keeps the same code and exit code 2 and adds `data.declined`. Long setup lines wrap at 80 columns, and a notice appears before slow app checks.
+- Hive's user instructions tell agents to save a lasting preference as separate facts with one shared subject. `hive setup --describe --question` accepts `project_kind` as `project-kind` and suggests close question names.
 
 ## Earlier changes in 0.15.2
 

@@ -12,7 +12,7 @@
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-16 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
@@ -42,7 +42,7 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.15.3 (released 2026-11-16)
+AIgent Hive v0.15.3 (released 2026-11-20)
 ```
 
 ### macOS·Linux curl
@@ -106,6 +106,11 @@ an optional third-party Skill.
 - 사실마다 `design/visual-style` 같은 주제 지정, 맞은 사실과 같은 주제의 사실 최대 16개를 함께 반환. `hive knowledge subjects list|preview|apply|restore`로 주제 관리
 - `남색`으로 `남색과`를 찾는 것처럼 조사가 붙은 저장 문장도 짧은 한국어로 검색. 회수 Skill이 `--expansions`로 한·영 바꿔 쓴 말 함께 전달
 - 주제가 붙은 사실이 생기면 Hive 0.15.2 이하가 그 지식 저장소를 거부, 하위 버전 되돌림 미지원
+- 사용량 보호가 고른 앱마다 구독의 5시간 한도 여부를 묻고, 5시간만·주간만·둘 다(기준 각각) 중 보호할 한도 선택. Antigravity는 기준 하나, 새 앱별 기준은 전역 기준에서 시작. Codex의 30일 사용량 창은 주간 한도로 측정
+- 잘못 입력한 명령·옵션에 AI 없이 가까운 추천 최대 3개(예 `hive instal` → `install`). `hive --help`는 짧은 묶음별 목록
+- `npm install -g`로 새 버전을 이전 공개 버전 위에 설치한 뒤 `hive update` 정상 진행. 재설치 실패 시 Hive 파일 보존과 복구 명령 안내
+- 설정 마지막 확인의 `아니요`는 실패 대신 변경 없음과 이어가기 명령 표시. JSON은 같은 코드·종료 코드 2에 `data.declined` 추가. 긴 설정 문장은 80열 안에서 줄바꿈, 느린 앱 확인 앞 안내
+- Hive 사용자 지침에 지속 선호를 같은 주제의 원자 사실로 나눠 저장하는 규칙. `hive setup --describe --question`이 `project_kind`를 `project-kind`로 해석하고 가까운 질문 이름 추천
 
 ## 이전 0.15.2 변경
 
