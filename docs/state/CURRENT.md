@@ -1,7 +1,7 @@
 # 현재 상태
 
 - 제품 버전: `0.15.3`
-- 공개 안정판·PC 설치: `0.15.2` (2026-11-16). [정식 근거](../research/overhaul/OV152-008.md)
+- 공개 안정판·PC 설치: `0.15.3` (2026-11-20). [정식 근거](../research/overhaul/OV153-010.md). 단계 5 항목 17/17 완료, 다음은 재정비 단계 6
 - 작업: 재정비 단계 5 0.15.3 기억 회수, 브랜치 `feature/overhaul-5-0.15.3-memory`. [소유 계획](../plans/active/0.15.3-memory.md)·[시작 근거](../research/overhaul/OV153-001.md)
 - 현재 요청(2026-11-19 유지관리자, local 세션): OV153-014·015 범위 추가와 이 세션에서 구현, 정식 0.15.3 출시까지 계속. 이 세션만 사용량 보호 해제. 원문 "Continue with your implementation while disabling the usage guard for this session only. Do not stop until 0.15.3 stable version is released"
 - 진행: OV153-001–007·009 완료. [구현 근거](../research/overhaul/OV153-002-006.md)·[회수율 재측정](../research/overhaul/OV153-007.md) 22/40→32/40(보류 3/10→5/10)·[단계 검토](../research/overhaul/stage-5-review.md)·[develop 병합](../research/overhaul/OV153-009.md)
@@ -20,11 +20,11 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.15.3`
-- 현재 등록 항목: 16/17 완료
+- 현재 등록 항목: 17/17 완료
 
 - `agent-owned`: 없음
 - `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: `OV153-010`
+- `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
 
