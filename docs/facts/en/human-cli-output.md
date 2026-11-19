@@ -10,7 +10,7 @@ tags: [cli, compatibility, output]
 aliases: ["human-readable CLI"]
 sources:
   - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
-  - "repo:crates/hive-cli/src/human_output.rs#sha256:f5f1b5a153c04b52733c028530a50a29c2f4744f473bb769e329afd02117406a"
+  - "repo:crates/hive-cli/src/human_output.rs#sha256:be0b28414d2c76fc95317bf106576630ccadd5c3f49bafd8cecbe4248b24114a"
   - "repo:crates/hive-cli/src/main.rs#sha256:7fc5b1b31339f6a712d50877bc29722fdedf9fa402ae269d1b52f034d1ffa7e0"
   - "repo:crates/hive-cli/tests/human_output.rs#sha256:8486343385d3a9edf6bb88fc89278437065cccb1c6658a45c0e8030f95818fbc"
 links: [inert-summon-contract, usage-threshold-provenance]
