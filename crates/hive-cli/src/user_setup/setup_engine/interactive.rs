@@ -134,7 +134,12 @@ pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCod
                 .interaction
                 .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
                 .map_err(SetupError::Input)?;
-            execute(&options, mode, &mut terminal)
+            let mut result = execute(&options, mode, &mut terminal)?;
+            // OV160-013 U4: the usage section offers the consented Claude status-line connection.
+            if options.section.as_deref() == Some("usage") && result.exit_code == 0 {
+                crate::user_setup::claude_statusline::offer(&options.root, &mut result);
+            }
+            Ok(result)
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
     let result = if json_output {

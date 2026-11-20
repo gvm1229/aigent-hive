@@ -16,9 +16,16 @@ struct FailureEpisode {
     active: bool,
 }
 
-fn failure_path(config: &InstalledUsageConfig, account: Option<&str>) -> (String, PathBuf) {
+const TERMINAL: &str = "observation-failure";
+const DISCORD: &str = "observation-failure-discord";
+
+fn failure_path(
+    kind: &str,
+    config: &InstalledUsageConfig,
+    account: Option<&str>,
+) -> (String, PathBuf) {
     let identity = sha256_digest(
-        serde_json::json!(["observation-failure", config.primary_host, account])
+        serde_json::json!([kind, config.primary_host, account])
             .to_string()
             .as_bytes(),
     );
@@ -32,15 +39,27 @@ pub(super) fn claim_failure(
     config: &InstalledUsageConfig,
     account: Option<&str>,
 ) -> bool {
+    // A legacy policy has no warning switch; its missing-measurement warning is still shown once.
     if crate::display_options::quiet()
         || !config
             .policy
             .as_ref()
-            .is_some_and(|policy| policy.warnings_enabled)
+            .is_none_or(|policy| policy.warnings_enabled)
     {
         return false;
     }
-    change_failure(user_root, fallback, config, account, true).unwrap_or(false)
+    change_failure(TERMINAL, user_root, fallback, config, account, true).unwrap_or(false)
+}
+
+/// One Discord missing-measurement warning per failure episode (OV160-013 U5).
+pub(super) fn claim_discord_failure(
+    user_root: Option<&Path>,
+    fallback: &PinnedTarget,
+    config: &InstalledUsageConfig,
+    account: Option<&str>,
+) -> bool {
+    config.discord_guard_enabled
+        && change_failure(DISCORD, user_root, fallback, config, account, true).unwrap_or(false)
 }
 
 pub(super) fn recover_failure(
@@ -50,15 +69,15 @@ pub(super) fn recover_failure(
     requested: Option<&str>,
     observed: Option<&str>,
 ) {
-    if config.policy.is_none() {
-        return;
-    }
-    for account in [requested, observed, None] {
-        let _ = change_failure(user_root, fallback, config, account, false);
+    for kind in [TERMINAL, DISCORD] {
+        for account in [requested, observed, None] {
+            let _ = change_failure(kind, user_root, fallback, config, account, false);
+        }
     }
 }
 
 fn change_failure(
+    kind: &str,
     user_root: Option<&Path>,
     fallback: &PinnedTarget,
     config: &InstalledUsageConfig,
@@ -67,7 +86,7 @@ fn change_failure(
 ) -> Result<bool, super::AdapterError> {
     let owned = user_root.map(PinnedTarget::open_usage).transpose()?;
     let root = owned.as_ref().unwrap_or(fallback);
-    let (identity, path) = failure_path(config, account);
+    let (identity, path) = failure_path(kind, config, account);
     let snapshot = root.snapshot_bounded(&path, 4096)?;
     let old: Option<FailureEpisode> = snapshot
         .bytes()

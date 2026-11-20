@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub(crate) mod claude_statusline;
 mod migration;
 mod progress_store;
 mod projection_journal;
@@ -610,6 +611,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     if arguments.first().map(String::as_str) == Some("feature") {
         return run_feature(&arguments[1..]);
+    }
+    if claude_statusline::handles(arguments) {
+        return claude_statusline::run(arguments);
     }
     if setup_engine::handles(arguments) {
         return setup_engine::run(arguments, summary);

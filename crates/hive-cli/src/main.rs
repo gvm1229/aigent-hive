@@ -440,6 +440,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
                 | "threshold"
                 | "session"
                 | "capture"
+                | "statusline"
                 | "summarize-tokens"
         )
     ) {

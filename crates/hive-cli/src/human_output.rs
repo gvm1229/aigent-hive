@@ -47,7 +47,7 @@ pub(crate) fn machine_protocol(arguments: &[String]) -> bool {
         (first, second),
         (Some("hook"), _)
             | (Some("policy"), Some("hook"))
-            | (Some("usage"), Some("capture"))
+            | (Some("usage"), Some("capture" | "statusline"))
             | (Some("discord"), Some("inbound"))
     )
 }
