@@ -11,7 +11,7 @@ aliases: ["Native-first usage"]
 sources:
   - "repo:crates/hive-cli/src/main.rs#sha256:7b759fade2356837bead00b8e769244fd7645f9ddc57c4de5df377ddf54663c0"
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:30e71c6caa31220d517c1764954274f23ea13e22bf10ca8a0157f2a85da682a3"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:7459a9e2294fc43dd05bbad91a027287808f619bf5775fde68528a9ea4c6e69a"
   - "repo:crates/hive-cli/src/usage_control/manual.rs#sha256:56dfd0b134074e7797d3ab27b203800fce2809758460a40f0500e1ad7b39bd80"
   - "repo:crates/hive-cli/src/usage_monitor/sensor.rs#sha256:16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:1ec9e901110dbfab4bde9c63a5e3fa4eecb58fe366ceac55fc20fd3a8fcec9b7"

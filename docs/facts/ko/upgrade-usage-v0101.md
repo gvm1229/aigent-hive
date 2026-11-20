@@ -10,7 +10,7 @@ tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:4de73afc7e39e6cfb92df9241c16f48f71c2870eedf93b55c6e81317cf30c8cb"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:30e71c6caa31220d517c1764954274f23ea13e22bf10ca8a0157f2a85da682a3"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:7459a9e2294fc43dd05bbad91a027287808f619bf5775fde68528a9ea4c6e69a"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:3064034c88ce11c947486618e149d977963e8bc15f4a7c3a0acbe1b428f2fcf8"
   - "repo:crates/hive-projection/src/lib.rs#sha256:9561647510a75cdc259d93a93f032e09d620f41adab550291f1c93ef3b564ed4"
   - "repo:crates/hive-render/src/lib.rs#sha256:3a7521d803fb1db33e44d0b24c33453e17c0cc0f9f674aba814b7649cac4c323"
