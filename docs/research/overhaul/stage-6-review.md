@@ -48,5 +48,15 @@
 | N1 | Claude는 한 질문의 모든 Stop에 같은 `prompt_id`, 전달 응답이 계속 Stop에 재생 | 사건 식별에 본문 지문 추가(같은 바이트 재시도만 재생), `stop_hook_active`는 재생 전 중립 응답. `msg_hook_continuation_stops_of_one_prompt_never_replay_a_delivered_result` |
 | N2 | 같은 질문의 뒤 Stop이 옛 대기 안내 재생, 새 결과 숨김 | N1 수정으로 해소, 같은 시험에서 새 결과 1회 전달 확인 |
 | N3 | 안내의 `cancel-ack` 예시에 필수 `--claim` 없음 | 안내와 복사본 3곳에 `--claim`, `hive stop`의 `claim_digest` 안내 |
-| N4 | 상한 1에서 같은 메시지 경쟁 패자가 `worker-limit` 응답 | 세대 게시 경쟁에서 진 경우 승자 기록이 같은 메시지면 `already-claimed`. 동시 시험 5회 반복 통과 |
+| N4 | 상한 1에서 같은 메시지 경쟁 패자가 `worker-limit` 응답 | 세대 게시 경쟁에서 진 경우 승자 기록이 같은 메시지면 `already-claimed`. 남은 경로는 3차 N4′ |
 | N5 | `HIVE_TEST_CLOCK=1`은 인증 아닌 환경 스위치 | 유지. [검토 수정](stage-6-review-fixes.md)의 한계와 동일 |
+
+## 3차 재검토
+
+- 판정: APPROVE WITH FIXES. N1·N2·N3 해소 확인(별도 대상 폴더의 새 실행 파일, 계속 Stop 3회 `{}`·같은 질문 뒤 Stop 1회 전달·안내 4곳 지문 동일)
+- 남은 지적과 처리
+
+| ID | 지적 | 처리 |
+| --- | --- | --- |
+| N4′ | 상한 1·같은 메시지 소비자 8명에서 150회 중 31회 패자가 상한 응답(소비권 승인 전 상한 계산 경로) | 상한 거부 때 이 메시지의 소비권이 이미 있으면 `already-claimed`. `containment_same_message_racers_at_one_worker_lose_the_claim_not_the_limit`(8명·10회, 3회 반복 통과). 상한 초과·이중 승자는 원래 없음 |
+| N6 | 같은 질문의 같은 바이트 Stop은 대기 안내 재생, 결과는 다음 다른 Stop에서 1회 전달 | 유지. 같은 바이트 재시도 재생 계약의 결과, 결과 유실 없음 |

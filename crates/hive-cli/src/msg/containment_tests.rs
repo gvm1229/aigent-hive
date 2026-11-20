@@ -591,3 +591,27 @@ fn containment_released_worker_slots_are_reused_by_generation() {
         .join(hive_core::containment::slot_path(0, 1))
         .is_file());
 }
+
+#[test]
+fn containment_same_message_racers_at_one_worker_lose_the_claim_not_the_limit() {
+    // Third review N4': at max_workers = 1, racers of one message report the lost claim race.
+    for _ in 0..10 {
+        let f = fixture();
+        f.harness("max_workers = 1\nmax_worker_seconds = 60\n");
+        let id = f.sent_id("race", "artemis", "t-race");
+        let results: Vec<Value> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|_| scope.spawn(|| f.claim(&id, "artemis", &[])))
+                .collect();
+            handles.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+        let winners = results
+            .iter()
+            .filter(|r| r["code"] == "hive.msg-claimed")
+            .count();
+        assert_eq!(winners, 1, "{results:?}");
+        for loser in results.iter().filter(|r| r["code"] != "hive.msg-claimed") {
+            assert_eq!(loser["code"], "hive.msg-already-claimed", "{results:?}");
+        }
+    }
+}

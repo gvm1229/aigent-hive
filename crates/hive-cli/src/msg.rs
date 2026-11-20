@@ -1069,7 +1069,7 @@ fn claim(arguments: &[String]) -> Result<ActionResult, MsgError> {
             format!("stop {stop_id} is active: this message cannot be claimed"),
         ));
     }
-    let (lease, limits) = containment::admit_claim(&context, requested_lease)?;
+    let (lease, limits) = admit_or_lost_race(&context, &message_id, requested_lease)?;
     let mut token = [0_u8; 16];
     getrandom::fill(&mut token)
         .map_err(|_| MsgError::new("error", 10, "hive.internal-error", "no random claim token"))?;
@@ -1107,6 +1107,30 @@ fn claim(arguments: &[String]) -> Result<ActionResult, MsgError> {
     );
     result.changed_paths = vec![slot_path, path];
     Ok(result)
+}
+
+/// `max_workers` admission. The limit may be full only because a racer just claimed this same
+/// message: then this claimant lost the claim race (third review N4').
+fn admit_or_lost_race(
+    context: &Context,
+    message_id: &str,
+    requested_lease: Option<u64>,
+) -> Result<(u64, Value), MsgError> {
+    match containment::admit_claim(context, requested_lease) {
+        Err(error)
+            if error.code == "hive.msg-worker-limit" && claim_exists(context, message_id)? =>
+        {
+            Err(MsgError::conflict(
+                "hive.msg-already-claimed",
+                "another consumer claimed this message first",
+            ))
+        }
+        other => other,
+    }
+}
+
+fn claim_exists(context: &Context, message_id: &str) -> Result<bool, MsgError> {
+    Ok(read_record::<ClaimRecord>(&context.target, &mediation::claim_path(message_id))?.is_some())
 }
 
 /// `--claim` must name the current claim: its token (from `msg claim`) or its digest.
