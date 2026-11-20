@@ -407,7 +407,10 @@ fn msg_ack_binds_receipt_and_duplicate_request_returns_existing_result() {
     assert_eq!(message["result"]["data"]["trust"], "untrusted-data");
     assert_eq!(message["result"]["data"]["text"], INJECTION);
     // A message outside a flow sends one completion notice; Discord is off here, so it is skipped.
-    assert_eq!(acked["data"]["notification"]["outcome"], "skipped", "{acked}");
+    assert_eq!(
+        acked["data"]["notification"]["outcome"], "skipped",
+        "{acked}"
+    );
     // Same ack again: the existing receipt, no new files and no second notice.
     let again = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1004"]);
     assert_eq!(again["code"], "hive.msg-duplicate");
