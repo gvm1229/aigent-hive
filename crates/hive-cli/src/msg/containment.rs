@@ -250,7 +250,13 @@ pub(super) fn reserve_slot(
                     "max_workers": limits.max_workers}),
             ));
         }
-        // Another claimant won this generation: try the next slot.
+        // Another claimant won this generation. If it claims this same message, this claimant
+        // lost the claim race; otherwise try the next slot.
+        if let Some(Ok(winner)) = read_record::<WorkerSlot>(&context.target, &path)? {
+            if winner.message_id == claim.message_id && winner.claim_token != claim.claim_token {
+                return Err(already_claimed());
+            }
+        }
     }
     // Every slot is held. If this message was claimed meanwhile, report the lost claim race.
     if read_record::<mediation::ClaimRecord>(

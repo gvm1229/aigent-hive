@@ -234,8 +234,12 @@ fn respond(
     // Only a host per-turn id identifies a retry of one turn. Without it, identical payloads
     // of two turns must not share an event (the second would replay stale bytes and hide a
     // newly acknowledged result), so each call gets its own id and recomputes the response.
+    // A host per-turn id alone is shared by every Stop of one prompt (Claude sends the same
+    // `prompt_id` on continuation Stops), so a retry is only a byte-identical payload of that
+    // turn. Continuation Stops (`stop_hook_active`) and later Stops with new payloads get their
+    // own event and recompute: the recursion guard answers neutrally and new results deliver.
     let discriminator = if let Some(turn) = &payload.turn_digest {
-        format!("turn:{turn}")
+        format!("turn:{turn}:{}", payload.payload_digest)
     } else {
         let mut nonce = [0_u8; 16];
         getrandom::fill(&mut nonce).map_err(|_| {
@@ -251,8 +255,9 @@ fn respond(
     );
     let record_path = hook_events::event_path(Some(&payload.session_digest), &event_id);
     let response_path = hook_events::response_path(&event_id);
-    // Retry of the same turn: the stored bytes, nothing new.
-    if payload.turn_digest.is_some() {
+    // Byte-identical retry of the same turn: the stored bytes, nothing new. The recursion
+    // guard never replays a continuing response.
+    if payload.turn_digest.is_some() && !payload.stop_hook_active {
         if let Some(stored) = target.read_optional(Path::new(&response_path), MAX_RESPONSE_BYTES)? {
             return Ok(Outcome {
                 response: stored,

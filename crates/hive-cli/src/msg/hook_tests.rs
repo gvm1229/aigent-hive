@@ -797,3 +797,66 @@ fn msg_hook_one_symlinked_claim_does_not_silence_other_messages() {
         .to_owned();
     assert!(text.contains("  | fine"), "{text}");
 }
+
+fn stop_with_prompt(session: &str, prompt_id: &str, active: bool, message: &str) -> String {
+    json!({"session_id": session, "prompt_id": prompt_id, "hook_event_name": "Stop",
+        "stop_hook_active": active, "transcript_path": "/private/transcript.jsonl",
+        "cwd": "/somewhere", "last_assistant_message": message})
+    .to_string()
+}
+
+#[test]
+fn msg_hook_continuation_stops_of_one_prompt_never_replay_a_delivered_result() {
+    // Second review N1/N2: Claude repeats `prompt_id` on every Stop of one prompt.
+    let f = fixture();
+    let binding = f.apply("claude", &[]);
+    let id = f.send("review", None);
+    let pending = f.hook(
+        "claude",
+        "Stop",
+        &binding,
+        &[],
+        &stop_with_prompt("s-n1", "p-1", false, "first"),
+    );
+    assert!(parse_response(&pending.response)
+        .get("hookSpecificOutput")
+        .is_none());
+    f.claim(&id, "900");
+    assert_eq!(
+        f.ack(&id, "N1 RESULT", "1001")["code"],
+        "hive.msg-acknowledged"
+    );
+    // A later Stop of the same prompt with a new payload delivers the new result (N2).
+    let delivered = f.hook(
+        "claude",
+        "Stop",
+        &binding,
+        &[],
+        &stop_with_prompt("s-n1", "p-1", false, "second"),
+    );
+    assert!(!delivered.replayed);
+    assert_eq!(f.record(&delivered)["delivered"], json!([id]));
+    // Continuation Stops of that prompt answer neutrally, never replaying the delivery (N1).
+    for message in ["continued-1", "continued-2"] {
+        let continuation = f.hook(
+            "claude",
+            "Stop",
+            &binding,
+            &[],
+            &stop_with_prompt("s-n1", "p-1", true, message),
+        );
+        assert!(!continuation.replayed);
+        assert_eq!(parse_response(&continuation.response), json!({}));
+        assert_eq!(f.record(&continuation)["disposition"], "recursive");
+    }
+    // A byte-identical retry of the delivering Stop still gets the stored bytes once more.
+    let retry = f.hook(
+        "claude",
+        "Stop",
+        &binding,
+        &[],
+        &stop_with_prompt("s-n1", "p-1", false, "second"),
+    );
+    assert!(retry.replayed);
+    assert_eq!(f.count(".hive/mediation/deliveries"), 1);
+}

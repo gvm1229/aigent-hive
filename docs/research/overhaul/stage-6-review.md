@@ -37,3 +37,16 @@
 | P3 | 호스트 쪽 안내 Skill과 참조 처리기 적합성 시험 | 정식 전 S10과 함께 이 단계에서 처리 |
 | P4 | 수신 상자 보존 정리와 1,000개 지연 예산 | S3의 일회 안내·상한은 이 단계, 정리 명령은 [OV170-013](../../plans/overhaul/0.17.0-overnight-loop.md) |
 | P5 | 실제 수용 전 실험 기능 표시 | 0.16.0-test.1 출시 노트·local 인계에 "실제 호스트 수용 전" 한계 명시 |
+
+## 2차 재검토
+
+- 판정: REQUEST CHANGES. B1·B2 해소 확인(같은 검토자의 재현 재실행). S2 수정에서 생긴 새 차단 N1 1건, 같은 원인 N2, 안내 누락 N3, 경쟁 응답 코드 N4
+- 확인 범위: `8953557f` 빌드 실행 파일로 S1–S9 재현 재실행, 같은 메시지·여러 메시지의 8–20개 동시 소비 프로세스, 흐름 확인증의 `--claim`
+
+| ID | 지적 | 처리 |
+| --- | --- | --- |
+| N1 | Claude는 한 질문의 모든 Stop에 같은 `prompt_id`, 전달 응답이 계속 Stop에 재생 | 사건 식별에 본문 지문 추가(같은 바이트 재시도만 재생), `stop_hook_active`는 재생 전 중립 응답. `msg_hook_continuation_stops_of_one_prompt_never_replay_a_delivered_result` |
+| N2 | 같은 질문의 뒤 Stop이 옛 대기 안내 재생, 새 결과 숨김 | N1 수정으로 해소, 같은 시험에서 새 결과 1회 전달 확인 |
+| N3 | 안내의 `cancel-ack` 예시에 필수 `--claim` 없음 | 안내와 복사본 3곳에 `--claim`, `hive stop`의 `claim_digest` 안내 |
+| N4 | 상한 1에서 같은 메시지 경쟁 패자가 `worker-limit` 응답 | 세대 게시 경쟁에서 진 경우 승자 기록이 같은 메시지면 `already-claimed`. 동시 시험 5회 반복 통과 |
+| N5 | `HIVE_TEST_CLOCK=1`은 인증 아닌 환경 스위치 | 유지. [검토 수정](stage-6-review-fixes.md)의 한계와 동일 |

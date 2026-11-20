@@ -72,7 +72,8 @@ The policy file names the message and, under `policy`, binds the role, provider,
 - `hive stop [--flow <id> | --task <id>]` refuses new sends, claims and flow steps; claimed work
   becomes `cancel-requested`. `hive stop status` shows active stops.
 - End claimed work only through the host's official cancel, then record it with
-  `hive msg cancel-ack --id <message-id> --receipt <host-cancel-receipt.json>`. Claude and Gemini
+  `hive msg cancel-ack --id <message-id> --claim <claim_token or claim_digest> --receipt <host-cancel-receipt.json>`
+  (`hive stop` lists each in-progress `claim_digest`). Claude and Gemini
   report `unsupported`; their work runs to its lease. Never force-kill or send interrupt keys.
 - Resume with `hive stop clear` (preview and digest), then
   `hive stop clear --confirm <stop-digest>`. Nothing is re-sent after a clear.
