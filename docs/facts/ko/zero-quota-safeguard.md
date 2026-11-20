@@ -9,7 +9,7 @@ summary: "기존 소진 보호의 이전 보존과 신규0.14.0 v2 기본 비활
 tags: [exhaustion, session, usage, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:30e71c6caa31220d517c1764954274f23ea13e22bf10ca8a0157f2a85da682a3"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
   - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"

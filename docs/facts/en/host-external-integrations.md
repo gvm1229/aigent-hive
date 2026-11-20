@@ -9,9 +9,9 @@ summary: "Discord notifications remain supported; the Notion canonical backend p
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:crates/hive-cli/src/discord.rs#sha256:3426d590f446a34c741ba53c7f93b8baff69c2362b775bd23fad524e6263349e"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:66f420760cb36622a7e81fe7a65f520733c71c23446c9255eec8552002824243"
+  - "repo:crates/hive-cli/src/discord.rs#sha256:053f9960a36dbd5dffa786044cd241b870ccb220ff5d4b9ac8476a47e60972e6"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:30e71c6caa31220d517c1764954274f23ea13e22bf10ca8a0157f2a85da682a3"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:1ec9e901110dbfab4bde9c63a5e3fa4eecb58fe366ceac55fc20fd3a8fcec9b7"
   - "repo:docs/archive/plans/foundations/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/archive/plans/releases/0.9.0/discord-onboarding-v09.md#sha256:91a27ed57ddd259ac0a3270ee9242243f0a567bdae3fc756b90f76303c01c037"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:160bc8bc434f1547e1fb3dad23902b740304323c800b92ece62ccda10a61114e"

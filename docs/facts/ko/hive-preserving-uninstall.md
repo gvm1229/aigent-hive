@@ -10,7 +10,7 @@ tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
   - "repo:crates/hive-cli/src/user_install.rs#sha256:3064034c88ce11c947486618e149d977963e8bc15f4a7c3a0acbe1b428f2fcf8"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:66f420760cb36622a7e81fe7a65f520733c71c23446c9255eec8552002824243"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:1ec9e901110dbfab4bde9c63a5e3fa4eecb58fe366ceac55fc20fd3a8fcec9b7"
   - "repo:docs/archive/plans/cli-uninstall-0.14.0.md#sha256:db50bb091eff11cd8ee1ee39667b992ac7a947a3ea7b0e7d3d74c020f41956d0"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"

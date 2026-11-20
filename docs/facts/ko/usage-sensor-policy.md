@@ -9,12 +9,12 @@ summary: "검증된 기본 조회·동의한 보조 조회와 v2 비활성 보�
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:ea9189ff3bd9b7ff277273229dcb48a4c1b8fd05ed8b1f92f8418b7d7f170d36"
+  - "repo:crates/hive-cli/src/main.rs#sha256:7b759fade2356837bead00b8e769244fd7645f9ddc57c4de5df377ddf54663c0"
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:30e71c6caa31220d517c1764954274f23ea13e22bf10ca8a0157f2a85da682a3"
   - "repo:crates/hive-cli/src/usage_control/manual.rs#sha256:56dfd0b134074e7797d3ab27b203800fce2809758460a40f0500e1ad7b39bd80"
   - "repo:crates/hive-cli/src/usage_monitor/sensor.rs#sha256:16030efe5ef70df9040e251fb46f05cd204e7819c42c692721cb5a5782f4cdeb"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:66f420760cb36622a7e81fe7a65f520733c71c23446c9255eec8552002824243"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:1ec9e901110dbfab4bde9c63a5e3fa4eecb58fe366ceac55fc20fd3a8fcec9b7"
   - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
   - "repo:docs/decisions/ADR-0010-native-first-usage-sensors.md#sha256:4e753ff25c9c2c604b59b60d27cace205a8e5f7cf377538db6dd6156835f0408"
   - "repo:docs/research/usage-guard-0.13.1.md#sha256:dfe5f7286915bdfb77cf392444bf70ae13fe2a1f54915ff915c73d5d1468937e"
