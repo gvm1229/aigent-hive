@@ -189,11 +189,53 @@ fn message_details(data: &Value, ko: bool, out: &mut String) {
                 summon["state"].as_str().unwrap_or("-"));
         }
     }
+    flow_details(data, ko, out);
     if let Some(summon) = data.get("summon").filter(|summon| summon.is_object()) {
         let receipts = summon["receipts"].as_array().map_or(0, Vec::len);
         let _ = write!(out, "\n- {} · {} · {}", summon["id"].as_str().unwrap_or("-"),
             summon["state"].as_str().unwrap_or("-"),
             label_for(ko, &format!("확인증 {receipts}개"), &format!("receipts: {receipts}")));
+    }
+}
+
+/// Flow status lines come from Hive records (`display` is built from the recorded profile and
+/// the derived message state), never from a host or worker screen.
+fn flow_details(data: &Value, ko: bool, out: &mut String) {
+    let key = if ko { "ko" } else { "en" };
+    if let Some(flow) = data.get("flow").filter(|flow| flow.is_object()) {
+        let _ = write!(
+            out,
+            "\n{} {} · {}",
+            label_for(ko, "흐름", "Flow"),
+            flow["flow_id"].as_str().unwrap_or("-"),
+            flow["state_label"][key].as_str().unwrap_or("-"),
+        );
+        for step in flow["steps"].as_array().into_iter().flatten() {
+            let _ = write!(out, "\n- {}", step["display"][key].as_str().unwrap_or("-"));
+        }
+    }
+    if let Some(flows) = data["flows"].as_array().filter(|items| !items.is_empty()) {
+        let count = flows.len();
+        out.push_str(&label_for(
+            ko,
+            &format!("\n진행 중인 흐름: {count}개"),
+            &format!("\nFlows in progress: {count}"),
+        ));
+        for flow in flows {
+            let line = flow["current_step"]["display"][key]
+                .as_str()
+                .or(flow["state"].as_str())
+                .unwrap_or("-");
+            let _ = write!(out, "\n- {} · {line}", flow["flow_id"].as_str().unwrap_or("-"));
+        }
+    }
+    if let Some(error) = data.get("flow_error").filter(|error| error.is_object()) {
+        let _ = write!(
+            out,
+            "\n{}: {}",
+            label_for(ko, "흐름을 진행하지 못함", "Flow not advanced"),
+            error["message"].as_str().unwrap_or("-"),
+        );
     }
 }
 
