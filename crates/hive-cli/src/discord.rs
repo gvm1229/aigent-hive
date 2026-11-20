@@ -318,6 +318,36 @@ pub(crate) fn notify_usage_halt(
     notify_with_url(&url, halt, deliver_https)
 }
 
+/// Deliver one prepared mediation notice (OV160-006) through the same opt-in webhook path.
+///
+/// The caller builds the text from bounded, non-secret fields; it is cut to Discord's 2000
+/// characters and mentions stay disabled. One call is one delivery attempt in the existing
+/// transport sense; the caller records the outcome and never calls again for the same event.
+pub(crate) fn notify_content(
+    enabled: bool,
+    webhook_url_env: Option<&str>,
+    content: &str,
+) -> NotificationOutcome {
+    let Some(environment_name) = enabled.then_some(webhook_url_env).flatten() else {
+        return if enabled {
+            NotificationOutcome::MissingWebhookEnvironment
+        } else {
+            NotificationOutcome::Disabled
+        };
+    };
+    let Ok(url) = env::var(environment_name) else {
+        return NotificationOutcome::MissingWebhookEnvironment;
+    };
+    notify_payload_with_url(&url, &content_payload(content), deliver_https)
+}
+
+fn content_payload(content: &str) -> DiscordPayload {
+    DiscordPayload {
+        content: content.chars().take(2000).collect(),
+        allowed_mentions: AllowedMentions { parse: Vec::new() },
+    }
+}
+
 fn notify_with_url<F>(
     url: &str,
     halt: &UsageHaltNotification<'_>,
@@ -731,6 +761,32 @@ mod tests {
 
         assert_eq!(outcome, NotificationOutcome::DeliveryFailed);
         assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn mediation_notice_uses_the_same_webhook_path_without_mentions() {
+        let mut sent = Vec::new();
+        let long = "가".repeat(2100);
+        let outcome = super::notify_payload_with_url(
+            "https://discord.com/api/webhooks/1234567890/a-valid-token",
+            &super::content_payload(&long),
+            |_, payload| {
+                sent.push(payload.to_vec());
+                Ok(())
+            },
+        );
+        assert_eq!(outcome, NotificationOutcome::Sent);
+        let payload: serde_json::Value = serde_json::from_slice(&sent[0]).unwrap();
+        assert_eq!(payload["allowed_mentions"]["parse"], serde_json::json!([]));
+        assert_eq!(payload["content"].as_str().unwrap().chars().count(), 2000);
+        assert_eq!(
+            super::notify_content(false, None, "x"),
+            NotificationOutcome::Disabled
+        );
+        assert_eq!(
+            super::notify_content(true, None, "x"),
+            NotificationOutcome::MissingWebhookEnvironment
+        );
     }
 
     #[test]

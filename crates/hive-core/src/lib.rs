@@ -8,6 +8,7 @@ use std::path::{Component, Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 pub mod custom_agent;
+pub mod decision;
 pub mod file_ops;
 pub mod flow;
 pub mod gods;

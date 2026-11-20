@@ -786,6 +786,30 @@
     "text_sha256": "e2d4d101230be4674f11fa44c2e549719562ba7634e5d0dc487ed6ea62f2d85a"
   },
   {
+    "path": "docs/research/overhaul/OV160-006.md",
+    "line": 80,
+    "reason": "Exact OV160-006 Discord notice snapshot literal asserted by tests; product UI text, not authored narrative.",
+    "text_sha256": "8e3cf8bfb25de0c8950190d363ea5e09ea86226617915e026b27c7bee85e71f5"
+  },
+  {
+    "path": "docs/research/overhaul/OV160-006.md",
+    "line": 96,
+    "reason": "Exact OV160-006 Discord notice snapshot literal asserted by tests; product UI text, not authored narrative.",
+    "text_sha256": "c2457caa438ef0e982ca9c05ac798671ad7b27fb56d5bc4a31472a01aae6b797"
+  },
+  {
+    "path": "docs/research/overhaul/OV160-006.md",
+    "line": 104,
+    "reason": "Exact OV160-006 Discord notice snapshot literal asserted by tests; product UI text, not authored narrative.",
+    "text_sha256": "b08743d9c7a1a720df8733e1321aef75aeb85df85ac2cb7090881dcec4cf8f41"
+  },
+  {
+    "path": "docs/research/overhaul/OV160-006.md",
+    "line": 113,
+    "reason": "Exact OV160-006 Discord notice snapshot literal asserted by tests; product UI text, not authored narrative.",
+    "text_sha256": "8fcaf6b45499a54c3bacc9dfd7925e149ea367af3e923a485e12372baa19af7a"
+  },
+  {
     "path": "docs/research/overhaul/OVX-002.md",
     "line": 18,
     "reason": "Exact synthetic retrieval fixture payload; preserve measured input bytes for OVX-002 reproduction.",

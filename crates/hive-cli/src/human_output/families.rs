@@ -196,6 +196,7 @@ fn message_details(data: &Value, ko: bool, out: &mut String) {
             summon["state"].as_str().unwrap_or("-"),
             label_for(ko, &format!("확인증 {receipts}개"), &format!("receipts: {receipts}")));
     }
+    crate::msg::decide::human_details(data, ko, out);
 }
 
 /// Flow status lines come from Hive records (`display` is built from the recorded profile and

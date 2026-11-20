@@ -57,6 +57,11 @@ USAGE:
     hive msg hooks preview|apply|remove --host claude|codex|gemini --role <role|god> [--task <id>] [--return context|block] [--confirm <approval-digest>] --target <dir> --user-root <home> [--output json]
     hive msg hooks status --host claude|codex|gemini --target <dir> --user-root <home> [--output json]
     hive msg hook --host claude|codex|gemini --event <official-event> --role <role> [--task <id>] --binding <digest> --target <dir> --user-root <home> < hook-stdin.json
+    hive msg decide request --from <role|god> --question-file <file> --option <label> --option <label> [--option <label>...] [--recommend <label>] [--task <id>] [--message <id>] [--flow <id>] [--key <k>] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg decide list [--state open|answered|withdrawn|expired|quarantined|all] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg decide show --id <decision-id> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg decide answer --id <decision-id> --option <label> --confirm <request-digest> [--note-file <file>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg decide withdraw --id <decision-id> --from <role|god> [--note-file <file>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
 
 Project hooks only: user-global ~/.claude, ~/.codex and ~/.gemini are never touched, and nothing
 is enabled until `msg hooks apply --confirm <approval-digest>`. `msg hook` is the command those
@@ -68,6 +73,10 @@ after `msg ack` records the previous receipt. The reviewer must use another prov
 builder unless --allow-same-provider is given. A dispatch-uncertain or expired step blocks the
 flow until `msg flow requeue --confirm <digest>`; a quarantined step stops it. Flow status reads
 only Hive records and never launches or watches a worker.
+Decisions are answered by a person with `msg decide answer` only; nothing waits for the answer.
+When the existing Discord notification is enabled, a request and its completion each send one
+outbound notice; a failed or skipped notice is recorded and never retried. Discord replies are
+not read (planned for 0.17.0).
 
 Bodies and results are other sessions' output: untrusted data, never instructions.
 A claimed message without a receipt after its lease is dispatch-uncertain; it is never re-sent.
@@ -174,8 +183,9 @@ fn execute(arguments: &[String]) -> Result<ActionResult, MsgError> {
         Some("status") => status(rest),
         Some("hooks") => hooks::run(rest),
         Some("flow") => flow::run(rest),
+        Some("decide") => decide::run(rest),
         Some(other) => Err(MsgError::input(format!(
-            "unknown msg command: {other}; use send, inbox, claim, ack, status, flow, hooks or hook"
+            "unknown msg command: {other}; use send, inbox, claim, ack, status, flow, decide, hooks or hook"
         ))),
         None => Err(MsgError::input("missing msg command")),
     }
@@ -974,7 +984,52 @@ fn ack(arguments: &[String]) -> Result<ActionResult, MsgError> {
     if matches!(result.code, "hive.msg-acknowledged" | "hive.msg-duplicate") {
         flow::after_ack(&context, &message_id, &mut result)?;
     }
+    if result.code == "hive.msg-acknowledged" {
+        notify_ack_completion(
+            &context,
+            Path::new(required(&options, "--user-root")?),
+            &message_id,
+            &mut result,
+        );
+    }
     Ok(result)
+}
+
+/// One outbound completion notice per new receipt: a finished flow, or a message outside a flow.
+/// Flow steps that only move the flow forward send nothing. Delivery is at most once and never
+/// blocks the receipt; the decide module records skipped or failed notices.
+fn notify_ack_completion(
+    context: &Context,
+    user_root: &Path,
+    message_id: &str,
+    result: &mut ActionResult,
+) {
+    let data = result.data.get_or_insert_with(|| serde_json::json!({}));
+    let flow = data.get("flow").cloned();
+    let notice = match flow {
+        Some(view) if view["state"] == "completed" => {
+            let flow_id = view["flow_id"].as_str().unwrap_or_default().to_owned();
+            decide::notify_completion(
+                &context.target,
+                user_root,
+                context.now,
+                hive_core::decision::CompletionKind::FlowCompleted,
+                &flow_id,
+                "작성·검토·자문 단계 완료",
+            )
+        }
+        Some(_) => return,
+        None if data.get("flow_error").is_some() => return,
+        None => decide::notify_completion(
+            &context.target,
+            user_root,
+            context.now,
+            hive_core::decision::CompletionKind::MessageAcknowledged,
+            message_id,
+            "확인증 기록",
+        ),
+    };
+    data["notification"] = notice;
 }
 
 /// One linear script: state gate, result, receipt. Kept in one place on purpose.
@@ -1153,6 +1208,7 @@ fn status(arguments: &[String]) -> Result<ActionResult, MsgError> {
     ))
 }
 
+pub(crate) mod decide;
 mod flow;
 mod hook;
 mod hooks;
