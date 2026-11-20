@@ -9,7 +9,7 @@
 - **local 세션 시작점**: 아직 없음. cloud 항목 완료 뒤 인계 문서 작성
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
-- [0.15.3 종료 상태](../archive/state/0.15.3-closeout.md)·[0.15.3 단계 검토](../research/overhaul/stage-5-review.md) 보존
+- [0.15.3 종료 상태](../archive/state/0.15.3-closeout.md)·[0.15.3 단계 검토](../research/overhaul/stage-5-review.md)·[단계 5·0.15.2 근거 색인](../research/overhaul/stage-5-closeout.md) 보존
 
 ## 생성된 구현·수용 항목
 
