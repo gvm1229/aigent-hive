@@ -1,0 +1,22 @@
+# Project rules
+
+User-editable rules and conventions belong here, outside the Hive markers.
+
+<!-- AIGENT-HIVE:START -->
+# Project: {{ project_name }}
+
+Profile: `{{ project_kind }}`
+{{ project_profile_markdown }}
+## Hive
+
+- Read `.agents/directives/00-project-harness.md` for availability, planning, editing, tests, host ownership, and closure.
+- Read `.agents/directives/01-project-knowledge.md` for lookup and the agent-reviewed memory gate.
+- Read `.agents/directives/02-project-upgrade.md` for setup, refresh, migration, and rollback.
+- Read `.agents/directives/03-session-coordination.md` before automated project edits.
+- Read `.agents/directives/04-korean-language.md` before Korean output.
+- Interface language: `{{ interface_language }}`. Prompt language is a separate current-request choice; default English.
+- Setup mode: `{{ setup_mode }}`. Preference provenance: `{{ preference_provenance }}`.
+- Primary host: `{{ primary_host }}`. Owner: `{{ capability_resolution.resolved_owner }}`.
+- Preserve user bytes outside Hive markers. The host owns model calls; no provider API or credential access.
+- Hive Skills missing on this PC: use the installed user plugin or explicitly select project-local Skills; ordinary work remains available.
+<!-- AIGENT-HIVE:END -->

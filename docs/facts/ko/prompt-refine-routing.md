@@ -9,7 +9,7 @@ summary: "명시적 프롬프트 작성과 일반 작업의 조사·계속 진�
 tags: [prompt, routing, skill]
 aliases: ["Prompt approval gate"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:82599d4eeb2477228ff3b76ef634a18be0a208c9ebaa2ec823b8c1da229d8a35"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:2b119cea5c4b445e65dd63fb32a7a77ecb983b9579522dfdd0ec4dfa9e5ae7a3"
   - "repo:harness/skills/prompt-refine/SKILL.md#sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed"
 links: [orchestration-ownership, skill-routing]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
