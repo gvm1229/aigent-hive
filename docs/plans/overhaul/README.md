@@ -15,7 +15,7 @@
 - 창 제어 서면 확인: 비차단 별도 조사, 진입 조건·금지 해제 권한 아님
 
 - 단계 5: 2026-11-15 cloud 세션 시작, `feature/overhaul-5-0.15.3-memory`. [시작 근거](../../research/overhaul/OV153-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV153-001–009 완료(검토·develop 병합·0.15.3-test.1 세 OS 수용), OV153-010–017 완료, 2026-11-20 정식 0.15.3·PC 설치·단계 브랜치 삭제([정식 근거](../../research/overhaul/OV153-010.md))
-- 단계 6: 2026-11-20 cloud 세션 시작, `feature/overhaul-6-0.16.0-mediation`. [시작 근거](../../research/overhaul/OV160-001.md), local 단계는 [실행 장소](venue.md) 넘기기
+- 단계 6: 2026-11-20 cloud 세션 시작, `feature/overhaul-6-0.16.0-mediation`. [시작 근거](../../research/overhaul/OV160-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV160-001–010 완료(검토·develop 병합·0.16.0-test.1 세 OS 수용), OV160-012는 [local 넘기기](../../research/overhaul/OV160-local-handoff.md)
 - 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
 
 ## 승인
@@ -103,7 +103,7 @@
 | 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 10/10 |
 | 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 10/10·정식 |
 | 5 0.15.3 기억 | [0.15.3-memory.md](../active/0.15.3-memory.md) | 있음 | 0.15.2 정식 | 17/17·정식 |
-| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 9/12 |
+| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 10/12 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |
 
 ## 불변 조건
