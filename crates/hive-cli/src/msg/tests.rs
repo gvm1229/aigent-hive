@@ -58,13 +58,14 @@ impl Fixture {
 
     fn files(&self, relative: &str) -> Vec<String> {
         let path = self.target.join(relative);
-        let mut names: Vec<String> = std::fs::read_dir(path)
-            .map(|entries| {
+        let mut names: Vec<String> = std::fs::read_dir(path).map_or_else(
+            |_| Vec::new(),
+            |entries| {
                 entries
                     .map(|entry| entry.unwrap().file_name().into_string().unwrap())
                     .collect()
-            })
-            .unwrap_or_default();
+            },
+        );
         names.sort();
         names
     }
@@ -273,7 +274,7 @@ fn msg_duplicate_send_returns_one_message_and_conflicting_key_is_refused() {
         again["data"]["message"]["id"],
         first["data"]["message"]["id"]
     );
-    assert!(again["changed_paths"].as_array().unwrap().is_empty());
+    assert_eq!(again["changed_paths"], json!([]));
     let keyed = f.send(b"body one", &["--key", "request-42"]);
     assert_eq!(keyed["code"], "hive.msg-queued");
     let conflict = f.send(b"body two", &["--key", "request-42"]);
@@ -370,13 +371,13 @@ fn msg_lost_receipt_is_dispatch_uncertain_without_redispatch() {
     let again = f.run(&["claim", "--id", &id, "--role", "artemis", "--now", "1200"]);
     assert_eq!(again["code"], "hive.msg-already-claimed");
     assert_eq!(f.files(".hive/mediation/claims"), before);
-    assert!(f.files(".hive/mediation/receipts").is_empty());
+    assert_eq!(f.files(".hive/mediation/receipts"), Vec::<String>::new());
     // A late result is kept as evidence but never delivered.
     let result = f.body("late.txt", b"late result");
     let late = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1300"]);
     assert_eq!(late["code"], "hive.msg-result-quarantined", "{late}");
     assert_eq!(f.files(".hive/mediation/quarantine").len(), 1);
-    assert!(f.files(".hive/mediation/results").is_empty());
+    assert_eq!(f.files(".hive/mediation/results"), Vec::<String>::new());
     let status = f.run(&["status", "--id", &id, "--now", "1301"]);
     assert_eq!(status["data"]["message"]["state"], "quarantined");
     assert!(status["data"]["message"]["result"].is_null());
