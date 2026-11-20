@@ -16,3 +16,6 @@
 
 # Per-invocation host capability evidence
 /runtime/
+
+# Role-to-role message mediation records (inbox, claims, receipts, results)
+/mediation/

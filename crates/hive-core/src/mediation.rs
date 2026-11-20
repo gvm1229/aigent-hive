@@ -344,8 +344,24 @@ impl MessageReceipt {
             || !valid_digest(&self.result_digest)
             || self.result_bytes > MAX_RESULT_BYTES as u64
             || self.acknowledged_at < claim.claimed_at
+            || self.acknowledged_at > claim.lease_until
         {
             return Err("receipt does not bind this message and claim".into());
+        }
+        Ok(())
+    }
+
+    /// Check that `result` is exactly the bound result file.
+    /// # Errors
+    /// Rejects a missing file or a size or digest mismatch.
+    pub fn verify_result(&self, result: Option<&[u8]>) -> Result<(), String> {
+        let Some(result) = result else {
+            return Err("result file named by the receipt is missing".into());
+        };
+        if result.len() as u64 != self.result_bytes
+            || crate::sha256_digest(result) != self.result_digest
+        {
+            return Err("result file does not match its receipt digest and size".into());
         }
         Ok(())
     }
@@ -357,6 +373,8 @@ pub struct Observation<'a> {
     pub envelope: Result<&'a MessageEnvelope, String>,
     pub claim: Option<&'a ClaimRecord>,
     pub receipt: Option<&'a MessageReceipt>,
+    /// Bytes of `results/<id>.result`; `None` when the file is absent.
+    pub result: Option<&'a [u8]>,
     /// A late or conflicting result was moved to `quarantine/`.
     pub quarantined_result: bool,
     /// An active stop covers this message (project, its task or its flow).
@@ -390,7 +408,10 @@ pub fn derive_state(observation: &Observation<'_>) -> (MessageState, Option<Stri
         return (MessageState::Quarantined, Some(reason));
     }
     if let Some(receipt) = observation.receipt {
-        return match receipt.validate(envelope, claim) {
+        return match receipt
+            .validate(envelope, claim)
+            .and_then(|()| receipt.verify_result(observation.result))
+        {
             Ok(()) => (MessageState::Acknowledged, None),
             Err(reason) => (MessageState::Quarantined, Some(reason)),
         };
@@ -687,6 +708,7 @@ mod tests {
                 envelope: Ok(&sealed),
                 claim,
                 receipt,
+                result: Some(&b"done"[..]),
                 quarantined_result,
                 cancel_requested: false,
                 cancel_receipt: None,
@@ -737,6 +759,28 @@ mod tests {
             observe(None, Some(&receipt), false, 300),
             MessageState::Quarantined
         );
+        // A receipt recorded after the claim lease never acknowledges (late `--now`).
+        let mut late = receipt.clone();
+        late.acknowledged_at = claimed.lease_until + 1;
+        assert!(late.validate(&sealed, &claimed).is_err());
+        // The result file must match the receipt digest and size (B2).
+        let check = |result: Option<&[u8]>| {
+            derive_state(&Observation {
+                envelope: Ok(&sealed),
+                claim: Some(&claimed),
+                receipt: Some(&receipt),
+                result,
+                quarantined_result: false,
+                cancel_requested: false,
+                cancel_receipt: None,
+                now: 300,
+            })
+        };
+        assert_eq!(check(Some(b"done")).0, MessageState::Acknowledged);
+        let overwritten = check(Some(b"evil"));
+        assert_eq!(overwritten.0, MessageState::Quarantined);
+        assert!(overwritten.1.unwrap().contains("receipt digest"));
+        assert_eq!(check(None).0, MessageState::Quarantined);
         let mut wrong_claimant = claimed.clone();
         wrong_claimant.claimant_role = "hive-routine-implementer".into();
         assert_eq!(
@@ -747,6 +791,7 @@ mod tests {
             envelope: Err("message envelope digest does not match its contents".into()),
             claim: None,
             receipt: None,
+            result: None,
             quarantined_result: false,
             cancel_requested: false,
             cancel_receipt: None,
@@ -777,6 +822,7 @@ mod tests {
                 envelope: Ok(&sealed),
                 claim: Some(&claimed),
                 receipt: None,
+                result: None,
                 quarantined_result,
                 cancel_requested: requested,
                 cancel_receipt: receipt,

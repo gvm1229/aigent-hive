@@ -56,6 +56,13 @@ impl Fixture {
         self.run(&arguments)
     }
 
+    fn ack(&self, id: &str, result: &str, now: &str) -> Value {
+        let token = super::test_claim_token(&self.target, id);
+        self.run(&[
+            "ack", "--id", id, "--claim", &token, "--result", result, "--now", now,
+        ])
+    }
+
     fn files(&self, relative: &str) -> Vec<String> {
         let path = self.target.join(relative);
         let mut names: Vec<String> = std::fs::read_dir(path).map_or_else(
@@ -231,23 +238,7 @@ fn msg_forged_sender_is_refused_and_tampering_is_quarantined() {
         "hive.msg-quarantined"
     );
     std::fs::write(&path, original).unwrap();
-    // A sender whose roster resolution changed after sending no longer delivers.
-    std::fs::write(
-        f.target.join(".hive/roster.toml"),
-        "[roles.hive-complex-implementer]\nmodel = \"changed-model\"\n",
-    )
-    .unwrap();
-    let status = f.run(&["status", "--id", &id, "--now", "1001"]);
-    assert_eq!(
-        status["data"]["message"]["state"], "quarantined",
-        "{status}"
-    );
-    assert!(status["data"]["message"]["reason"]
-        .as_str()
-        .unwrap()
-        .contains("sender no longer resolves"));
     // Only the recipient role can claim.
-    std::fs::remove_file(f.target.join(".hive/roster.toml")).unwrap();
     let wrong = f.run(&[
         "claim",
         "--id",
@@ -268,6 +259,8 @@ fn msg_duplicate_send_returns_one_message_and_conflicting_key_is_refused() {
     let again = f.send(b"same body", &[]);
     assert_eq!(again["code"], "hive.msg-duplicate", "{again}");
     assert_eq!(again["exit_code"], 0);
+    // A queued duplicate is still live: no new-key advice.
+    assert!(again["next_action"].is_null(), "{again}");
     assert_eq!(again["data"]["duplicate"], true);
     assert_eq!(again["data"]["redispatched"], false);
     assert_eq!(
@@ -374,7 +367,7 @@ fn msg_lost_receipt_is_dispatch_uncertain_without_redispatch() {
     assert_eq!(f.files(".hive/mediation/receipts"), Vec::<String>::new());
     // A late result is kept as evidence but never delivered.
     let result = f.body("late.txt", b"late result");
-    let late = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1300"]);
+    let late = f.ack(&id, &result, "1300");
     assert_eq!(late["code"], "hive.msg-result-quarantined", "{late}");
     assert_eq!(f.files(".hive/mediation/quarantine").len(), 1);
     assert_eq!(f.files(".hive/mediation/results"), Vec::<String>::new());
@@ -389,10 +382,29 @@ fn msg_ack_binds_receipt_and_duplicate_request_returns_existing_result() {
     let sent = f.send(b"please review", &["--key", "review-1"]);
     let id = sent["data"]["message"]["id"].as_str().unwrap().to_owned();
     let result = f.body("result.txt", INJECTION.as_bytes());
-    let early = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1001"]);
+    let early = f.ack(&id, &result, "1001");
     assert_eq!(early["code"], "hive.msg-not-claimed");
     f.run(&["claim", "--id", &id, "--role", "artemis", "--now", "1002"]);
-    let acked = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1003"]);
+    // S5: the claim token is required; a wrong one is refused and writes nothing.
+    let wrong = f.run(&[
+        "ack",
+        "--id",
+        &id,
+        "--claim",
+        "0123456789abcdef0123456789abcdef",
+        "--result",
+        &result,
+        "--now",
+        "1003",
+    ]);
+    assert_eq!(wrong["code"], "hive.msg-claim-mismatch", "{wrong}");
+    assert_eq!(wrong["exit_code"], 3);
+    assert_eq!(f.files(".hive/mediation/results"), Vec::<String>::new());
+    assert_eq!(f.files(".hive/mediation/receipts"), Vec::<String>::new());
+    assert_eq!(f.files(".hive/mediation/quarantine"), Vec::<String>::new());
+    let missing = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1003"]);
+    assert_eq!(missing["code"], "hive.msg-refused", "{missing}");
+    let acked = f.ack(&id, &result, "1003");
     assert_eq!(acked["code"], "hive.msg-acknowledged", "{acked}");
     let message = &acked["data"]["message"];
     assert_eq!(message["state"], "acknowledged");
@@ -412,7 +424,7 @@ fn msg_ack_binds_receipt_and_duplicate_request_returns_existing_result() {
         "{acked}"
     );
     // Same ack again: the existing receipt, no new files and no second notice.
-    let again = f.run(&["ack", "--id", &id, "--result", &result, "--now", "1004"]);
+    let again = f.ack(&id, &result, "1004");
     assert_eq!(again["code"], "hive.msg-duplicate");
     assert!(again["data"].get("notification").is_none());
     // A new session repeating the original request gets the existing result and receipt.
@@ -423,10 +435,15 @@ fn msg_ack_binds_receipt_and_duplicate_request_returns_existing_result() {
     assert_eq!(message["state"], "acknowledged");
     assert!(message["receipt"].is_object());
     assert_eq!(message["result"]["data"]["text"], INJECTION);
+    // O2: the key names a finished message, so the caller is told to use a new key.
+    assert!(duplicate["next_action"]
+        .as_str()
+        .unwrap()
+        .contains("new --key"));
     // A different result after the receipt is quarantined.
     let other = f.body("other.txt", b"other");
     assert_eq!(
-        f.run(&["ack", "--id", &id, "--result", &other, "--now", "1005"])["code"],
+        f.ack(&id, &other, "1005")["code"],
         "hive.msg-result-quarantined"
     );
     assert_eq!(
@@ -496,4 +513,99 @@ fn msg_inbox_and_status_report_summon_envelopes() {
         f.run(&["status", "--id", "summon:../x:task-1"])["code"],
         "hive.msg-path-refused"
     );
+}
+
+#[test]
+fn msg_roster_change_after_send_or_ack_keeps_the_sealed_message_state() {
+    // S6: the sender is checked at send time; reads verify only the sealed envelope.
+    let f = fixture();
+    let queued = f.send(b"queued before the change", &[]);
+    let queued = queued["data"]["message"]["id"].as_str().unwrap().to_owned();
+    let sent = f.send(b"acknowledged before the change", &[]);
+    let id = sent["data"]["message"]["id"].as_str().unwrap().to_owned();
+    f.run(&["claim", "--id", &id, "--role", "artemis", "--now", "1001"]);
+    let result = f.body("result.txt", b"done");
+    assert_eq!(f.ack(&id, &result, "1002")["code"], "hive.msg-acknowledged");
+    std::fs::write(
+        f.target.join(".hive/roster.toml"),
+        "[roles.hive-complex-implementer]\nmodel = \"changed-model\"\n",
+    )
+    .unwrap();
+    let status = f.run(&["status", "--id", &id, "--now", "1003"]);
+    assert_eq!(
+        status["data"]["message"]["state"], "acknowledged",
+        "{status}"
+    );
+    assert_eq!(status["data"]["message"]["result"]["data"]["text"], "done");
+    let status = f.run(&["status", "--id", &queued, "--now", "1003"]);
+    assert_eq!(status["data"]["message"]["state"], "queued", "{status}");
+    // A new send resolves the new roster value at send time.
+    let fresh = f.send(b"after the change", &[]);
+    assert_eq!(fresh["data"]["message"]["sender"]["model"], "changed-model");
+}
+
+#[cfg(unix)]
+#[test]
+fn msg_inbox_quarantines_only_the_message_with_a_symlinked_claim() {
+    // S8: one non-regular record never fails the whole inbox.
+    let f = fixture();
+    let good = f.send(b"good", &[]);
+    let good = good["data"]["message"]["id"].as_str().unwrap().to_owned();
+    let bad = f.send(b"bad", &[]);
+    let bad = bad["data"]["message"]["id"].as_str().unwrap().to_owned();
+    let outside = f.target.parent().unwrap().join("claim.json");
+    std::fs::write(&outside, "{}").unwrap();
+    std::fs::create_dir_all(f.target.join(".hive/mediation/claims")).unwrap();
+    std::os::unix::fs::symlink(&outside, f.target.join(mediation::claim_path(&bad))).unwrap();
+    let inbox = f.run(&["inbox", "--now", "1001"]);
+    assert_eq!(inbox["code"], "hive.msg-inbox", "{inbox}");
+    let messages = inbox["data"]["messages"].as_array().unwrap();
+    assert_eq!(messages.len(), 2);
+    let state = |id: &str| {
+        messages
+            .iter()
+            .find(|message| message["id"] == id)
+            .map(|message| message["state"].clone())
+            .unwrap()
+    };
+    assert_eq!(state(&good), "queued");
+    assert_eq!(state(&bad), "quarantined");
+    let status = f.run(&["status", "--id", &bad, "--now", "1001"]);
+    assert!(status["data"]["message"]["reason"]
+        .as_str()
+        .unwrap()
+        .contains("not a readable regular file"));
+    // The other message can still be claimed.
+    let claimed = f.run(&["claim", "--id", &good, "--role", "artemis", "--now", "1001"]);
+    assert_eq!(claimed["code"], "hive.msg-claimed", "{claimed}");
+}
+
+#[test]
+fn msg_now_is_a_test_only_clock() {
+    // S1: without HIVE_TEST_CLOCK=1 `--now` is refused; the system clock is used otherwise.
+    let refused = clock(Some("1000"), false, 5000).unwrap_err();
+    assert_eq!(refused.code, "hive.msg-clock-refused");
+    assert_eq!(refused.exit_code, 3);
+    assert!(refused.message.contains("HIVE_TEST_CLOCK=1"));
+    assert_eq!(clock(None, false, 5000).unwrap(), 5000);
+    assert_eq!(clock(Some("1000"), true, 5000).unwrap(), 1000);
+    assert_eq!(
+        clock(Some("soon"), true, 5000).unwrap_err().code,
+        "hive.msg-refused"
+    );
+}
+
+#[test]
+fn msg_duplicate_of_an_expired_message_asks_for_a_new_key() {
+    // O2: a terminal message is never re-sent under its old key.
+    let f = fixture();
+    f.send(b"stale", &["--ttl", "10", "--key", "stale-1"]);
+    let file = f.body("body.txt", b"stale");
+    let again = f.run(&[
+        "send", "--to", "artemis", "--from", "athena", "--file", &file, "--key", "stale-1",
+        "--ttl", "10", "--now", "1020",
+    ]);
+    assert_eq!(again["code"], "hive.msg-duplicate", "{again}");
+    assert_eq!(again["data"]["message"]["state"], "expired");
+    assert!(again["next_action"].as_str().unwrap().contains("new --key"));
 }

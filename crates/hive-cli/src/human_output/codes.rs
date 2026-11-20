@@ -74,6 +74,7 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.msg-hooks-removed", "승인된 Hive 훅 항목만 지웠고 다른 설정은 그대로 두었습니다.", "Removed only the approved Hive hook entries; other settings were kept."),
     ("hive.msg-hooks-status", "프로젝트 훅 설정 상태를 확인했습니다.", "Project hook configuration checked."),
     ("hive.msg-hooks-refused", "승인 지문이나 훅 영수증이 현재 설정과 맞지 않아 거부했습니다. 다시 미리보기하세요.", "The approval digest or hook receipt does not match the current settings, so it was refused. Preview again."),
+    ("hive.msg-hooks-unverified-host", "이 호스트의 훅 사건과 반환 형식이 검증되지 않아 적용하지 않았습니다. 미리보기만 할 수 있습니다.", "This host's hook events and return shape are unverified, so nothing was applied. Only a preview is available."),
     // Local decision queue (hive msg decide). Answers come from the local CLI only.
     ("hive.decision-requested", "결정 요청을 대기열에 넣었습니다. 사람이 로컬 CLI로 답하며 기다리지 않았습니다.", "Decision queued. A person answers it with the local CLI; nothing waited."),
     ("hive.decision-duplicate", "같은 결정 요청이 이미 있어 기존 결정을 돌려줬습니다. 다시 넣거나 다시 알리지 않았습니다.", "Same decision request already exists. Returned it; nothing was queued or announced again."),
@@ -97,6 +98,8 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.msg-stopped", "중지가 걸려 있어 새 메시지·단계·재요청·소비권을 만들지 않았습니다.", "A stop is active, so no new message, step, requeue or claim was created."),
     ("hive.msg-cancel-recorded", "호스트의 공식 취소 확인증을 기록했습니다. Hive가 작업을 끊지는 않았고, 이후 결과는 격리합니다.", "The host's official cancel receipt is recorded. Hive interrupted nothing; any later result is quarantined."),
     ("hive.msg-cancel-unsupported", "이 호스트는 공식 취소를 지원하지 않아 취소를 기록하지 않았습니다. 작업은 소비 기한이 끝날 때까지 취소 요청 상태입니다.", "This host has no supported official cancel, so no cancel was recorded. The work stays cancel-requested until its lease ends."),
+    ("hive.msg-claim-mismatch", "--claim이 이 메시지의 현재 소비권과 맞지 않아 아무것도 기록하지 않았습니다.", "--claim does not name the current claim of this message, so nothing was recorded."),
+    ("hive.msg-clock-refused", "--now는 시험용 시계라 HIVE_TEST_CLOCK=1 없이는 받지 않습니다. 빼고 다시 실행하세요.", "--now is a test-only clock and is refused without HIVE_TEST_CLOCK=1. Run again without it."),
     ("hive.msg-cancel-refused", "취소 확인증이 현재 중지·소비권과 맞지 않거나 취소 요청 상태가 아니라 기록하지 않았습니다.", "The cancel receipt does not match the active stop and claim, or the work is not cancel-requested, so nothing was recorded."),
     ("hive.stop-requested", "중지를 기록했습니다. 새 메시지는 거부하고, 진행 중인 작업은 끊지 않고 취소 요청으로 표시했습니다.", ""),
     ("hive.stop-already-active", "같은 범위의 중지가 이미 있어 새로 쓴 것은 없습니다.", "This scope is already stopped. Nothing new was written."),

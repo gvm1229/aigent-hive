@@ -8,7 +8,7 @@
 //! Hive sends no keys, kills no process and never claims a forced cancel. Resuming needs an
 //! explicit `hive stop clear --confirm <stop-digest>`.
 use super::{
-    checked_id, failure, list_entries, load, locate, option, publish_new, read_record,
+    check_claim, checked_id, failure, list_entries, load, locate, option, publish_new, read_record,
     record_bytes, success, view, Context, EntryKind, MsgError, Published,
 };
 use crate::run::{parse_options, read_explicit_file, required, PinnedTarget};
@@ -33,7 +33,7 @@ USAGE:
     hive stop [--flow <flow-id> | --task <task-id>] [--reason <text>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive stop status [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive stop clear [--flow <flow-id> | --task <task-id>] [--confirm <stop-digest>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
-    hive msg cancel-ack --id <message-id> --receipt <host-cancel-receipt.json> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg cancel-ack --id <message-id> --claim <claim-token|claim-digest> --receipt <host-cancel-receipt.json> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
 
 Without a scope the whole project stops. `stop clear` without --confirm only previews the
 digest to confirm. A host with no official cancel is shown `unsupported`; its claimed work
@@ -444,13 +444,22 @@ fn clear(arguments: &[String]) -> Result<ActionResult, MsgError> {
 pub(super) fn cancel_ack(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let options = parse_options(
         arguments,
-        &["--id", "--receipt", "--now", "--target", "--user-root"],
+        &[
+            "--id",
+            "--claim",
+            "--receipt",
+            "--now",
+            "--target",
+            "--user-root",
+        ],
     )?;
     let context = Context::open(&options)?;
     let message_id = checked_id(required(&options, "--id")?, "--id")?;
+    let presented = required(&options, "--claim")?;
     let role = locate(&context, &message_id)?;
     let bytes = read_explicit_file(Path::new(required(&options, "--receipt")?), 64 * 1024)?;
     let loaded = load(&context, &role, &message_id)?;
+    check_claim(&loaded, presented)?;
     let (state, _) = loaded.state(context.now);
     let refused = |message: String| MsgError::conflict("hive.msg-cancel-refused", message);
     match state {

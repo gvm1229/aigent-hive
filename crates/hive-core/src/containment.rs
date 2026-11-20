@@ -40,6 +40,10 @@ pub const GIT_PUSH_DENY: &str = "deny";
 pub const WORKTREE_PLACEHOLDER: &str = "{target}";
 /// The only cancel method a receipt may name.
 pub const HOST_OFFICIAL_CANCEL: &str = "host-official-cancel";
+/// Hive state inside the bound worktree (`.hive/`, including `.hive/mediation/`). The host must
+/// keep it out of the worker's writable roots: a worker that could write it could forge claims,
+/// receipts or results of other messages.
+pub const EXCLUDED_HIVE_ROOT: &str = "{target}/.hive";
 
 // ---------------------------------------------------------------------------------------------
 // Worker policy.
@@ -92,6 +96,9 @@ pub struct WorkerPolicy {
     pub git_push: String,
     /// Paths the worker may write; `{target}` is the task worktree the host binds.
     pub writable_roots: Vec<String>,
+    /// Paths under a writable root that the host must keep read-only or hidden from the worker.
+    /// Always `{target}/.hive`: Hive's own records, never worker output.
+    pub excluded_roots: Vec<String>,
     /// Environment the host sets for the worker so any `git push`/`fetch` transport fails.
     pub git_env: BTreeMap<String, String>,
     /// Digest of the exact profile argv the policy was checked against.
@@ -130,6 +137,7 @@ impl WorkerPolicy {
             network: NETWORK_NONE.to_owned(),
             git_push: GIT_PUSH_DENY.to_owned(),
             writable_roots,
+            excluded_roots: vec![EXCLUDED_HIVE_ROOT.to_owned()],
             git_env: git_push_guard_env(),
             argv_digest: crate::sha256_digest(&argv),
             enforced_by: if executable {
@@ -175,6 +183,7 @@ impl WorkerPolicy {
             || self.network != NETWORK_NONE
             || self.git_push != GIT_PUSH_DENY
             || !roots_ok
+            || self.excluded_roots != [EXCLUDED_HIVE_ROOT]
             || self.git_env != git_push_guard_env()
             || !valid_digest(&self.argv_digest)
             || !matches!(self.enforced_by.as_str(), "host-sandbox" | "host-guidance")
@@ -776,6 +785,52 @@ pub fn policy_path(message_id: &str) -> String {
     format!("{MEDIATION_ROOT}/policies/{message_id}.json")
 }
 
+/// `.hive/mediation/slots/<slot>`: generations of one `max_workers` slot.
+#[must_use]
+pub fn slot_dir(slot: u32) -> String {
+    format!("{MEDIATION_ROOT}/slots/{slot}")
+}
+
+/// `.hive/mediation/slots/<slot>/<20-digit generation>.json`
+#[must_use]
+pub fn slot_path(slot: u32, generation: u64) -> String {
+    format!("{}/{generation:020}.json", slot_dir(slot))
+}
+
+/// One reservation of a `max_workers` slot, published no-clobber before the claim it admits.
+///
+/// Generations of one slot are contiguous: generation `n + 1` is published only after the
+/// holder of generation `n` was observed released, so two claimants racing for one slot can
+/// never both win it. A holder is released when its claim lost the claim race (another token),
+/// reached a terminal or uncertain state, or was never published before `lease_until`.
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerSlot {
+    pub schema_version: u32,
+    pub slot: u32,
+    pub generation: u64,
+    pub message_id: String,
+    pub claim_token: String,
+    pub reserved_at: u64,
+    pub lease_until: u64,
+}
+
+impl WorkerSlot {
+    /// # Errors
+    /// Rejects unsafe ids, an out-of-range slot or an empty lease.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.schema_version != CONTAINMENT_SCHEMA_VERSION
+            || self.slot >= MAX_MAX_WORKERS
+            || !valid_id(&self.message_id)
+            || !valid_id(&self.claim_token)
+            || self.lease_until <= self.reserved_at
+        {
+            return Err("invalid worker slot reservation".into());
+        }
+        Ok(())
+    }
+}
+
 /// Worker policy bound to one envelope, published beside it (no-clobber).
 #[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -841,6 +896,11 @@ mod tests {
             let mut roots = policy.clone();
             roots.writable_roots = vec!["/".into()];
             assert!(roots.validate().is_err());
+            // `.hive/` (mediation records included) is never a worker-writable path (S9).
+            assert_eq!(policy.excluded_roots, ["{target}/.hive"]);
+            let mut exposed = policy.clone();
+            exposed.excluded_roots.clear();
+            assert!(exposed.validate().is_err());
         }
         let mut claude = Roster::defaults().unwrap();
         claude.workspace.provider = Some("claude".into());

@@ -89,7 +89,10 @@ impl Fixture {
 
     fn ack(&self, id: &str, text: &str, now: &str) -> Value {
         let result = self.file("result.txt", text);
-        self.run(&["ack", "--id", id, "--result", &result, "--now", now])
+        let token = super::test_claim_token(&self.target, id);
+        self.run(&[
+            "ack", "--id", id, "--claim", &token, "--result", &result, "--now", now,
+        ])
     }
 
     fn messages(&self) -> usize {
@@ -248,7 +251,8 @@ fn msg_flow_restart_and_duplicate_advance_create_one_next_step() {
     ];
     let context = Context::open(&options).unwrap();
     let bytes = std::fs::read(&result).unwrap();
-    let recorded = ack_message(&context, &builder, &bytes).unwrap();
+    let token = super::test_claim_token(&f.target, &builder);
+    let recorded = ack_message(&context, &builder, &token, &bytes).unwrap();
     assert_eq!(recorded.code, "hive.msg-acknowledged");
     assert_eq!(f.status(&flow, "1021")["data"]["flow"]["state"], "ready");
     let first = f.run(&["flow", "advance", "--flow", &flow, "--now", "1022"]);

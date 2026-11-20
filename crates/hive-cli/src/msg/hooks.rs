@@ -19,7 +19,16 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
 const LIMIT: u64 = 1024 * 1024;
+/// Claude and Codex document `timeout` in seconds. Gemini's unit is unverified, so its entries
+/// carry no timeout and are never applied.
 const HOOK_TIMEOUT_SECONDS: u64 = 10;
+
+/// A host whose allowlisted events are all unverified: preview only, never written (S7).
+fn apply_unverified(host: HookHost) -> bool {
+    hook_events::host_events(host)
+        .iter()
+        .all(|entry| entry.live == "unverified")
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -201,8 +210,10 @@ fn entries(
                 "--user-root",
                 user_root,
             ]);
-            let handler = json!({"type": "command", "command": quote_command(&arguments)?,
-                "timeout": HOOK_TIMEOUT_SECONDS});
+            let mut handler = json!({"type": "command", "command": quote_command(&arguments)?});
+            if !apply_unverified(host) {
+                handler["timeout"] = json!(HOOK_TIMEOUT_SECONDS);
+            }
             Ok(Entry {
                 path: vec!["hooks".to_owned(), allowed.event.to_owned()],
                 value: json!({"hooks": [handler]}),
@@ -262,8 +273,17 @@ struct Scope {
     user_root: PathBuf,
 }
 
-fn scope(context: &Context, options: &[(&str, &str)]) -> Result<Scope, MsgError> {
+fn scope(context: &Context, options: &[(&str, &str)], action: &str) -> Result<Scope, MsgError> {
     let host = HookHost::parse(required(options, "--host")?).map_err(MsgError::input)?;
+    if action == "apply" && apply_unverified(host) {
+        return Err(MsgError::blocked(
+            "hive.msg-hooks-unverified-host",
+            format!(
+                "{} hook events and their return shape are unverified; `msg hooks preview` shows the entries, but apply is refused until a live check verifies them",
+                host.as_str()
+            ),
+        ));
+    }
     let role_name = required(options, "--role")?;
     super::checked_id(role_name, "--role")?;
     let role = context.role(role_name)?;
@@ -424,7 +444,7 @@ pub(super) fn run(arguments: &[String]) -> Result<ActionResult, MsgError> {
     if action == "status" {
         return status(&context, &options);
     }
-    let scope = scope(&context, &options)?;
+    let scope = scope(&context, &options, action)?;
     let operation = if action == "remove" {
         "remove"
     } else {

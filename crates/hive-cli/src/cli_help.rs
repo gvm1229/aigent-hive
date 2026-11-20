@@ -326,6 +326,7 @@ const MSG_OPTIONS: &[&str] = &[
     "--binding",
     "--builder",
     "--check",
+    "--claim",
     "--confirm",
     "--effort",
     "--event",

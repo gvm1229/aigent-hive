@@ -7,20 +7,24 @@
 //! host "hook error"; a refused event prints `{}` and is kept as a quarantined record.
 //!
 //! An acknowledged result for the bound role is handed back once: its delivery record is
-//! published no-clobber and names this event. A byte-identical replay of the same event prints
-//! the stored response again, so it receives the same receipt with no new delivery, claim or
-//! model call. A later different event of any session gets no second copy of that result.
+//! published no-clobber and names this event. An event that carries the host per-turn id
+//! (`prompt_id`) is keyed on it, so a retry of the same turn prints the stored response again
+//! with no new delivery, claim or model call. Without a per-turn id two identical payloads may
+//! be two turns, so every call is its own event and the response is recomputed; a later event
+//! of any session gets no second copy of an already delivered result. A withheld message is
+//! listed once per state, and at most `MAX_LISTED_IDS` pending or withheld ids are listed.
 use super::hooks::{self, HookIntent};
 use super::{
-    list_entries, load, option, publish_new, record_bytes, Context, EntryKind, MsgError, Published,
+    list_entries, load, option, publish_new, record_bytes, Context, EntryKind, Loaded, MsgError,
+    Published,
 };
 use crate::run::{parse_options, required};
 use hive_core::hook_events::{
-    self, AllowedEvent, DeliveredResult, DeliveryRecord, EventDisposition, HookEventRecord,
-    HookHost, NormalizedPayload, Notice, ReturnShape, HOOK_EVENT_SCHEMA_VERSION,
-    MAX_HOOK_INPUT_BYTES, MAX_RESULTS_PER_RESPONSE,
+    self, AllowedEvent, AnnouncementRecord, DeliveredResult, DeliveryRecord, EventDisposition,
+    HookEventRecord, HookHost, NormalizedPayload, Notice, ReturnShape, HOOK_EVENT_SCHEMA_VERSION,
+    MAX_HOOK_INPUT_BYTES, MAX_LISTED_IDS, MAX_RESULTS_PER_RESPONSE,
 };
-use hive_core::mediation::{self, MessageState, MAX_RESULT_BYTES, MEDIATION_ROOT, UNTRUSTED_DATA};
+use hive_core::mediation::{self, MessageReceipt, MessageState, MEDIATION_ROOT, UNTRUSTED_DATA};
 use hive_core::sha256_digest;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -194,6 +198,7 @@ fn quarantine(
             .clone()
             .filter(|binding| hive_core::policy::valid_digest(binding)),
         session_digest: session,
+        turn_digest: payload.and_then(|payload| payload.turn_digest.clone()),
         payload_digest,
         payload_bytes: call.input.len() as u64,
         stop_hook_active: payload.is_some_and(|payload| payload.stop_hook_active),
@@ -226,23 +231,37 @@ fn respond(
     intent: &HookIntent,
 ) -> Result<Outcome, MsgError> {
     let target = &call.context.target;
+    // Only a host per-turn id identifies a retry of one turn. Without it, identical payloads
+    // of two turns must not share an event (the second would replay stale bytes and hide a
+    // newly acknowledged result), so each call gets its own id and recomputes the response.
+    let discriminator = if let Some(turn) = &payload.turn_digest {
+        format!("turn:{turn}")
+    } else {
+        let mut nonce = [0_u8; 16];
+        getrandom::fill(&mut nonce).map_err(|_| {
+            MsgError::new("error", 10, "hive.internal-error", "no random event nonce")
+        })?;
+        format!("call:{}:{}", payload.payload_digest, sha256_digest(&nonce))
+    };
     let event_id = hook_events::event_id_for(
         call.host,
         call.event,
         &payload.session_digest,
-        &payload.payload_digest,
+        &discriminator,
     );
     let record_path = hook_events::event_path(Some(&payload.session_digest), &event_id);
     let response_path = hook_events::response_path(&event_id);
-    // Replay of the same event: the stored bytes, nothing new.
-    if let Some(stored) = target.read_optional(Path::new(&response_path), MAX_RESPONSE_BYTES)? {
-        return Ok(Outcome {
-            response: stored,
-            event_id,
-            disposition: EventDisposition::Recorded,
-            replayed: true,
-            record_path,
-        });
+    // Retry of the same turn: the stored bytes, nothing new.
+    if payload.turn_digest.is_some() {
+        if let Some(stored) = target.read_optional(Path::new(&response_path), MAX_RESPONSE_BYTES)? {
+            return Ok(Outcome {
+                response: stored,
+                event_id,
+                disposition: EventDisposition::Recorded,
+                replayed: true,
+                record_path,
+            });
+        }
     }
     let shape = match (allowed.shape, intent.stop_shape) {
         (ReturnShape::StopContext | ReturnShape::StopBlock, Some(chosen))
@@ -272,6 +291,7 @@ fn respond(
         task: call.task.clone(),
         binding_digest: Some(intent.binding_digest.clone()),
         session_digest: Some(payload.session_digest.clone()),
+        turn_digest: payload.turn_digest.clone(),
         payload_digest: payload.payload_digest.clone(),
         payload_bytes: payload.payload_bytes,
         stop_hook_active: payload.stop_hook_active,
@@ -310,7 +330,8 @@ fn respond(
 }
 
 /// Messages sent by the bound role (and task): deliver acknowledged results once, report
-/// queued or claimed ones as pending, and withhold everything that is not deliverable.
+/// queued or claimed ones as pending, and announce each non-deliverable state once. A message
+/// whose records cannot be read is skipped; the others are still answered.
 fn collect(call: &Call<'_>, event_id: &str, session_digest: &str) -> Result<Notice, MsgError> {
     let context = &call.context;
     let role = call.role.as_deref().unwrap_or_default();
@@ -324,16 +345,19 @@ fn collect(call: &Call<'_>, event_id: &str, session_digest: &str) -> Result<Noti
         if kind != EntryKind::Dir || !mediation::is_valid_id(&recipient) {
             continue;
         }
-        for (name, kind) in
-            list_entries(&context.target, &inbox.join(&recipient))?.unwrap_or_default()
-        {
+        let Ok(entries) = list_entries(&context.target, &inbox.join(&recipient)) else {
+            continue;
+        };
+        for (name, kind) in entries.unwrap_or_default() {
             let Some(message_id) = name.strip_suffix(".json") else {
                 continue;
             };
             if kind != EntryKind::File || !mediation::is_valid_id(message_id) {
                 continue;
             }
-            let loaded = load(context, &recipient, message_id)?;
+            let Ok(loaded) = load(context, &recipient, message_id) else {
+                continue;
+            };
             let Some(envelope) = loaded.parsed.clone() else {
                 continue;
             };
@@ -351,28 +375,35 @@ fn collect(call: &Call<'_>, event_id: &str, session_digest: &str) -> Result<Noti
     found.sort_by_key(|(sequence, _, _)| *sequence);
     for (_, message_id, loaded) in found {
         // Inside an active stop nothing is handed back, so the host is never asked to continue.
-        if loaded.stopped_by.is_some() {
-            notice.withheld.push((message_id, "stopped".to_owned()));
-            continue;
-        }
-        let (state, _) = loaded.state(context.now);
+        let state = if loaded.stopped_by.is_some() {
+            None
+        } else {
+            Some(loaded.state(context.now).0)
+        };
         match state {
-            MessageState::Queued | MessageState::Claimed => notice.pending.push(message_id),
-            MessageState::Expired
-            | MessageState::DispatchUncertain
-            | MessageState::Quarantined
-            | MessageState::CancelRequested
-            | MessageState::Cancelled => {
-                notice
-                    .withheld
-                    .push((message_id, state.as_str().to_owned()));
+            Some(MessageState::Queued | MessageState::Claimed) => {
+                if notice.pending.len() < MAX_LISTED_IDS {
+                    notice.pending.push(message_id);
+                } else {
+                    notice.pending_more += 1;
+                }
             }
-            MessageState::Acknowledged => {
+            Some(MessageState::Acknowledged) => {
                 if notice.delivered.len() >= MAX_RESULTS_PER_RESPONSE {
                     continue;
                 }
-                if let Some(result) = deliver(call, &message_id, event_id, session_digest)? {
+                if let Some(result) = deliver(call, &message_id, &loaded, event_id, session_digest)?
+                {
                     notice.delivered.push(result);
+                }
+            }
+            other => {
+                let label = other.map_or("stopped", MessageState::as_str);
+                if notice.withheld.len() >= MAX_LISTED_IDS {
+                    // Not listed, so not announced: a later event lists it.
+                    notice.withheld_more += 1;
+                } else if announce(call, &message_id, label, event_id)? {
+                    notice.withheld.push((message_id, label.to_owned()));
                 }
             }
         }
@@ -380,23 +411,61 @@ fn collect(call: &Call<'_>, event_id: &str, session_digest: &str) -> Result<Noti
     Ok(notice)
 }
 
+/// Publish the once-per-state announcement of a withheld message. `false` when an earlier event
+/// already listed this message in this state.
+fn announce(
+    call: &Call<'_>,
+    message_id: &str,
+    state: &str,
+    event_id: &str,
+) -> Result<bool, MsgError> {
+    let record = AnnouncementRecord {
+        schema_version: HOOK_EVENT_SCHEMA_VERSION,
+        message_id: message_id.to_owned(),
+        state: state.to_owned(),
+        event_id: event_id.to_owned(),
+    };
+    let path = hook_events::announcement_path(message_id, state);
+    Ok(
+        match publish_new(&call.context.target, &path, &record_bytes(&record)?)? {
+            Published::Created | Published::SameBytes => true,
+            // Resuming an interrupted call of this same event keeps its announcement.
+            Published::Different(existing) => {
+                serde_json::from_slice::<AnnouncementRecord>(&existing)
+                    .is_ok_and(|existing| existing.event_id == event_id)
+            }
+        },
+    )
+}
+
 /// Publish the one delivery record for an acknowledged message. `None` when another event
-/// already received it.
+/// already received it. The result bytes are the ones `load` verified against the receipt's
+/// digest and size, never a second read of the file.
 fn deliver(
     call: &Call<'_>,
     message_id: &str,
+    loaded: &Loaded,
     event_id: &str,
     session_digest: &str,
 ) -> Result<Option<DeliveredResult>, MsgError> {
     let target = &call.context.target;
     let receipt_file = mediation::receipt_path(message_id);
     let result_file = mediation::result_path(message_id);
-    let Some(receipt) = target.read_optional(Path::new(&receipt_file), 64 * 1024)? else {
+    let (Some(Ok(receipt)), Some(Ok(result))) = (&loaded.receipt, &loaded.result) else {
         return Ok(None);
     };
-    let Some(result) = target.read_optional(Path::new(&result_file), MAX_RESULT_BYTES)? else {
+    // The receipt digest names the exact bytes the state was derived from.
+    let Some(receipt_bytes) = target.read_optional(Path::new(&receipt_file), 64 * 1024)? else {
         return Ok(None);
     };
+    if serde_json::from_slice::<MessageReceipt>(&receipt_bytes)
+        .ok()
+        .as_ref()
+        != Some(receipt)
+        || receipt.verify_result(Some(result)).is_err()
+    {
+        return Ok(None);
+    }
     let record = DeliveryRecord {
         schema_version: HOOK_EVENT_SCHEMA_VERSION,
         message_id: message_id.to_owned(),
@@ -405,9 +474,9 @@ fn deliver(
         event: call.event.to_owned(),
         session_digest: session_digest.to_owned(),
         receipt_file: receipt_file.clone(),
-        receipt_digest: sha256_digest(&receipt),
+        receipt_digest: sha256_digest(&receipt_bytes),
         result_file: result_file.clone(),
-        result_digest: sha256_digest(&result),
+        result_digest: sha256_digest(result),
         delivered_at_ms: now_ms(),
         trust: UNTRUSTED_DATA.to_owned(),
     };
@@ -427,6 +496,6 @@ fn deliver(
         receipt_file,
         result_file,
         result_digest: record.result_digest,
-        text: std::str::from_utf8(&result).ok().map(str::to_owned),
+        text: std::str::from_utf8(result).ok().map(str::to_owned),
     }))
 }

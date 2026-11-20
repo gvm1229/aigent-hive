@@ -11,7 +11,7 @@ use super::{
 use crate::run::read_explicit_file;
 use hive_core::containment::{
     self, CheckDrift, CheckPinRecord, LimitError, MessagePolicyRecord, PinnedCheck, WorkerLimits,
-    WorkerPolicy, CONTAINMENT_SCHEMA_VERSION,
+    WorkerPolicy, WorkerSlot, CONTAINMENT_SCHEMA_VERSION,
 };
 use hive_core::mediation::{self, MessageState, MEDIATION_ROOT};
 use hive_core::roster::Roster;
@@ -113,33 +113,161 @@ pub(super) fn running_claims(context: &Context) -> Result<Vec<String>, MsgError>
         if kind != EntryKind::File || !mediation::is_valid_id(message_id) {
             continue;
         }
-        let Some(Ok(claim)) = read_record::<mediation::ClaimRecord>(
+        let Ok(Some(Ok(claim))) = read_record::<mediation::ClaimRecord>(
             &context.target,
             &mediation::claim_path(message_id),
-        )?
-        else {
+        ) else {
             continue;
         };
         if !mediation::is_valid_id(&claim.claimant_role) {
             continue;
         }
         let envelope = mediation::envelope_path(&claim.claimant_role, message_id);
-        if context
-            .target
-            .read_optional(Path::new(&envelope), super::MAX_RECORD_BYTES)?
-            .is_none()
-        {
+        if !matches!(
+            context
+                .target
+                .read_optional(Path::new(&envelope), super::MAX_RECORD_BYTES),
+            Ok(Some(_))
+        ) {
             continue;
         }
-        let loaded = load(context, &claim.claimant_role, message_id)?;
-        if matches!(
-            loaded.state(context.now).0,
-            MessageState::Claimed | MessageState::CancelRequested
-        ) {
+        if holds_worker(context, &claim.claimant_role, message_id, None) {
             running.push(message_id.to_owned());
         }
     }
     Ok(running)
+}
+
+/// The claim of `message_id` (with `token`, when given) is claimed or cancel-requested inside
+/// its lease. A message whose records cannot be read holds nothing.
+fn holds_worker(context: &Context, role: &str, message_id: &str, token: Option<&str>) -> bool {
+    let Ok(loaded) = load(context, role, message_id) else {
+        return false;
+    };
+    let same_claim = match (token, loaded.claim.as_ref()) {
+        (None, _) => true,
+        (Some(token), Some(Ok(claim))) => claim.claim_token == token,
+        (Some(_), _) => false,
+    };
+    same_claim
+        && matches!(
+            loaded.state(context.now).0,
+            MessageState::Claimed | MessageState::CancelRequested
+        )
+}
+
+/// Whether the holder of one slot generation still runs. A reservation whose claim was never
+/// published is held until its lease ends (the claimant may still be publishing it); one whose
+/// message has another claim lost the claim race and is free at once.
+fn slot_held(context: &Context, slot: &WorkerSlot) -> bool {
+    // An unreadable claim quarantines its message: it runs nothing.
+    let Ok(claim) = read_record::<mediation::ClaimRecord>(
+        &context.target,
+        &mediation::claim_path(&slot.message_id),
+    ) else {
+        return false;
+    };
+    match claim {
+        None => context.now < slot.lease_until,
+        Some(Ok(claim)) if claim.claim_token == slot.claim_token => holds_worker(
+            context,
+            &claim.claimant_role,
+            &slot.message_id,
+            Some(&slot.claim_token),
+        ),
+        Some(_) => false,
+    }
+}
+
+fn already_claimed() -> MsgError {
+    MsgError::conflict(
+        "hive.msg-already-claimed",
+        "another consumer claimed this message first",
+    )
+}
+
+/// Reserve one `max_workers` slot for `claim` before the claim is published (S4).
+///
+/// Each slot `0..max_workers` is a directory of contiguous generations. A slot is free when it
+/// has no generation yet or its newest generation's holder is released; the claimant then
+/// publishes the next generation no-clobber, so of two racers exactly one wins that slot.
+/// Restart-safe: nothing is ever deleted, and a crashed claimant's reservation ends with its
+/// lease. Returns the published path and a view.
+pub(super) fn reserve_slot(
+    context: &Context,
+    claim: &mediation::ClaimRecord,
+) -> Result<(String, Value), MsgError> {
+    let limits = worker_limits(context)?;
+    for slot in 0..limits.max_workers {
+        let directory = containment::slot_dir(slot);
+        let generations: Vec<u64> = list_entries(&context.target, Path::new(&directory))?
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|(_, kind)| *kind == EntryKind::File)
+            .filter_map(|(name, _)| name.strip_suffix(".json")?.parse().ok())
+            .collect();
+        let next = match generations.iter().max() {
+            None => 0,
+            Some(&newest) => {
+                let path = containment::slot_path(slot, newest);
+                let held = match read_record::<WorkerSlot>(&context.target, &path)? {
+                    Some(Ok(holder)) if holder.validate().is_ok() && holder.slot == slot => {
+                        let held = slot_held(context, &holder);
+                        // Another claimant of this same message is publishing its claim: this
+                        // claimant lost the claim race, not the worker limit.
+                        if held
+                            && holder.message_id == claim.message_id
+                            && holder.claim_token != claim.claim_token
+                        {
+                            return Err(already_claimed());
+                        }
+                        held
+                    }
+                    // A damaged reservation fails closed until its slot is inspected.
+                    _ => true,
+                };
+                if held {
+                    continue;
+                }
+                newest + 1
+            }
+        };
+        let record = WorkerSlot {
+            schema_version: CONTAINMENT_SCHEMA_VERSION,
+            slot,
+            generation: next,
+            message_id: claim.message_id.clone(),
+            claim_token: claim.claim_token.clone(),
+            reserved_at: claim.claimed_at,
+            lease_until: claim.lease_until,
+        };
+        record.validate().map_err(MsgError::input)?;
+        let path = containment::slot_path(slot, next);
+        if let Published::Created = publish_new(&context.target, &path, &record_bytes(&record)?)? {
+            return Ok((
+                path.clone(),
+                json!({"slot": slot, "generation": next, "path": path,
+                    "max_workers": limits.max_workers}),
+            ));
+        }
+        // Another claimant won this generation: try the next slot.
+    }
+    // Every slot is held. If this message was claimed meanwhile, report the lost claim race.
+    if read_record::<mediation::ClaimRecord>(
+        &context.target,
+        &mediation::claim_path(&claim.message_id),
+    )?
+    .is_some()
+    {
+        return Err(already_claimed());
+    }
+    Err(MsgError::blocked(
+        "hive.msg-worker-limit",
+        format!(
+            "every worker slot is held and max_workers = {}; acknowledge or wait for one to end",
+            limits.max_workers
+        ),
+    ))
 }
 
 /// Gate one claim: slot count and the per-claim time ceiling. Returns the lease to use.

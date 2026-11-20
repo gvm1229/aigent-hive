@@ -28,6 +28,8 @@ pub const MAX_SESSION_ID_BYTES: usize = 512;
 pub const MAX_RESULTS_PER_RESPONSE: usize = 4;
 /// Result text bytes quoted per delivered result; the full result stays in `results/`.
 pub const MAX_QUOTED_RESULT_BYTES: usize = 4096;
+/// Pending or withheld message ids listed in one response; the rest are counted.
+pub const MAX_LISTED_IDS: usize = 10;
 
 /// Host whose official hook surface is normalized.
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
@@ -66,6 +68,8 @@ impl HookHost {
 pub enum ReturnShape {
     /// `hookSpecificOutput.additionalContext` on Stop: documented non-error feedback that
     /// continues the conversation. Claude's default, so a result is not shown as a hook error.
+    /// Used only when a result is delivered; a pending or withheld notice is a `systemMessage`
+    /// that does not continue the turn (one more model turn per Stop otherwise).
     StopContext,
     /// Top-level `decision: "block"` with `reason` on Stop. Codex's documented Stop return and
     /// the OV150-001 shape that Claude displayed as "Stop hook error".
@@ -197,6 +201,8 @@ pub enum EventDisposition {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct NormalizedPayload {
     pub session_digest: String,
+    /// Digest of the host's per-turn id (`prompt_id`), when the payload carries one.
+    pub turn_digest: Option<String>,
     pub payload_digest: String,
     pub payload_bytes: u64,
     pub stop_hook_active: bool,
@@ -226,6 +232,13 @@ pub fn normalize_payload(event: &AllowedEvent, bytes: &[u8]) -> Result<Normalize
         .and_then(Value::as_str)
         .filter(|session| !session.is_empty() && session.len() <= MAX_SESSION_ID_BYTES)
         .ok_or_else(|| "hook input has no usable session_id".to_owned())?;
+    let turn_digest = match object.get("prompt_id") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(turn)) if !turn.is_empty() && turn.len() <= MAX_SESSION_ID_BYTES => {
+            Some(crate::sha256_digest(turn.as_bytes()))
+        }
+        Some(_) => return Err("prompt_id must be a non-empty string".into()),
+    };
     let stop_hook_active = match object.get("stop_hook_active") {
         None | Some(Value::Null) => false,
         Some(Value::Bool(active)) => *active,
@@ -233,24 +246,28 @@ pub fn normalize_payload(event: &AllowedEvent, bytes: &[u8]) -> Result<Normalize
     };
     Ok(NormalizedPayload {
         session_digest: crate::sha256_digest(session.as_bytes()),
+        turn_digest,
         payload_digest: crate::sha256_digest(bytes),
         payload_bytes: bytes.len() as u64,
         stop_hook_active: event.recursion_guard && stop_hook_active,
     })
 }
 
-/// Event id from host, event, session digest and payload digest. The payload digest is the
-/// per-session sequence discriminator: hosts send no counter, and a byte-identical replay of
-/// one event must map to the same id.
+/// Event id from host, event, session digest and a discriminator.
+///
+/// With a host per-turn id (`prompt_id`) the discriminator is its digest, so a retry of the
+/// same turn maps to the same id and replays the stored response. Without one, identical
+/// payloads of two different turns are indistinguishable, so the caller passes a per-call
+/// discriminator and the response is recomputed (delivery stays once per message).
 #[must_use]
 pub fn event_id_for(
     host: HookHost,
     event: &str,
     session_digest: &str,
-    payload_digest: &str,
+    discriminator: &str,
 ) -> String {
     let seed = format!(
-        "{}\n{event}\n{session_digest}\n{payload_digest}",
+        "{}\n{event}\n{session_digest}\n{discriminator}",
         host.as_str()
     );
     let digest = crate::sha256_digest(seed.as_bytes());
@@ -270,6 +287,9 @@ pub struct HookEventRecord {
     pub task: Option<String>,
     pub binding_digest: Option<String>,
     pub session_digest: Option<String>,
+    /// Digest of the host per-turn id, when present; it alone makes an event replayable.
+    #[serde(default)]
+    pub turn_digest: Option<String>,
     pub payload_digest: String,
     pub payload_bytes: u64,
     pub stop_hook_active: bool,
@@ -305,6 +325,10 @@ impl HookEventRecord {
                 .is_some_and(|digest| !valid_digest(digest))
             || self
                 .session_digest
+                .as_deref()
+                .is_some_and(|digest| !valid_digest(digest))
+            || self
+                .turn_digest
                 .as_deref()
                 .is_some_and(|digest| !valid_digest(digest))
             || !valid_digest(&self.payload_digest)
@@ -377,6 +401,23 @@ pub fn delivery_path(message_id: &str) -> String {
     format!("{MEDIATION_ROOT}/deliveries/{message_id}.json")
 }
 
+/// `.hive/mediation/announcements/<message_id>-<state>.json`: a withheld message is listed in
+/// one hook response per state, never on every later event.
+#[must_use]
+pub fn announcement_path(message_id: &str, state: &str) -> String {
+    format!("{MEDIATION_ROOT}/announcements/{message_id}-{state}.json")
+}
+
+/// One withheld-state announcement, published once (no-clobber).
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AnnouncementRecord {
+    pub schema_version: u32,
+    pub message_id: String,
+    pub state: String,
+    pub event_id: String,
+}
+
 /// Canonical digest that binds an approved project hook command to its exact scope.
 ///
 /// # Errors
@@ -421,8 +462,12 @@ pub struct Notice {
     pub delivered: Vec<DeliveredResult>,
     /// Requests still queued or claimed: the host waits for a later event.
     pub pending: Vec<String>,
-    /// Requests that are expired, dispatch-uncertain or quarantined: never delivered.
+    /// Requests that are expired, dispatch-uncertain or quarantined: never delivered. Each is
+    /// listed once per state.
     pub withheld: Vec<(String, String)>,
+    /// Pending and withheld ids beyond `MAX_LISTED_IDS`, counted but not listed.
+    pub pending_more: usize,
+    pub withheld_more: usize,
 }
 
 impl Notice {
@@ -476,10 +521,18 @@ pub fn notice_text(notice: &Notice) -> String {
             }
         }
     }
+    let more = |count: usize| {
+        if count == 0 {
+            String::new()
+        } else {
+            format!(" and {count} more")
+        }
+    };
     if !notice.pending.is_empty() {
         lines.push(format!(
-            "Hive mediation: queued, nothing waited. Still queued or claimed: {}. The result arrives on a later hook event or in {MEDIATION_ROOT}/results/.",
-            notice.pending.join(", ")
+            "Hive mediation: queued, nothing waited. Still queued or claimed: {}{}. The result arrives on a later hook event or in {MEDIATION_ROOT}/results/.",
+            notice.pending.join(", "),
+            more(notice.pending_more)
         ));
     }
     if !notice.withheld.is_empty() {
@@ -489,8 +542,9 @@ pub fn notice_text(notice: &Notice) -> String {
             .map(|(id, state)| format!("{id} ({state})"))
             .collect();
         lines.push(format!(
-            "Hive mediation: not delivered and never re-sent automatically: {}.",
-            items.join(", ")
+            "Hive mediation: not delivered and never re-sent automatically: {}{}.",
+            items.join(", "),
+            more(notice.withheld_more)
         ));
     }
     lines.push(format!(
@@ -508,12 +562,15 @@ pub fn render_response(shape: ReturnShape, event: &str, notice: &Notice) -> Valu
     }
     let text = notice_text(notice);
     match shape {
+        // Stop `additionalContext` and `decision: block` both continue the conversation. Only
+        // a delivered result justifies that; a queued or withheld notice is shown without
+        // continuing the turn.
+        ReturnShape::StopContext | ReturnShape::StopBlock if notice.delivered.is_empty() => {
+            json!({"systemMessage": text})
+        }
         ReturnShape::StopContext | ReturnShape::PromptContext => json!({
             "hookSpecificOutput": {"hookEventName": event, "additionalContext": text}
         }),
-        // Blocking makes the host continue. Only a delivered result justifies that; a queued
-        // or withheld notice is shown without continuing the turn.
-        ReturnShape::StopBlock if notice.delivered.is_empty() => json!({"systemMessage": text}),
         ReturnShape::StopBlock => json!({"decision": "block", "reason": text}),
         ReturnShape::RecordOnly => json!({}),
     }
@@ -543,6 +600,8 @@ mod tests {
                 Vec::new()
             },
             withheld: Vec::new(),
+            pending_more: 0,
+            withheld_more: 0,
         }
     }
 
@@ -586,6 +645,7 @@ mod tests {
         let raw = br#"{"session_id":"abc-123","hook_event_name":"Stop","stop_hook_active":true,"transcript_path":"/secret/t.jsonl","last_assistant_message":"private"}"#;
         let payload = normalize_payload(stop, raw).unwrap();
         assert!(payload.stop_hook_active);
+        assert_eq!(payload.turn_digest, None);
         assert_eq!(payload.session_digest, crate::sha256_digest(b"abc-123"));
         assert_eq!(payload.payload_digest, crate::sha256_digest(raw));
         let prompt = allowed_event(HookHost::Claude, "UserPromptSubmit").unwrap();
@@ -603,6 +663,7 @@ mod tests {
             br#"{"hook_event_name":"Stop"}"#,
             br#"{"session_id":"","hook_event_name":"Stop"}"#,
             br#"{"session_id":"s","stop_hook_active":"yes"}"#,
+            br#"{"session_id":"s","prompt_id":7}"#,
             b"[1]",
             b"not json",
         ] {
@@ -663,9 +724,25 @@ mod tests {
         let block = render_response(ReturnShape::StopBlock, "Stop", &delivered);
         assert_eq!(block["decision"], "block");
         assert!(block["reason"].as_str().unwrap().contains("msg-1"));
-        let queued = render_response(ReturnShape::StopBlock, "Stop", &notice(false, true));
-        assert!(queued.get("decision").is_none(), "queued never continues");
-        assert!(queued["systemMessage"].as_str().unwrap().contains("queued"));
+        // Neither Stop shape continues the turn without a delivered result (B1).
+        for shape in [ReturnShape::StopBlock, ReturnShape::StopContext] {
+            let queued = render_response(shape, "Stop", &notice(false, true));
+            assert!(queued.get("decision").is_none(), "queued never continues");
+            assert!(queued.get("hookSpecificOutput").is_none(), "{queued}");
+            assert!(queued["systemMessage"].as_str().unwrap().contains("queued"));
+            let mut withheld = notice(false, false);
+            withheld.withheld.push(("msg-3".into(), "expired".into()));
+            let withheld = render_response(shape, "Stop", &withheld);
+            assert!(withheld.get("decision").is_none());
+            assert!(withheld.get("hookSpecificOutput").is_none(), "{withheld}");
+            assert!(withheld["systemMessage"]
+                .as_str()
+                .unwrap()
+                .contains("msg-3 (expired)"));
+        }
+        let mut many = notice(false, true);
+        many.pending_more = 7;
+        assert!(notice_text(&many).contains("msg-2 and 7 more"));
         let prompt = render_response(
             ReturnShape::PromptContext,
             "UserPromptSubmit",

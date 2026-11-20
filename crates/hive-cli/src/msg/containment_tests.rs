@@ -92,7 +92,10 @@ impl Fixture {
 
     fn ack(&self, id: &str, text: &str, now: &str) -> Value {
         let result = self.file("result.txt", text);
-        self.run(&["ack", "--id", id, "--result", &result, "--now", now])
+        let token = super::test_claim_token(&self.target, id);
+        self.run(&[
+            "ack", "--id", id, "--claim", &token, "--result", &result, "--now", now,
+        ])
     }
 
     fn start(&self, extra: &[&str]) -> Value {
@@ -402,10 +405,13 @@ fn containment_stop_creates_zero_new_envelopes_and_waits_for_host_receipts() {
         )
     };
     let claude_receipt = receipt_for(&claude_work, "claude");
+    let claude_token = super::test_claim_token(&f.target, &claude_work);
     let unsupported = f.run(&[
         "cancel-ack",
         "--id",
         &claude_work,
+        "--claim",
+        &claude_token,
         "--receipt",
         &claude_receipt,
         "--now",
@@ -426,10 +432,13 @@ fn containment_stop_creates_zero_new_envelopes_and_waits_for_host_receipts() {
             .unwrap()
             .replace("\"forced\":false", "\"forced\":true"),
     );
+    let codex_token = super::test_claim_token(&f.target, &codex_work);
     let refused = f.run(&[
         "cancel-ack",
         "--id",
         &codex_work,
+        "--claim",
+        &codex_token,
         "--receipt",
         &forced,
         "--now",
@@ -438,10 +447,35 @@ fn containment_stop_creates_zero_new_envelopes_and_waits_for_host_receipts() {
     assert_eq!(refused["code"], "hive.msg-cancel-refused", "{refused}");
     // The host's own official cancel receipt moves the work to cancelled.
     let codex_receipt = receipt_for(&codex_work, "codex");
+    // S5: a wrong --claim is refused and records nothing.
+    let mismatch = f.run(&[
+        "cancel-ack",
+        "--id",
+        &codex_work,
+        "--claim",
+        "0123456789abcdef0123456789abcdef",
+        "--receipt",
+        &codex_receipt,
+        "--now",
+        "1016",
+    ]);
+    assert_eq!(mismatch["code"], "hive.msg-claim-mismatch", "{mismatch}");
+    assert!(!f
+        .target
+        .join(hive_core::containment::cancel_receipt_path(&codex_work))
+        .exists());
+    // The claim digest from `msg status` is accepted as well as the token.
+    let codex_claim_digest = f.run(&["status", "--id", &codex_work, "--now", "1016"])["data"]
+        ["message"]["claim_digest"]
+        .as_str()
+        .unwrap()
+        .to_owned();
     let cancelled = f.run(&[
         "cancel-ack",
         "--id",
         &codex_work,
+        "--claim",
+        &codex_claim_digest,
         "--receipt",
         &codex_receipt,
         "--now",
@@ -512,4 +546,48 @@ fn containment_task_and_flow_stops_cover_only_their_scope() {
     .unwrap();
     let closed = f.send("anything", "artemis", "task-2b");
     assert_eq!(closed["code"], "hive.msg-stopped", "{closed}");
+}
+
+#[test]
+fn containment_hive_state_is_excluded_from_the_worker_and_git() {
+    // S9: `.hive/` (mediation records included) is never worker-writable and is git-ignored.
+    let f = fixture();
+    let builder = f.sent_id("build", "hephaistos", "task-1");
+    let view = f.run(&["status", "--id", &builder, "--now", "1001"]);
+    let policy = &view["data"]["message"]["worker_policy"]["policy"];
+    assert_eq!(policy["writable_roots"], json!(["{target}"]));
+    assert_eq!(
+        policy["excluded_roots"],
+        json!(["{target}/.hive"]),
+        "{policy}"
+    );
+    let ignore = include_str!("../../../../harness/template/.hive/.gitignore");
+    assert!(ignore.lines().any(|line| line == "/mediation/"), "{ignore}");
+}
+
+#[test]
+fn containment_released_worker_slots_are_reused_by_generation() {
+    // S4: a slot is reserved before the claim and reused only after its holder ended.
+    let f = fixture();
+    f.harness("max_workers = 1\nmax_worker_seconds = 60\n");
+    let first = f.sent_id("one", "artemis", "task-1");
+    let second = f.sent_id("two", "artemis", "task-2");
+    let claimed = f.claim(&first, "artemis", &[]);
+    assert_eq!(claimed["data"]["worker_slot"]["slot"], 0, "{claimed}");
+    assert_eq!(claimed["data"]["worker_slot"]["generation"], 0);
+    let result = f.ack(&first, "done", "1002");
+    assert_eq!(result["code"], "hive.msg-acknowledged", "{result}");
+    let next = f.run(&[
+        "claim", "--id", &second, "--role", "artemis", "--now", "1003",
+    ]);
+    assert_eq!(next["code"], "hive.msg-claimed", "{next}");
+    assert_eq!(next["data"]["worker_slot"]["generation"], 1);
+    assert!(f
+        .target
+        .join(hive_core::containment::slot_path(0, 0))
+        .is_file());
+    assert!(f
+        .target
+        .join(hive_core::containment::slot_path(0, 1))
+        .is_file());
 }
