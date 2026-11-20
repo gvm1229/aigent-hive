@@ -337,11 +337,25 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
             json!(["selected_project_skills", "project_skill_policy_version"])
         );
         assert_eq!(
-            result["data"]["skill_merges"][0],
-            json!({
-                "sources": ["iterative-execution", "ralph-loop"],
-                "target": "verified-workflow"
-            })
+            result["data"]["skill_merges"],
+            json!([
+                {
+                    "sources": ["knowledge-capture", "knowledge-import"],
+                    "target": "knowledge-capture"
+                },
+                {
+                    "sources": ["knowledge-maintain", "knowledge-promote"],
+                    "target": "knowledge-manage"
+                },
+                {
+                    "sources": ["run-checkpoint", "run-handoff", "run-resume"],
+                    "target": "run"
+                },
+                {
+                    "sources": ["iterative-execution", "ralph-loop"],
+                    "target": "verified-workflow"
+                }
+            ])
         );
     }
     for mode in ["--apply", "--validate"] {
@@ -364,6 +378,20 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
     assert!(!current.contains("\"ralph-loop\""));
     assert!(!target.join(".agents/skills/iterative-execution").exists());
     assert!(!target.join(".agents/skills/ralph-loop").exists());
+    for (retired, current_name) in [
+        ("knowledge-maintain", "knowledge-manage"),
+        ("knowledge-promote", "knowledge-manage"),
+        ("run-checkpoint", "run"),
+        ("run-handoff", "run"),
+        ("run-resume", "run"),
+    ] {
+        assert!(!current.contains(&format!("\"{retired}\"")));
+        assert!(current.contains(&format!("\"{current_name}\"")));
+        assert!(!target.join(format!(".agents/skills/{retired}")).exists());
+        assert!(target
+            .join(format!(".agents/skills/{current_name}/SKILL.md"))
+            .is_file());
+    }
 }
 
 #[test]

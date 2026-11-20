@@ -9,7 +9,7 @@ summary: "The 0.11.0 refactor inherits unreleased 0.10.4 changes, preserves exis
 tags: [architecture, refactor, version]
 aliases: []
 sources:
-  - "repo:docs/architecture/policy-rule-inventory.md#sha256:bc8d431af65678302984520646b8b5b4775a915714fdde21c42a4b863a0ef32a"
+  - "repo:docs/architecture/policy-rule-inventory.md#sha256:b7a3a89c77a807b503293ba5e32751ad668117a3a4b78643d6e88173a12b7b84"
   - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:e609abd004c690bcdce2822313645ba7dd733fa9114e778c6305314c4ada0813"
 links: [artifact-boundaries, knowledge-source-freshness, orchestration-ownership]
 reviewed_revision: "git:dd4e2773e98d7acb13fa0dc77ad11167faaf23fb"

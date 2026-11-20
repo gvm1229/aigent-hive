@@ -33,9 +33,7 @@ EXPECTED_SKILLS = frozenset(
         "humanize-kor",
         "custom-subagent-create",
         "verified-workflow",
-        "knowledge-scan",
-        "knowledge-transfer",
-        "knowledge-maintain",
+        "knowledge-manage",
         "knowledge-capture",
         "prompt-refine",
         "research-best-practices",
@@ -44,16 +42,12 @@ EXPECTED_SKILLS = frozenset(
         "ship",
         "amend-directive",
         "user-setup",
-        "run-handoff",
+        "run",
         "project-transition",
-        "run-resume",
-        "run-checkpoint",
-        "knowledge-promote",
         "multi-goal",
         "product-update",
         "project-refresh",
-        "judge-evidence",
-        "adversarial-judge",
+        "judge",
         "team-execution",
     }
 )
@@ -223,7 +217,7 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         for route in (
             "dependency edges",
             "Lost\n   acknowledgement is `dispatch-uncertain`",
-            "A Judge node or\n   elevated risk uses `$aigent-hive:adversarial-judge`",
+            "A Judge node or\n   elevated risk uses the adversarial mode of `$aigent-hive:judge`",
             "repeated failure fingerprints",
             "independent verifier",
         ):
@@ -244,6 +238,37 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
             "setup-harness",
         ):
             self.assertIn(retired_name, retired)
+        merged = {
+            "knowledge-maintain": "knowledge-manage",
+            "knowledge-promote": "knowledge-manage",
+            "knowledge-transfer": "knowledge-manage",
+            "knowledge-scan": "knowledge-capture",
+            "run-checkpoint": "run",
+            "run-handoff": "run",
+            "run-resume": "run",
+            "adversarial-judge": "judge",
+            "judge-evidence": "judge",
+        }
+        events = {event["retired_name"]: event for event in ledger["lifecycle"]}
+        for old_name, current_name in merged.items():
+            self.assertEqual(retired[old_name], current_name)
+            self.assertEqual(events[old_name]["removed_in"], "0.16.0")
+            self.assertEqual(events[old_name]["replacement"], current_name)
+            self.assertEqual(events[old_name]["transition_kind"], "merge")
+            self.assertFalse((SKILL_ROOT / old_name).exists())
+            body = (SKILL_ROOT / current_name / "SKILL.md").read_text(encoding="utf-8")
+            header = yaml.safe_load(body.split("---", 2)[1])
+            self.assertIn(old_name, header["description"])
+            self.assertIn(f"`{old_name}`", body)
+            self.assertIn(f"say the new name `{current_name}`", body)
+            for root in (PLUGIN_ROOT, TEMPLATE_ROOT):
+                self.assertFalse((root / old_name).exists())
+                self.assertEqual(
+                    (root / current_name / "SKILL.md").read_bytes(),
+                    (SKILL_ROOT / current_name / "SKILL.md").read_bytes(),
+                )
+        for current_name in set(merged.values()):
+            self.assertNotIn(current_name, retired)
         self.assertEqual(
             hashlib.sha256((SKILL_ROOT / "retired-names.yml").read_bytes()).hexdigest(),
             hashlib.sha256((SKILL_ROOT / "retired-names.yml").read_bytes()).hexdigest(),

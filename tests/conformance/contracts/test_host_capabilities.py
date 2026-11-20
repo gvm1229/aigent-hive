@@ -30,7 +30,7 @@ CURRENT_REQUIRED = {
         "including a 0.8.x OMX/OMC owner",
         "host_capability_unsupported",
     ),
-    "harness/skills/judge-evidence/SKILL.md": (
+    "harness/skills/judge/references/evidence.md": (
         "New judging uses the host-native owner",
         "preserved existing external compatibility owner",
         "legacy 0.8.x owner",
@@ -116,9 +116,10 @@ class V09HostNativeContractTests(unittest.TestCase):
 
     def test_run_data_skills_preserve_pinned_owner(self) -> None:
         for relative in (
-            "harness/skills/run-checkpoint/SKILL.md",
-            "harness/skills/run-resume/SKILL.md",
-            "harness/skills/run-handoff/SKILL.md",
+            "harness/skills/run/SKILL.md",
+            "harness/skills/run/references/checkpoint.md",
+            "harness/skills/run/references/resume.md",
+            "harness/skills/run/references/handoff.md",
             "harness/skills/project-refresh/SKILL.md",
         ):
             text = (REPOSITORY_ROOT / relative).read_text(encoding="utf-8")

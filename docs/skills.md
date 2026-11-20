@@ -26,10 +26,8 @@
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
 | `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
-| `knowledge-scan` | 사용자가 고른 저장소·폴더 분석과 검토된 지식 추출 | 저장소 규칙·결정의 Wiki 반입 |
-| `knowledge-transfer` | 기존 Markdown 지식의 컴퓨터 간 이전·FTS 복원 | 이전 컴퓨터의 지식을 새 컴퓨터에서 사용 |
-| `knowledge-maintain` | 신뢰 가능한 Hive 지식 검사·검색 색인 재생성·명시 정리 | Wiki link 검사와 색인 재구축 |
-| `knowledge-capture` | 대화 종료 전 나중 작업에 도움이 되는 사실·선호·방식 1건의 안전한 기록 | PR 전 Clippy 실행 규칙 기록 |
+| `knowledge-manage` | 기존 Hive 지식의 검사·색인 재생성·명시 정리, 검토된 지식의 전역 공유, 컴퓨터 간 이전 | Wiki link 검사, 배포 규칙 전역 공유, 새 컴퓨터로 지식 이전 |
+| `knowledge-capture` | 대화 종료 전 나중 작업에 도움이 되는 사실·선호·방식의 안전한 기록, 사용자가 고른 저장소·폴더의 검토된 지식 추출 | PR 전 Clippy 실행 규칙 기록, 저장소 규칙·결정의 Wiki 반입 |
 | `prompt-refine` | 실행 전 승인용 prompt 정리·개선 | Codex 실행용 prompt 개선 |
 | `research-best-practices` | 공식 자료 중심의 최신 모범 사례 조사 | Rust 자동 update 모범 사례 조사 |
 | `knowledge-recall` | 현재 질문·작업에 도움 되는 Hive 지식의 제한 조회 | 기존 출시 결정 검색 |
@@ -37,15 +35,11 @@
 | `ship` | 저장소 규칙을 읽고 변경을 독립 관심사별로 검증·commit·선택적 push | 큰 변경을 기능·문서·release commit으로 분리 |
 | `amend-directive` | 전역·project·Hive source의 사용자 수정 가능 agent behavior 변경 | Setup의 사소한 승인 질문 금지 |
 | `user-setup` | 언어·Wiki·host·Skill·사용량 보호 전역 설정 | 전역 Aigent Hive 설정 변경 |
-| `run-handoff` | 실행 역할과 남은 작업 인계 기록 | 검증 role과 남은 작업 인계 |
+| `run` | 실행 상태 저장, 역할 인계 기록, 저장된 실행의 새 session 재개 | Context 정리 전 진행 상태 저장, `RUN-42` 재개 |
 | `project-transition` | 구조·major version이 다른 프로젝트 이관 | Project의 다음 major 형식 이관 |
-| `run-resume` | 저장된 실행의 새 session 재개 | `RUN-42`의 마지막 checkpoint 재개 |
-| `run-checkpoint` | 현재 실행 상태와 다음 단계 저장 | Context 정리 전 진행 상태 저장 |
-| `knowledge-promote` | 다른 작업에도 도움 되는 검토된 사실·선호·방식의 전역 공유 | Deployment rule의 전역 knowledge 승격 |
 | `product-update` | 설치된 Aigent Hive 자체 갱신 | Aigent Hive 최신 stable update |
 | `project-refresh` | 사용자 수정을 보존하는 project Hive 파일 갱신 | Project의 current Hive format refresh |
-| `judge-evidence` | package 출처·무결성·독립 검토 준비 확인 | Release candidate의 독립 review 준비 확인 |
-| `adversarial-judge` | 제한된 clean-context 독립 Judge 요청 준비 | 명시적 반례·권한·복구 결손 검토 |
+| `judge` | 제한된 clean-context 독립 Judge 요청 준비, package 출처·무결성·서명 증거 확인 | 명시적 반례 검토, release candidate의 독립 review 준비 확인 |
 | `athena` | 작업 계획과 완료 기준을 구현 전에 저장하고 결과를 별도로 검토 | 아테나 호출 |
 | `artemis` | 코드 변경 없이 자료를 조사하고 문제 원인을 진단 | 아르테미스 호출 |
 | `hephaistos` | 저장한 계획을 구현하고 결과 코드를 정리 | 헤파이스토스 호출 |
@@ -66,8 +60,8 @@
 | `source-project-setup` | `project-setup` |
 | `source-code-polish` | `code-polish` |
 | `source-ralph-loop` | `verified-workflow` |
-| `source-knowledge-import` | `knowledge-scan` |
-| `source-knowledge-maintain` | `knowledge-maintain` |
+| `source-knowledge-import` | `knowledge-capture` |
+| `source-knowledge-maintain` | `knowledge-manage` |
 | `source-knowledge-capture` | `knowledge-capture` |
 | `source-prompt-refine` | `prompt-refine` |
 | `source-research-best-practices` | `research-best-practices` |
@@ -75,12 +69,12 @@
 | `source-commit-work` | `ship` |
 | `source-amend-directive` | `amend-directive` |
 | `source-review` | Wiki 질문은 `knowledge-recall`; code·Git 근거 확인은 기본 읽기 도구 |
-| `source-knowledge` | 조회 `knowledge-recall`; 관리 `knowledge-maintain`; 기록 `knowledge-capture` |
+| `source-knowledge` | 조회 `knowledge-recall`; 관리 `knowledge-manage`; 기록 `knowledge-capture` |
 
 ## 병합 결정
 
 - `auto-setup-project` + `setup-project` → `project-setup`: 동일 목적의 질문 방식 통합
-- `manage-wiki` + `maintain-knowledge` → `knowledge-maintain`: thin router와 실제 관리 작업 통합
+- `manage-wiki` + `maintain-knowledge` → `knowledge-manage`: thin router와 실제 관리 작업 통합(`0.16.0` 이전 이름 `knowledge-maintain`)
 - `hive-usage-guard` + `manage-usage` → `usage-guard`: 단일 설정·정책 resolver
 - `hive-commit` + source Git workflow → `ship`: universal workflow와 저장소별 규칙 분리
 - `hive-directive-amend` → `amend-directive`: 사용자 수정 가능 behavior와 immutable safety 경계 분리
@@ -89,8 +83,7 @@
 
 ## 유지할 분리
 
-- `knowledge-capture` / `knowledge-scan` / `knowledge-transfer` / `knowledge-promote`: 대화 기록·새 지식 추출·기존 지식 이전·전역 공유의 범위와 권한 차이
-- `run-checkpoint` / `run-resume` / `run-handoff`: 저장·복구·인계 상태 변경 차이
+- `knowledge-recall` / `knowledge-capture` / `knowledge-manage`: 읽기 전용 조회, 새 지식 기록, 기존 지식 관리의 범위와 권한 차이
 - `project-refresh` / `project-transition`: 일반 갱신과 구조 이관의 복구 위험 차이
 
 ## 범용화 경계
@@ -118,3 +111,22 @@ task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증�
 - `package-review` → `judge-evidence`
 - Retired 이름: routing compatibility만 제공
 - Successful upgrade: authenticated retired Skill artifact·projection `0건`
+
+## `0.16.0` 통합
+
+| 옛 이름 | 새 이름 | 새 Skill 안 위치 |
+| --- | --- | --- |
+| `knowledge-scan` | `knowledge-capture` | 저장소 스캔 `references/scan.md` |
+| `knowledge-maintain` | `knowledge-manage` | 정비 `references/maintenance.md` |
+| `knowledge-promote` | `knowledge-manage` | 공유 `references/promote.md` |
+| `knowledge-transfer` | `knowledge-manage` | 이전 `references/transfer.md` |
+| `run-checkpoint` | `run` | 저장 `references/checkpoint.md` |
+| `run-handoff` | `run` | 인계 `references/handoff.md` |
+| `run-resume` | `run` | 재개 `references/resume.md` |
+| `adversarial-judge` | `judge` | 반대 검토 `references/adversarial.md` |
+| `judge-evidence` | `judge` | 증거 검증 `references/evidence.md` |
+
+- 기준: 같은 대상·권한 단위로 묶음. 읽기 전용 조회, 새 지식 기록, 기존 지식 관리를 분리
+- 옛 이름 호출: 새 Skill 설명과 본문의 옛 이름 안내, 새 이름과 위치 한 번 안내 뒤 계속
+- 이전 단계 기록: `0.10.0`의 `knowledge-import`·`package-review` 이관도 최종 이름으로 직접 연결
+- 갱신: 인증된 옛 Skill 폴더 제거, 사용자 수정·외부 파일 보존과 충돌 보고

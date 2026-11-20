@@ -47,8 +47,8 @@ source work under the source plan. Do not infer host support or installation con
    Record only exact claim, launch, heartbeat, lookup, cancellation, and result receipts. Lost
    acknowledgement is `dispatch-uncertain`; never reclaim without qualified non-launch proof.
 6. Verify each criterion independently. Use a deterministic verifier by default. A Judge node or
-   elevated risk uses `$aigent-hive:adversarial-judge` and the authenticated quorum contract; an
-   implementation agent never accepts its own result.
+   elevated risk uses the adversarial mode of `$aigent-hive:judge` and the authenticated quorum
+   contract; an implementation agent never accepts its own result.
 7. Retry only inside the node's declared budget. Repeated failure fingerprints, exhausted budget,
    quarantine, or missing attestation stop that node's automatic attempts, not the outer task.
    Preserve evidence and limits; inspect authorized recovery and independent work under the loaded

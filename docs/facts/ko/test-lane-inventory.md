@@ -13,7 +13,7 @@ sources:
   - "repo:docs/guides/test-lanes.md#sha256:ac5e2863835c6c3605986ff71600d6b6a626676dc745a781cc2d0e18a28fa451"
   - "repo:scripts/test-lanes.py#sha256:5bc7694c5e1f399880069d16edbde37b85c741dadc5d6252892ebd5142cea8b1"
   - "repo:scripts/test_artifacts.py#sha256:df00889b7e966f0b5613ee9f079e35dc21c2ba52bc55084f311c042e4af50a6d"
-  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:aadd1bc3e37924cf0869cb520cbf4401583682c3b005d19a4f119d3b381b6524"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:1e472bb4458467341a9cc571e90f2679f6272f30692d84c0bc99b895ef2dd42c"
   - "repo:tests/conformance/integration/test_connected_setup_lifecycle.py#sha256:32227317a8993d52bd762e7c9fa03682fdddfda638a3d92d2cfe0a47c108d755"
   - "repo:tests/conformance/lanes.toml#sha256:7a19fd3fe4dcf636dc7691665e3072e61c8354320141b13a7eb85e2c5fd85739"
 links: [release-verification, test-fault-isolation]

@@ -11,13 +11,13 @@ aliases: ["Host integration priority"]
 sources:
   - "repo:crates/hive-cli/src/discord.rs#sha256:4dfee283b0d3b1aae546df1a415405326757ef8b1d68263f62cd407c5519e586"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:082645d4de44857f384e5613bbee10866928140c3932115fb3181baa7c3e27cb"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:66f420760cb36622a7e81fe7a65f520733c71c23446c9255eec8552002824243"
   - "repo:docs/archive/plans/foundations/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/archive/plans/releases/0.9.0/discord-onboarding-v09.md#sha256:91a27ed57ddd259ac0a3270ee9242243f0a567bdae3fc756b90f76303c01c037"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:160bc8bc434f1547e1fb3dad23902b740304323c800b92ece62ccda10a61114e"
   - "repo:docs/research/discord-notion-host-integrations.md#sha256:5b26108090c75343964f5452c3b7fd20a1df6300feda8561847bad6feb1748b9"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848"
-  - "repo:schemas/user-setup.schema.json#sha256:02903b420365725d94b3cb79000661970338767fe382f163a36c9d58e5288aa8"
+  - "repo:schemas/user-setup.schema.json#sha256:cefe939bedb7f6645fd1851e086def9677e4a2f3f7774258d54dd203cc8b10fc"
 links: [knowledge-storage, orchestration-ownership]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active

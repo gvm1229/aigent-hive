@@ -3,17 +3,6 @@ schema_version: 1
 skills: []
 {% else -%}
 skills:
-{% if 'adversarial-judge' in selected_project_skills -%}
-- name: adversarial-judge
-  source_type: built-in
-  content_digest: sha256:9b8641f4c858698cb8959ed311cc2bcefb7764e1465b6109ec4343c2dc27f215
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
-  - run-state
-  - subagents
-  consent_digest: null
-{% endif -%}
 {% if 'aither' in selected_project_skills -%}
 - name: aither
   source_type: built-in
@@ -55,7 +44,7 @@ skills:
 {% if 'athena' in selected_project_skills -%}
 - name: athena
   source_type: built-in
-  content_digest: sha256:439ca814c82f64791107a78e02e525b268b5e6af6ef858042f7a74c25cd1c8c9
+  content_digest: sha256:736754bdf14368b61f01c74e3f3bd3bd9d285416e22d2ac843f07ecb316a34a0
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -88,7 +77,7 @@ skills:
 {% if 'demeter' in selected_project_skills -%}
 - name: demeter
   source_type: built-in
-  content_digest: sha256:9309dd653c52d462b6b55d567d64c01c9ac71a057eaa077043e9b32623887c95
+  content_digest: sha256:69db6ec2c15836bdba3d930584077f8250e96939d846de1be841d45eca17cabe
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -132,33 +121,22 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
-{% if 'judge-evidence' in selected_project_skills -%}
-- name: judge-evidence
+{% if 'judge' in selected_project_skills -%}
+- name: judge
   source_type: built-in
-  content_digest: sha256:140dafda618921f8178a0bf8ab9ffa44607ca5ed0fc17079f5990c7bd0e79e77
+  content_digest: sha256:eff261723439586f4b8e0b5b78b6976c33f56a6bfb38f13439e56fe140ca13e9
   side_effect_class: read-only
   capabilities:
   - filesystem-read
   - run-state
+  - subagents
   consent_digest: null
 {% endif -%}
 {% if 'knowledge-capture' in selected_project_skills -%}
 - name: knowledge-capture
   source_type: built-in
-  content_digest: sha256:45d922abbe2b266f1b0a0ae757da4eb0abb13eccb3b640f54d8d2e321016c3b9
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-write
-  - shell
-  consent_digest: null
-{% endif -%}
-{% if 'knowledge-maintain' in selected_project_skills -%}
-- name: knowledge-maintain
-  source_type: built-in
-  content_digest: sha256:5500264a26254e757e29c968c5a34218c24320d149969c218ac85a3389c3f4b8
-  side_effect_class: project-write
+  content_digest: sha256:3ddc5bf3e58c774266ce2bb11654fa54c80e0a09c519347b9de54d61eedaaa11
+  side_effect_class: external-write
   capabilities:
   - filesystem-read
   - filesystem-write
@@ -167,10 +145,10 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
-{% if 'knowledge-promote' in selected_project_skills -%}
-- name: knowledge-promote
+{% if 'knowledge-manage' in selected_project_skills -%}
+- name: knowledge-manage
   source_type: built-in
-  content_digest: sha256:a96707ad90c399aff34475844384d26c1e8f6b6670a3c900b17790b4a264c9ca
+  content_digest: sha256:b1b7ad59c87dd00925c9f48b523d56fe5123a2e4ed2d4a051b7a832beeed33ef
   side_effect_class: external-write
   capabilities:
   - filesystem-read
@@ -191,32 +169,6 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
-{% if 'knowledge-scan' in selected_project_skills -%}
-- name: knowledge-scan
-  source_type: built-in
-  content_digest: sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
-{% endif -%}
-{% if 'knowledge-transfer' in selected_project_skills -%}
-- name: knowledge-transfer
-  source_type: built-in
-  content_digest: sha256:7b4bbe52c0e4af139f61ded9ba5c75562d21c8e0011530af6512563bbaea7188
-  side_effect_class: external-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - memory-read
-  - memory-write
-  - shell
-  consent_digest: null
-{% endif -%}
 {% if 'multi-goal' in selected_project_skills -%}
 - name: multi-goal
   source_type: built-in
@@ -233,7 +185,7 @@ skills:
 {% if 'poseidon' in selected_project_skills -%}
 - name: poseidon
   source_type: built-in
-  content_digest: sha256:4c9e130a03134d50c4c3a7435ba4097d51b100bab344801b4cefcca9dba502f5
+  content_digest: sha256:d1c462b79c8a1f69cbf8b110cf28b416be90a77430d852a80466c68479d25f8b
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -310,35 +262,14 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
-{% if 'run-checkpoint' in selected_project_skills -%}
-- name: run-checkpoint
+{% if 'run' in selected_project_skills -%}
+- name: run
   source_type: built-in
-  content_digest: sha256:2892a1d16f2795a0a2629c5d9082410d29205b0b9f46a41707d3cf40e764f655
+  content_digest: sha256:b0163dc5734d08fd4e999d3e214cb9c8a846c8ce1dd6fa4c794ba9e0945366e0
   side_effect_class: project-write
   capabilities:
   - filesystem-read
   - filesystem-write
-  - run-state
-  consent_digest: null
-{% endif -%}
-{% if 'run-handoff' in selected_project_skills -%}
-- name: run-handoff
-  source_type: built-in
-  content_digest: sha256:f257a35ba81113d8ce3c0e6e219af4bcdc037cbca08c0083d34e1309958daacc
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  consent_digest: null
-{% endif -%}
-{% if 'run-resume' in selected_project_skills -%}
-- name: run-resume
-  source_type: built-in
-  content_digest: sha256:b145e03c7dba48f5297c4cb38a1d7e4006e2fce0dff9d605450f4290918ebf37
-  side_effect_class: read-only
-  capabilities:
-  - filesystem-read
   - run-state
   consent_digest: null
 {% endif -%}
@@ -381,7 +312,7 @@ skills:
 {% if 'verified-workflow' in selected_project_skills -%}
 - name: verified-workflow
   source_type: built-in
-  content_digest: sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf
+  content_digest: sha256:f06e29b9f7738d4ef33c16bd45fea4844e9408b87ee287c611d152d2f6c76cf6
   side_effect_class: project-write
   capabilities:
   - filesystem-read

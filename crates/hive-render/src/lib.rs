@@ -4125,12 +4125,7 @@ fn normalize_project_skill_policy(
 fn is_project_knowledge_skill(name: &str) -> bool {
     matches!(
         name,
-        "knowledge-capture"
-            | "knowledge-recall"
-            | "knowledge-promote"
-            | "knowledge-maintain"
-            | "knowledge-scan"
-            | "knowledge-transfer"
+        "knowledge-capture" | "knowledge-recall" | "knowledge-manage"
     )
 }
 
@@ -8366,7 +8361,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["knowledge-maintain".to_owned()],
+            selected_project_skills: vec!["knowledge-manage".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -8667,7 +8662,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-promote\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-manage\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -8701,9 +8696,9 @@ mod tests {
             .expect("effective preferences should be returned");
         assert_eq!(
             effective.selected_project_skills,
-            ["knowledge-capture", "knowledge-promote", "knowledge-recall",]
+            ["knowledge-capture", "knowledge-manage", "knowledge-recall",]
         );
-        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-promote"] {
+        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-manage"] {
             assert!(target
                 .join(format!(".agents/skills/{skill}/SKILL.md"))
                 .is_file());
@@ -8711,7 +8706,7 @@ mod tests {
         let harness =
             fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
         assert!(harness.contains(
-            "selected_project_skills = [\"knowledge-capture\", \"knowledge-promote\", \"knowledge-recall\"]"
+            "selected_project_skills = [\"knowledge-capture\", \"knowledge-manage\", \"knowledge-recall\"]"
         ));
         assert!(harness.contains("codexbar_fallback_enabled = false"));
     }
@@ -8777,8 +8772,7 @@ mod tests {
             "code-polish",
             "humanize-kor",
             "verified-workflow",
-            "knowledge-scan",
-            "knowledge-maintain",
+            "knowledge-manage",
             "knowledge-capture",
             "prompt-refine",
             "research-best-practices",
@@ -8786,14 +8780,10 @@ mod tests {
             "usage-guard",
             "ship",
             "amend-directive",
-            "run-handoff",
-            "run-resume",
-            "run-checkpoint",
-            "knowledge-promote",
+            "run",
             "product-update",
             "project-refresh",
-            "judge-evidence",
-            "adversarial-judge",
+            "judge",
             "team-execution",
             "multi-goal",
         ];
@@ -8809,7 +8799,16 @@ mod tests {
             "usage-guard/references/sensors.md",
             "knowledge-recall/references/confidential.md",
             "knowledge-capture/references/ingest.md",
-            "run-checkpoint/references/policy-review.md",
+            "knowledge-capture/references/scan.md",
+            "knowledge-manage/references/maintenance.md",
+            "knowledge-manage/references/promote.md",
+            "knowledge-manage/references/transfer.md",
+            "run/references/checkpoint.md",
+            "run/references/handoff.md",
+            "run/references/resume.md",
+            "run/references/policy-review.md",
+            "judge/references/adversarial.md",
+            "judge/references/evidence.md",
             "amend-directive/references/transplant.md",
         ] {
             expected.push(format!(".agents/skills/{resource}"));
@@ -10901,7 +10900,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 38);
+        assert_eq!(deletions.len(), 42);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -11825,7 +11824,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 config["selected_project_skills"].as_array().unwrap().len(),
-                if wiki_enabled { 32 } else { 27 }
+                if wiki_enabled { 27 } else { 24 }
             );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));

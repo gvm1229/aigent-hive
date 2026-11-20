@@ -29,8 +29,6 @@ _exclude:
   - "{% if 'hephaistos' not in selected_project_skills %}.claude/skills/hephaistos{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.agents/skills/poseidon{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.claude/skills/poseidon{% endif %}"
-  - "{% if 'adversarial-judge' not in selected_project_skills %}.agents/skills/adversarial-judge{% endif %}"
-  - "{% if 'adversarial-judge' not in selected_project_skills %}.claude/skills/adversarial-judge{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.agents/skills/amend-directive{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.claude/skills/amend-directive{% endif %}"
   - "{% if 'code-polish' not in selected_project_skills %}.agents/skills/code-polish{% endif %}"
@@ -39,20 +37,14 @@ _exclude:
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.claude/skills/custom-subagent-create{% endif %}"
   - "{% if 'humanize-kor' not in selected_project_skills %}.agents/skills/humanize-kor{% endif %}"
   - "{% if 'humanize-kor' not in selected_project_skills %}.claude/skills/humanize-kor{% endif %}"
-  - "{% if 'judge-evidence' not in selected_project_skills %}.agents/skills/judge-evidence{% endif %}"
-  - "{% if 'judge-evidence' not in selected_project_skills %}.claude/skills/judge-evidence{% endif %}"
+  - "{% if 'judge' not in selected_project_skills %}.agents/skills/judge{% endif %}"
+  - "{% if 'judge' not in selected_project_skills %}.claude/skills/judge{% endif %}"
   - "{% if 'knowledge-capture' not in selected_project_skills %}.agents/skills/knowledge-capture{% endif %}"
   - "{% if 'knowledge-capture' not in selected_project_skills %}.claude/skills/knowledge-capture{% endif %}"
-  - "{% if 'knowledge-maintain' not in selected_project_skills %}.agents/skills/knowledge-maintain{% endif %}"
-  - "{% if 'knowledge-maintain' not in selected_project_skills %}.claude/skills/knowledge-maintain{% endif %}"
-  - "{% if 'knowledge-promote' not in selected_project_skills %}.agents/skills/knowledge-promote{% endif %}"
-  - "{% if 'knowledge-promote' not in selected_project_skills %}.claude/skills/knowledge-promote{% endif %}"
+  - "{% if 'knowledge-manage' not in selected_project_skills %}.agents/skills/knowledge-manage{% endif %}"
+  - "{% if 'knowledge-manage' not in selected_project_skills %}.claude/skills/knowledge-manage{% endif %}"
   - "{% if 'knowledge-recall' not in selected_project_skills %}.agents/skills/knowledge-recall{% endif %}"
   - "{% if 'knowledge-recall' not in selected_project_skills %}.claude/skills/knowledge-recall{% endif %}"
-  - "{% if 'knowledge-scan' not in selected_project_skills %}.agents/skills/knowledge-scan{% endif %}"
-  - "{% if 'knowledge-scan' not in selected_project_skills %}.claude/skills/knowledge-scan{% endif %}"
-  - "{% if 'knowledge-transfer' not in selected_project_skills %}.agents/skills/knowledge-transfer{% endif %}"
-  - "{% if 'knowledge-transfer' not in selected_project_skills %}.claude/skills/knowledge-transfer{% endif %}"
   - "{% if 'multi-goal' not in selected_project_skills %}.agents/skills/multi-goal{% endif %}"
   - "{% if 'multi-goal' not in selected_project_skills %}.claude/skills/multi-goal{% endif %}"
   - "{% if 'product-update' not in selected_project_skills %}.agents/skills/product-update{% endif %}"
@@ -69,12 +61,8 @@ _exclude:
   - "{% if 'quick-answer' not in selected_project_skills %}.claude/skills/quick-answer{% endif %}"
   - "{% if 'research-best-practices' not in selected_project_skills %}.agents/skills/research-best-practices{% endif %}"
   - "{% if 'research-best-practices' not in selected_project_skills %}.claude/skills/research-best-practices{% endif %}"
-  - "{% if 'run-checkpoint' not in selected_project_skills %}.agents/skills/run-checkpoint{% endif %}"
-  - "{% if 'run-checkpoint' not in selected_project_skills %}.claude/skills/run-checkpoint{% endif %}"
-  - "{% if 'run-handoff' not in selected_project_skills %}.agents/skills/run-handoff{% endif %}"
-  - "{% if 'run-handoff' not in selected_project_skills %}.claude/skills/run-handoff{% endif %}"
-  - "{% if 'run-resume' not in selected_project_skills %}.agents/skills/run-resume{% endif %}"
-  - "{% if 'run-resume' not in selected_project_skills %}.claude/skills/run-resume{% endif %}"
+  - "{% if 'run' not in selected_project_skills %}.agents/skills/run{% endif %}"
+  - "{% if 'run' not in selected_project_skills %}.claude/skills/run{% endif %}"
   - "{% if 'ship' not in selected_project_skills %}.agents/skills/ship{% endif %}"
   - "{% if 'ship' not in selected_project_skills %}.claude/skills/ship{% endif %}"
   - "{% if 'team-execution' not in selected_project_skills %}.agents/skills/team-execution{% endif %}"
@@ -314,7 +302,6 @@ selected_project_skills:
   type: yaml
   when: false
   default:
-    - adversarial-judge
     - aither
     - amend-directive
     - apollon
@@ -326,12 +313,10 @@ selected_project_skills:
     - hades
     - hephaistos
     - humanize-kor
-    - judge-evidence
+    - judge
     - knowledge-capture
-    - knowledge-maintain
-    - knowledge-promote
+    - knowledge-manage
     - knowledge-recall
-    - knowledge-scan
     - multi-goal
     - poseidon
     - product-update
@@ -339,9 +324,7 @@ selected_project_skills:
     - prompt-refine
     - quick-answer
     - research-best-practices
-    - run-checkpoint
-    - run-handoff
-    - run-resume
+    - run
     - ship
     - team-execution
     - usage-guard

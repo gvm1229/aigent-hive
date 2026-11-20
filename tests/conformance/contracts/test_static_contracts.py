@@ -35,12 +35,11 @@ CURRENT = {
     "aither",
     "hades",
 
-    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
-    "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
+    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow",
+    "knowledge-manage", "knowledge-capture", "prompt-refine", "research-best-practices",
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
-    "run-handoff", "project-transition", "run-resume", "run-checkpoint",
-    "knowledge-promote", "product-update", "project-refresh", "judge-evidence",
-    "adversarial-judge", "team-execution", "multi-goal", "custom-subagent-create",
+    "run", "project-transition", "product-update", "project-refresh", "judge",
+    "team-execution", "multi-goal", "custom-subagent-create",
 }
 
 
@@ -250,7 +249,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
 
     def test_wiki_lint_routes_source_and_consumer_targets_without_skipping(self) -> None:
         capture = (SKILLS / "knowledge-capture/SKILL.md").read_text(encoding="utf-8")
-        maintain = (SKILLS / "knowledge-maintain/SKILL.md").read_text(encoding="utf-8")
+        maintain = (SKILLS / "knowledge-manage/references/maintenance.md").read_text(encoding="utf-8")
         for text in (capture, maintain):
             normalized = " ".join(text.split())
             self.assertIn("hive knowledge lint --target", normalized)

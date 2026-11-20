@@ -1282,8 +1282,11 @@ pub(crate) fn authentic_historical_user_skill(
                 || [DescriptorLanguage::En, DescriptorLanguage::Ko]
                     .into_iter()
                     .any(|language| {
-                        hive_projection::localized_builtin_artifact(name, suffix, source, language)
-                            .is_ok_and(|expected| expected == bytes)
+                        hive_projection::historical_localized_builtin_artifacts(
+                            name, suffix, source, language,
+                        )
+                        .iter()
+                        .any(|expected| expected == bytes)
                     })
         })
 }
@@ -4788,21 +4791,21 @@ fn historical_user_artifact_matches(
     [DescriptorLanguage::En, DescriptorLanguage::Ko]
         .into_iter()
         .any(|language| {
-            hive_projection::localized_builtin_artifact(name, suffix, source, language).is_ok_and(
-                |bytes| {
-                    sha256_digest(&bytes) == digest
+            hive_projection::historical_localized_builtin_artifacts(name, suffix, source, language)
+                .iter()
+                .any(|bytes| {
+                    sha256_digest(bytes) == digest
                         || (Path::new(suffix)
                             .extension()
                             .and_then(OsStr::to_str)
                             .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
                             && sha256_digest(
-                                String::from_utf8_lossy(&bytes)
+                                String::from_utf8_lossy(bytes)
                                     .replace("\r\n", "\n")
                                     .replace('\n', "\r\n")
                                     .as_bytes(),
                             ) == digest)
-                },
-            )
+                })
         })
 }
 
@@ -10755,12 +10758,15 @@ mod tests {
                 };
                 let target = temporary.path().join(&entry.path);
                 let raw = fs::read(&target).unwrap();
-                let mut bytes = hive_projection::localized_builtin_artifact(
+                // A published 0.13.0 Korean install carries the descriptor of that release, which
+                // is the last variant for a Skill merged or reworded in 0.16.0.
+                let mut bytes = hive_projection::historical_localized_builtin_artifacts(
                     name,
                     suffix,
                     &raw,
                     DescriptorLanguage::Ko,
                 )
+                .pop()
                 .unwrap();
                 if Path::new(suffix)
                     .extension()

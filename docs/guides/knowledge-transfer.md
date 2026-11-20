@@ -8,7 +8,7 @@
 - 제외: SQLite·벡터 색인·모델·인증 정보·호스트 설정·기밀 자료
 - 비공개 모음: 접근 범위 보존, 새 프로젝트 연결 전 공유 검색 제외
 - 파일 전달: 사용자가 선택한 USB·파일 공유 수단
-- Skill 구분: 기존 지식 이전 `knowledge-transfer`, 새 저장소 분석 `knowledge-scan`, 검색 색인 정비 `knowledge-maintain`
+- Skill 구분: 기존 지식 이전·검색 색인 정비 `knowledge-manage`, 새 저장소 분석 `knowledge-capture`. `0.16.0` 이전 이름 `knowledge-transfer`·`knowledge-maintain`·`knowledge-scan`
 
 ## 이전 컴퓨터
 

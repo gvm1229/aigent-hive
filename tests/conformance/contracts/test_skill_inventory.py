@@ -151,12 +151,11 @@ CURRENT_CONSUMER_SKILLS = frozenset(
         "demeter",
         "aither",
         "hades",
-        "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow", "knowledge-scan", "knowledge-transfer",
-        "knowledge-maintain", "knowledge-capture", "prompt-refine", "research-best-practices",
+        "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow",
+        "knowledge-manage", "knowledge-capture", "prompt-refine", "research-best-practices",
         "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
-        "run-handoff", "project-transition", "run-resume", "run-checkpoint",
-        "knowledge-promote", "product-update", "project-refresh", "judge-evidence",
-        "adversarial-judge", "team-execution", "multi-goal", "custom-subagent-create",
+        "run", "project-transition", "product-update", "project-refresh", "judge",
+        "team-execution", "multi-goal", "custom-subagent-create",
     }
 )
 CURRENT_SHARED_SKILLS = CURRENT_SOURCE_SKILLS & CURRENT_CONSUMER_SKILLS
@@ -166,7 +165,7 @@ V09_SKILL_NAMES = (
     "research-best-practices",
     "knowledge-import",
     "ralph-loop",
-    "knowledge-maintain",
+    "knowledge-manage",
 )
 V09_RUNTIME_FILES = (
     "Cargo.toml",
@@ -188,8 +187,8 @@ V09_RUNTIME_FILES = (
     "crates/hive-wiki/src/store.rs",
     "harness/skills/catalog.yml",
     "harness/skills/knowledge-capture/SKILL.md",
-    "harness/skills/knowledge-maintain/SKILL.md",
-    "harness/skills/knowledge-promote/SKILL.md",
+    "harness/skills/knowledge-manage/SKILL.md",
+    "harness/skills/knowledge-manage/references/promote.md",
     "harness/skills/knowledge-recall/SKILL.md",
     "schemas/host-capability.schema.json",
     "schemas/loop-dispatch.schema.json",
@@ -203,18 +202,13 @@ V09_DIRECTIVE_FILES = (
     ".agents/directives/05-security-safety.md",
 )
 V09_SKILL_GLOBS = (
-    "knowledge-scan",
-    "knowledge-transfer",
     "code-polish",
     "research-best-practices",
     "knowledge-capture",
-    "knowledge-maintain",
-    "knowledge-promote",
+    "knowledge-manage",
     "knowledge-recall",
     "knowledge-import",
     "ralph-loop",
-    "knowledge-recall",
-    "knowledge-maintain",
 )
 TEXT_SUFFIXES = {
     ".json",
@@ -482,7 +476,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
         self.assertEqual(len(CURRENT_SOURCE_SKILLS), 2)
-        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 37)
+        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 31)
         self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
         catalog_text = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")
@@ -611,8 +605,8 @@ class V09RuntimeBoundaryContract(unittest.TestCase):
             "crates/hive-wiki/src/store.rs",
             "harness/skills/catalog.yml",
             "harness/skills/knowledge-capture/SKILL.md",
-            "harness/skills/knowledge-maintain/SKILL.md",
-            "harness/skills/knowledge-promote/SKILL.md",
+            "harness/skills/knowledge-manage/SKILL.md",
+            "harness/skills/knowledge-manage/references/promote.md",
             "harness/skills/knowledge-recall/SKILL.md",
             "schemas/knowledge-bundle-manifest.schema.json",
             "schemas/knowledge-scan-result.schema.json",

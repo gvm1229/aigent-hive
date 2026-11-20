@@ -54,9 +54,7 @@ OWNER_KEYS = (
     "subagent_support",
 )
 DATA_SKILLS = {
-    "run-handoff",
-    "run-checkpoint",
-    "run-resume",
+    "run",
 }
 RAW_USAGE_ACCOUNT = "usage-guard@example.invalid"
 USAGE_ACCOUNT_DIGEST = (

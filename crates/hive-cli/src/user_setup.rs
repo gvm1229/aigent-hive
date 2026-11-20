@@ -2597,11 +2597,7 @@ fn resolve_skills(
         selected.retain(|name| {
             !matches!(
                 name.as_str(),
-                "knowledge-capture"
-                    | "knowledge-recall"
-                    | "knowledge-promote"
-                    | "knowledge-maintain"
-                    | "knowledge-scan"
+                "knowledge-capture" | "knowledge-recall" | "knowledge-manage"
             )
         });
     }
@@ -5394,7 +5390,7 @@ skills:
   mode: individual
   selected:
     - knowledge-capture
-    - knowledge-maintain
+    - knowledge-manage
 usage_guard:
   enabled: true
   stop_remaining_percent: 20
@@ -5424,12 +5420,17 @@ usage_guard:
     #[test]
     fn enabled_wiki_skill_resolves_the_complete_reused_knowledge_stack() {
         let mut config = valid_config();
-        config.skills.selected = vec!["knowledge-maintain".to_owned()];
+        config.skills.selected = vec!["knowledge-manage".to_owned()];
         let catalog = parse_and_validate_catalog().expect("catalog");
 
         assert_eq!(
             resolve_skills(&config, &catalog).expect("closure"),
-            ["knowledge-maintain", "knowledge-recall", "user-setup",]
+            [
+                "knowledge-capture",
+                "knowledge-manage",
+                "knowledge-recall",
+                "user-setup",
+            ]
         );
     }
 

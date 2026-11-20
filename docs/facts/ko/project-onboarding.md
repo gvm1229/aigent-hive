@@ -9,7 +9,7 @@ summary: "refresh의 감지 사실 갱신과 기록된 종류 선택 보존."
 tags: [onboarding, project]
 aliases: ["프로젝트 설정"]
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:796ea6a394afd04562c97e4e00275e83afd30fe9d208d1f6fb1dfbb08b38fa7c"
+  - "repo:crates/hive-render/src/lib.rs#sha256:0beac46a96e59324d8531733df41dc13ab282b9e29cbf3c4cbea3454ae83df9c"
   - "repo:docs/decisions/ADR-0009-user-plugin-project-knowledge-boundary.md#sha256:68d3ff4ada0f4f64af24a1f11b881c51ae650de438af02c7bf0b84a459c5cc0f"
   - "repo:docs/research/overhaul/OV151-007.md#sha256:69efaab07a728c908284c141ffa519f5fcf2b313a8cb0ec23d486e4bc489ff55"
 links: [global-onboarding, shared-index]

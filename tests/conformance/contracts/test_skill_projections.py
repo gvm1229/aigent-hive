@@ -189,7 +189,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                 ):
                     self.assertIn(required, skill.lower())
                 self.assertNotIn("At every turn boundary", agents)
-                resume = (self.discovery_root(target, host) / "run-resume/SKILL.md").read_text(encoding="utf-8")
+                resume = (self.discovery_root(target, host) / "run/references/resume.md").read_text(encoding="utf-8")
                 for required in ("policy_evaluated=true", "outcome=disabled", "authorization ID",
                                  "exactly", "observation-unavailable", "v2 master opt-out"):
                     self.assertIn(required, resume)
@@ -269,11 +269,7 @@ class Phase3HostProjection(Phase3ProjectionTestCase):
                     if path.is_file()
                 )
                 self.assertNotIn(b"UserPromptSubmit", discovery_bytes)
-                for skill in (
-                    "run-checkpoint",
-                    "run-resume",
-                    "run-handoff",
-                ):
+                for skill in ("run",):
                     self.assertTrue(
                         (
                             self.discovery_root(target, host)

@@ -21,10 +21,11 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / "tests/fixtures/judge"
 SCHEMAS = ROOT / "schemas"
-SKILL = ROOT / "harness/skills/judge-evidence/SKILL.md"
+JUDGE_SKILL = ROOT / "harness/skills/judge/SKILL.md"
+SKILL = ROOT / "harness/skills/judge/references/evidence.md"
 PROJECTED_SKILL = (
     ROOT
-    / "harness/template/.agents/skills/judge-evidence/SKILL.md"
+    / "harness/template/.agents/skills/judge/references/evidence.md"
 )
 CATALOG = ROOT / "harness/skills/catalog.yml"
 FORBIDDEN_CONTEXT_FIELDS = (
@@ -391,20 +392,22 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
     def test_judge_skill_is_implemented_read_only_builtin(self) -> None:
         catalog = read_yaml(CATALOG)
         entry = next(
-            item for item in catalog["skills"] if item["name"] == "judge-evidence"
+            item for item in catalog["skills"] if item["name"] == "judge"
         )
         self.assertEqual(entry["availability"], "implemented")
         self.assertEqual(entry["side_effect_class"], "read-only")
         self.assertNotIn("filesystem-write", entry["capabilities"])
-        self.assertNotIn("subagents", entry["capabilities"])
+        # The adversarial mode asks the host for a separate Judge; Hive itself never spawns one.
+        self.assertIn("subagents", entry["capabilities"])
+        self.assertIn("Hive never calls a provider API", JUDGE_SKILL.read_text(encoding="utf-8"))
 
     def test_active_skill_digest_matches_canonical_source_bytes(self) -> None:
         catalog = read_yaml(CATALOG)
         entry = next(
-            item for item in catalog["skills"] if item["name"] == "judge-evidence"
+            item for item in catalog["skills"] if item["name"] == "judge"
         )
         self.assertEqual(entry["availability"], "implemented")
-        self.assertIn("name: judge-evidence", SKILL.read_text(encoding="utf-8"))
+        self.assertIn("name: judge", JUDGE_SKILL.read_text(encoding="utf-8"))
 
     def test_judge_skill_preserves_simple_question_and_v09_owner_contract(
         self,

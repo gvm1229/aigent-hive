@@ -36,15 +36,15 @@ construct capability evidence from guesses, or launch a Judge or subagent for or
 ## Project Skill choices
 
 - Show the complete daily-work list before apply, one Skill per entry with its purpose.
-  Exclude user-setup, project-setup, custom-subagent-create, knowledge-transfer and
-  project-transition from the default; user-setup remains user-scope only.
-- Offer the full supported project catalog for customization, including the four opt-in
+  Exclude user-setup, project-setup, custom-subagent-create and project-transition from the
+  default; user-setup remains user-scope only.
+- Offer the full supported project catalog for customization, including the three opt-in
   specialized Skills. Never invent a small individual selection on the user's behalf.
 - If the user customizes Skills during expedited setup, reuse the validated inherited language,
   Wiki and persona as custom answers; ask only about the requested selection.
 - Show dependency closure before apply. Removing a required Skill also requires removing its
   dependent selections; never silently re-add a Skill the user explicitly excluded.
-- A disabled Wiki excludes the five daily-work knowledge Skills and explains the 18-Skill result.
+- A disabled Wiki excludes the three daily-work knowledge Skills and explains the 15-Skill result.
 - Show selected Skills and their verified plugin or local delivery. Physical folder count is not
   availability. Selected Skills may route relevant natural-language requests; they do not grant
   file mutation, publication, external delivery, model launches or hook consent.
