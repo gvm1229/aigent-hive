@@ -28,8 +28,8 @@ Enforce or control only the installed Hive usage policy and the current host ses
    `data.usage_guard.policy_evaluated=true`, one authorization ID, and exactly one dispatch brief.
    Accept `enforced=true` with `outcome=authorized`; `outcome=disabled`, `enforced=false`,
    `observation_required=false` for disabled checks (`enforcement_enabled=false` is the v2 master
-   opt-out); or `outcome=observation-unavailable` for a missing measurement or the v2 warning
-   policy; report its missing windows, cause and fix command once. Never
+   opt-out); or `outcome=observation-unavailable` for missing usage or the v2 warning
+   policy; report cause and fix. Never
    fabricate an observation or enable a guard for this Skill.
 6. If native sensing is unavailable or unsupported, read [sensor fallback](references/sensors.md).
    Never install a fallback without explicit current-action acceptance.
