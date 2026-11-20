@@ -141,3 +141,101 @@ fn msg_human_inbox_shows_injection_text_as_labelled_data() {
     );
     assert!(!text.trim_start().starts_with('{'));
 }
+
+fn run_hook(project: &Project, binding: &str, stdin: &str) -> Output {
+    use std::io::Write;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_hive"))
+        .args([
+            "msg",
+            "hook",
+            "--host",
+            "claude",
+            "--event",
+            "Stop",
+            "--role",
+            "athena",
+            "--binding",
+            binding,
+            "--target",
+        ])
+        .arg(&project.target)
+        .arg("--user-root")
+        .arg(&project.home)
+        .env("HOME", &project.home)
+        .env("USERPROFILE", &project.home)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stdin.as_bytes())
+        .unwrap();
+    child.wait_with_output().unwrap()
+}
+
+/// The project hook command as a host runs it: stdin JSON in, one JSON document out, exit 0
+/// and an empty stderr on the normal path and on a refused event alike.
+#[test]
+fn msg_hook_process_exits_zero_with_one_json_document_and_no_stderr() {
+    let project = project("ko");
+    let mut base = vec![
+        "msg", "hooks", "preview", "--host", "claude", "--role", "athena", "--output", "json",
+    ];
+    let preview = json(&hive(&project, &base));
+    assert_eq!(preview["code"], "hive.msg-hooks-preview", "{preview}");
+    let digest = preview["data"]["preview"]["approval_digest"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let binding = preview["data"]["preview"]["binding_digest"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    base[2] = "apply";
+    base.extend(["--confirm", &digest]);
+    let applied = json(&hive(&project, &base));
+    assert_eq!(applied["code"], "hive.msg-hooks-configured", "{applied}");
+    let id = send(&project, "review");
+    let started = std::time::Instant::now();
+    let output = run_hook(
+        &project,
+        &binding,
+        r#"{"session_id":"proc-1","hook_event_name":"Stop","stop_hook_active":false}"#,
+    );
+    let elapsed = started.elapsed();
+    println!(
+        "process event-to-record latency: {} ms",
+        elapsed.as_millis()
+    );
+    assert!(elapsed.as_secs() < 5, "{elapsed:?}");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(text.lines().count(), 1, "{text}");
+    let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let context = value["hookSpecificOutput"]["additionalContext"]
+        .as_str()
+        .unwrap();
+    assert!(context.contains(&id), "{context}");
+    assert!(count(&project.target.join(".hive/mediation/events")) >= 1);
+    for (binding, stdin) in [
+        (binding.as_str(), "not json"),
+        (
+            binding.as_str(),
+            r#"{"session_id":"proc-2","hook_event_name":"Notification"}"#,
+        ),
+        (
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+            r#"{"session_id":"proc-3","hook_event_name":"Stop"}"#,
+        ),
+    ] {
+        let output = run_hook(&project, binding, stdin);
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), "{}\n");
+    }
+}

@@ -56,6 +56,11 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.msg-quarantined", "변조되었거나 보낸 역할을 확인할 수 없는 메시지라 격리했습니다.", "The message is quarantined: tampered or its sender no longer resolves."),
     ("hive.msg-result-quarantined", "늦거나 충돌하는 결과라 전달하지 않고 격리했습니다.", "The result is late or conflicting, so it was quarantined and not delivered."),
     ("hive.msg-not-found", "해당 메시지를 찾지 못했습니다.", "No message with that id was found."),
+    ("hive.msg-hooks-preview", "프로젝트 훅 설정 미리보기입니다. 바뀐 파일은 없으며, 적용하려면 승인 지문을 --confirm에 넣으세요.", "Project hook preview only; nothing changed. Pass the approval digest to --confirm to apply."),
+    ("hive.msg-hooks-configured", "프로젝트 훅 항목을 썼습니다. 사용자 전역 설정은 건드리지 않았고, 호스트의 실제 로드는 따로 확인해야 합니다.", "Project hook entries written. User-global settings were not touched; host loading still needs a live check."),
+    ("hive.msg-hooks-removed", "승인된 Hive 훅 항목만 지웠고 다른 설정은 그대로 두었습니다.", "Removed only the approved Hive hook entries; other settings were kept."),
+    ("hive.msg-hooks-status", "프로젝트 훅 설정 상태를 확인했습니다.", "Project hook configuration checked."),
+    ("hive.msg-hooks-refused", "승인 지문이나 훅 영수증이 현재 설정과 맞지 않아 거부했습니다. 다시 미리보기하세요.", "The approval digest or hook receipt does not match the current settings, so it was refused. Preview again."),
     ("hive.summon-duplicate", "같은 소환 요청이 이미 준비되어 기존 상태·결과·확인증을 돌려줬습니다. 다시 준비하거나 실행하지 않았습니다.", "This summon was already prepared. Returned the existing state, result and receipts; nothing was prepared or run again."),
     // Storage.
     ("hive.storage-reported", "저장 공간 사용량을 확인했습니다. 바꾼 것은 없습니다.", "Hive storage measured. Nothing was changed."),
