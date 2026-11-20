@@ -16,7 +16,7 @@ sources:
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:082645d4de44857f384e5613bbee10866928140c3932115fb3181baa7c3e27cb"
   - "repo:crates/hive-render/src/lib.rs#sha256:796ea6a394afd04562c97e4e00275e83afd30fe9d208d1f6fb1dfbb08b38fa7c"
   - "repo:harness/directives/00-project-harness.md#sha256:7073d74da76915240b5061818f9a00644872a3b5ff7d84fa55e30dc26c99a50c"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:1940e4944e009c00e3de325a585597de9163392dede5920df0f08ccca0e89fbd"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:6b0b2a3765c90078e1e530e8b70322d531c17053731c5f4c9c9753423270a509"
   - "repo:harness/template/AGENTS.md.jinja#sha256:fe7f06cc88b566a9ab1ef2919d8ca43830aa963a98208c084c56b5c12f26c864"
   - "repo:tests/conformance/contracts/test_static_contracts.py#sha256:edf491a6826fe3c171e84b8ec3b25bc41d5be32a397840fd91cbdbd74a947985"
 links: [automated-user-handoff, source-development, steering-preservation]

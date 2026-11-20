@@ -183,3 +183,64 @@ fn doctor_and_check_target_support_json_like_their_help_says() {
     assert_eq!(code, Some(0));
     assert_eq!(value["action"], "CheckTarget");
 }
+
+#[test]
+fn retired_route_and_prompt_explain_the_move_without_running() {
+    for (name, example) in [
+        ("route", "hive advanced route --request <request.json>"),
+        (
+            "prompt",
+            "hive advanced prompt validate --request <input.json> --result <result.json>",
+        ),
+    ] {
+        let (code, ko) = text(&[name, "--request", "missing.json"], "ko");
+        assert_eq!(code, Some(2));
+        assert_eq!(
+            ko,
+            format!(
+                "처리 실패: hive {name} 명령은 hive advanced {name}로 옮겨졌습니다.\n\
+                 예시: {example}\n\
+                 다음 단계: hive advanced --help 로 옵션과 예시를 확인하세요.\n"
+            )
+        );
+        let (code, en) = text(&[name], "en");
+        assert_eq!(code, Some(2));
+        assert!(
+            en.starts_with(&format!(
+                "Failed. hive {name} moved to hive advanced {name}.\n"
+            )),
+            "{en}"
+        );
+        assert!(en.contains("Next: see hive advanced --help"), "{en}");
+        let (code, value) = json(&[name, "--help"]);
+        assert_eq!(code, Some(2));
+        assert_eq!(value["action"], "UnknownAction");
+        assert_eq!(value["exit_code"], 2);
+        assert_eq!(value["code"], "hive.command-moved");
+        assert_eq!(value["next_action"], example);
+        assert_eq!(value["data"]["retired_command"], format!("hive {name}"));
+        assert_eq!(
+            value["data"]["replacement"],
+            format!("hive advanced {name}")
+        );
+    }
+}
+
+#[test]
+fn hive_advanced_runs_the_moved_commands_and_lists_them() {
+    let (code, help) = text(&["advanced", "--help"], "en");
+    assert_eq!(code, Some(0));
+    assert!(help.contains("hive advanced route --request"), "{help}");
+    assert!(help.contains("hive advanced prompt validate"), "{help}");
+    let (code, bare) = text(&["advanced"], "en");
+    assert_eq!(code, Some(0));
+    assert_eq!(bare, help);
+    // The moved parser still runs: a missing request file is its own input error.
+    let (code, value) = json(&["advanced", "route", "--request", "missing.json"]);
+    assert_eq!(code, Some(2));
+    assert_ne!(value["code"], "hive.command-moved");
+    assert_ne!(value["code"], "hive.unknown-action");
+    let (code, value) = json(&["advanced", "nothing"]);
+    assert_eq!(code, Some(2));
+    assert_eq!(value["code"], "hive.invalid-input");
+}

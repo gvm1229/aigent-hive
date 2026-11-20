@@ -239,7 +239,7 @@ def main() -> int:
         "provider_processes_started": 0,
         "steps": [],
         "limitations": [
-            "The host converts natural language into normalized routing facts; hive route does not ingest raw prompts.",
+            "The host converts natural language into normalized routing facts; hive advanced route does not ingest raw prompts.",
             "Fresh-process canonical recovery is tested; the Codex desktop application itself is not restarted.",
             "A host-owned Judge verdict receipt is verified, while authenticated quorum completion authority remains a separate protected-trust-root boundary.",
         ],
@@ -256,7 +256,7 @@ def main() -> int:
         route_path = work / "routing-request.json"
         write_json(route_path, route_request)
         routed = invoke(
-            [str(binary), "route", "--request", str(route_path), "--output", "json"],
+            [str(binary), "advanced", "route", "--request", str(route_path), "--output", "json"],
             cwd=ROOT,
             expect_json=True,
         )

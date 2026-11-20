@@ -11,8 +11,8 @@ aliases: ["human-readable CLI"]
 sources:
   - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
   - "repo:crates/hive-cli/src/human_output.rs#sha256:be0b28414d2c76fc95317bf106576630ccadd5c3f49bafd8cecbe4248b24114a"
-  - "repo:crates/hive-cli/src/main.rs#sha256:9bd92c1b64bdb639cd65167a01aac4008eb18dd588f743c41a3b3eda6b3bf661"
-  - "repo:crates/hive-cli/tests/human_output.rs#sha256:c6836a553a54b133b871bb08d568137c799514d8579b41af8e1d748e1dd11aae"
+  - "repo:crates/hive-cli/src/main.rs#sha256:bfb034c7837b7e9f517b0c3bc19d4dac6fe566ad7ec8787be39966497f8023ce"
+  - "repo:crates/hive-cli/tests/human_output.rs#sha256:ed87bc2cfbf8ccfac0a3e4a8aeb779903dfdca2f0728f7647244e6bec650f65b"
 links: [inert-summon-contract, usage-threshold-provenance]
 reviewed_revision: "git:43dad991f214a9afdc50524cf2b7f32c22ae46a1"
 status: active

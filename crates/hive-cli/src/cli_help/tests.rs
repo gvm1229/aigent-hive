@@ -152,7 +152,7 @@ fn option_literals(text: &str) -> BTreeSet<String> {
 /// programs (git, npm, host CLIs) or rejected test inputs, never Hive options.
 #[rustfmt::skip]
 const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
-    (&["main.rs"], &["setup", "update", "usage", "route", "prompt", "hook"], &[]),
+    (&["main.rs"], &["setup", "update", "usage", "advanced", "hook"], &[]),
     (&["user_setup.rs", "user_setup"], &["setup"], &[]),
     (&["user_install.rs", "user_install"], &["install", "uninstall", "update"],
      &["--json", "--version", "--full", "--purge", "--operation"]),
@@ -476,4 +476,31 @@ fn option_shaped_value_after_a_known_option_reaches_the_parser() {
     };
     assert!(precheck(&arguments(&["knowledge", "query", "--text", "--verbose"])).is_none());
     assert!(precheck(&arguments(&["install", "--scope", "user", "--flags"])).is_some());
+}
+
+#[test]
+fn retired_top_level_commands_point_to_hive_advanced() {
+    assert_eq!(MOVED_TO_ADVANCED, ["route", "prompt"]);
+    for name in MOVED_TO_ADVANCED {
+        assert!(find(name).is_none(), "{name} stays off the top level");
+        assert!(find("advanced").unwrap().subcommands.contains(name));
+        assert!(!top_level_candidates().contains(name));
+    }
+    assert_eq!(
+        moved_example("route"),
+        "hive advanced route --request <request.json>"
+    );
+    assert_eq!(
+        moved_text("prompt", moved_example("prompt"), InterfaceLanguage::Ko),
+        "처리 실패: hive prompt 명령은 hive advanced prompt로 옮겨졌습니다.\n\
+         예시: hive advanced prompt validate --request <input.json> --result <result.json>\n\
+         다음 단계: hive advanced --help 로 옵션과 예시를 확인하세요.\n"
+    );
+    assert_eq!(
+        moved_text("route", moved_example("route"), InterfaceLanguage::En),
+        "Failed. hive route moved to hive advanced route.\n\
+         Example: hive advanced route --request <request.json>\n\
+         Next: see hive advanced --help for options and examples.\n"
+    );
+    assert!(moved_command(&["usage".to_owned()]).is_none());
 }

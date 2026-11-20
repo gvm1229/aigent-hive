@@ -490,12 +490,12 @@ pub(crate) const COMMANDS: &[Command] = &[
         &["package", "receipt", "quorum"],
         &["--assignment", "--package", "--request", "--target", "--trust-root"],
         &["hive judge --help"]),
-    command("route", Group::Advanced, "요청 경로 결정 (에이전트용)", "Route a request (for agents)",
-        &[], &["--request"], &["hive route --request <request.json>"]),
-    command("prompt", Group::Advanced, "다듬은 프롬프트 검증·승인", "Validate or approve a refined prompt",
-        &["validate", "approve"],
+    command("advanced", Group::Advanced, "요청 경로 결정·프롬프트 검증 (에이전트용)",
+        "Route requests or check prompts (for agents)",
+        &["route", "prompt"],
         &["--confirm-refined-prompt", "--digest", "--request", "--result", "--target-host"],
-        &["hive prompt validate --request <input.json> --result <result.json>"]),
+        &["hive advanced route --request <request.json>",
+          "hive advanced prompt validate --request <input.json> --result <result.json>"]),
     command("hook", Group::Advanced, "호스트 hook 처리 (호스트 전용)", "Handle host hooks (hosts only)",
         &[], &["--capabilities", "--capability", "--event", "--input"],
         &["hive hook --help"]),
@@ -508,6 +508,75 @@ pub(crate) const COMMANDS: &[Command] = &[
 
 pub(crate) fn find(name: &str) -> Option<&'static Command> {
     COMMANDS.iter().find(|command| command.name == name)
+}
+
+/// Top-level spellings retired in 0.16.0. Each now runs only as `hive advanced <name>`.
+/// No shipped hook, Skill, template or installer calls them, so the old spelling only explains
+/// the move and never runs the command.
+pub(crate) const MOVED_TO_ADVANCED: &[&str] = &["route", "prompt"];
+
+/// Explains a retired top-level command and exits 2 without running it.
+pub(crate) fn moved_command(arguments: &[String]) -> Option<ExitCode> {
+    let name = arguments.first()?.as_str();
+    if !MOVED_TO_ADVANCED.contains(&name) {
+        return None;
+    }
+    let replacement = format!("hive advanced {name}");
+    let example = moved_example(name);
+    if crate::human_output::machine() {
+        let result = crate::ActionResult {
+            schema_version: 1,
+            action: "UnknownAction",
+            status: "error",
+            exit_code: 2,
+            code: "hive.command-moved",
+            message: format!("hive {name} moved to {replacement}"),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: Some(example.to_owned()),
+            data: Some(serde_json::json!({
+                "retired_command": format!("hive {name}"),
+                "replacement": replacement,
+                "help_command": "hive advanced --help",
+            })),
+        };
+        return Some(crate::emit_action_result(&result));
+    }
+    print!(
+        "{}",
+        moved_text(name, example, crate::human_output::language())
+    );
+    Some(ExitCode::from(2))
+}
+
+/// The `hive advanced` example for a moved command.
+fn moved_example(name: &str) -> &'static str {
+    let prefix = format!("hive advanced {name} ");
+    find("advanced")
+        .and_then(|entry| {
+            entry
+                .examples
+                .iter()
+                .find(|example| example.starts_with(&prefix))
+        })
+        .copied()
+        .unwrap_or("hive advanced --help")
+}
+
+fn moved_text(name: &str, example: &str, language: InterfaceLanguage) -> String {
+    if language == InterfaceLanguage::Ko {
+        format!(
+            "처리 실패: hive {name} 명령은 hive advanced {name}로 옮겨졌습니다.\n\
+             예시: {example}\n\
+             다음 단계: hive advanced --help 로 옵션과 예시를 확인하세요.\n"
+        )
+    } else {
+        format!(
+            "Failed. hive {name} moved to hive advanced {name}.\n\
+             Example: {example}\n\
+             Next: see hive advanced --help for options and examples.\n"
+        )
+    }
 }
 
 /// Every option some Hive parser accepts. Only a token outside this set is rejected early,

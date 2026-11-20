@@ -17,7 +17,7 @@ sources:
   - "repo:docs/archive/plans/usage-defaults-0.14.0.md#sha256:61da2591b7e2adbd852472c1ccbab817e695ca424f0ae35f80bc196a77ea8d99"
   - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:1940e4944e009c00e3de325a585597de9163392dede5920df0f08ccca0e89fbd"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:6b0b2a3765c90078e1e530e8b70322d531c17053731c5f4c9c9753423270a509"
   - "repo:tests/results/public-zero-0.12.0-test.2.json#sha256:f64d29840b056f157c60f0a5f6556c2e5b62990beb8c9c6bfb3285b4aafd7354"
   - "repo:tests/results/usage-compatibility-live-0.13.2.json#sha256:76abaa5e2595b9aeee3797fd612694112e9c8efbbcb43ccfaed49653907aeafc"
 links: [installed-usage-guard, quota-reset-session-control]

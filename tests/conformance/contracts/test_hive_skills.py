@@ -156,6 +156,29 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         ):
             self.assertIn(expected, text)
 
+    def test_usage_guard_core_stays_short_and_names_its_detail_sections(self) -> None:
+        # OV160-008: whitespace word count of the whole SKILL.md, as `wc -w` measures it.
+        core = (SKILL_ROOT / "usage-guard/SKILL.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(core.split()), 500)
+        details = (SKILL_ROOT / "usage-guard/references/control.md").read_text(encoding="utf-8")
+        headings = {line[3:] for line in details.splitlines() if line.startswith("## ")}
+        for section in (
+            "Target and policy",
+            "Automatic-dispatch preflight",
+            "Setup and manual inspection",
+            "Boundaries detail",
+            "Windows midway monitor",
+        ):
+            self.assertIn(f"*{section}*", core)
+            self.assertIn(section, headings)
+        for rule in (
+            "Never guess a percentage",
+            "Never install a fallback without explicit current-action acceptance",
+            "never raw prompts or credentials",
+            "cannot clear an exhaustion halt",
+        ):
+            self.assertIn(rule, " ".join(core.split()))
+
     def test_setup_routers_use_one_cli_state_and_no_duplicate_questionnaire(self) -> None:
         for name in ("user-setup", "project-setup"):
             text = (SKILL_ROOT / name / "SKILL.md").read_text(encoding="utf-8")

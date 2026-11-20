@@ -103,9 +103,9 @@ USAGE:
     hive session close --target <dir> --host codex|claude|antigravity --session-id <id> [--output json]
     hive session recover --target <dir> [--output json]
     hive index rebuild --target <dir> [--output json]
-    hive route --request <json> [--output json]
-    hive prompt validate --request <input.json> --result <result.json> [--output json]
-    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
+    hive advanced route --request <json> [--output json]
+    hive advanced prompt validate --request <input.json> --result <result.json> [--output json]
+    hive advanced prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] [--output json]
     hive policy evaluate --input <json> [--output json]
     hive usage check --account-digest <sha256:...> [--threshold <0..99>] [--output json]
@@ -282,6 +282,9 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
     {
         return gods::run_alias(god, &arguments[1..]);
     }
+    if let Some(code) = cli_help::moved_command(&arguments) {
+        return code;
+    }
     if let Some(code) = cli_help::precheck(&arguments) {
         return code;
     }
@@ -331,8 +334,7 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("session") => session::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
-        Some("route") => run_route(&arguments[1..]),
-        Some("prompt") => run_prompt(&arguments[1..]),
+        Some("advanced") => run_advanced(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("policy") => policy::run(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
@@ -1261,6 +1263,22 @@ struct PromptContracts {
     output: PromptRefinementResult,
     input_bytes: Vec<u8>,
     output_bytes: Vec<u8>,
+}
+
+/// `hive advanced` holds agent-only commands that left the top level in 0.16.0.
+fn run_advanced(arguments: &[String]) -> ExitCode {
+    match arguments.first().map(String::as_str) {
+        Some("route") => run_route(&arguments[1..]),
+        Some("prompt") => run_prompt(&arguments[1..]),
+        None => {
+            print_family_help("advanced");
+            ExitCode::SUCCESS
+        }
+        Some(other) => emit_action_result(&invalid_input_result(
+            "UnknownAction",
+            format!("unknown advanced action: {other}"),
+        )),
+    }
 }
 
 fn run_prompt(arguments: &[String]) -> ExitCode {
