@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product_version": "0.16.0",
-  "package_version": "0.16.0-test.1",
+  "package_version": "0.16.0-test.2",
   "plan_ids": [
     "OV160-002",
     "OV160-003",
@@ -9,7 +9,8 @@
     "OV160-005",
     "OV160-006",
     "OV160-007",
-    "OV160-008"
+    "OV160-008",
+    "OV160-013"
   ],
-  "product_tree_sha256": "sha256:922667c9baf2f03de0e3bc0236a8166df8b1b1312cbd5c72058db9760af8fe92"
+  "product_tree_sha256": "sha256:7fd88736c5ec3ee663a58cae00d8572b2371926420384ebadafb6b3d341dcd18"
 }
