@@ -1,17 +1,17 @@
 # Aigent Hive 활성 계획
 
-> Revision: 514
-> 기준일: 2026-11-17
-> Product version: `0.15.3`
-> 공개 Stable: `0.15.2`
-> 현재 단계: 단계 5, cloud 부분 완료. OV153-010·011·012·013의 이 PC 확인 대기
-> 공개 시험: `0.15.3-test.2` 게시·세 OS 수용 완료([근거](../research/overhaul/OV153-011-test2.md))
-> 작업 브랜치: `develop`(단계·수정 브랜치 병합 완료, 정식 뒤 삭제)
+> Revision: 515
+> 기준일: 2026-11-20
+> Product version: `0.16.0`
+> 공개 Stable: `0.15.3`
+> 현재 단계: 단계 6 0.16.0 메시지·작업 중재 구현
+> 공개 시험: `0.16.0-test.1` 미실행
+> 작업 브랜치: `feature/overhaul-6-0.16.0-mediation`
 
 ## 목표와 결정
 
-- [소유 계획](active/0.15.3-memory.md): 한 턴의 여러 사실 기록·사실당 주제·주제 묶음 회수·회수 Skill 후속 조회·기존 지식 주제 부여·회수율 평가
-- [시작 승인과 버전 전환](../research/overhaul/OV153-001.md): 유지관리자 "Start stage 5 in a cloud session"
+- [소유 계획](active/0.16.0-mediation.md): 파일 수신 상자의 역할 간 메시지, 공식 훅 사건과 비동기 결과 반환, 작성·검토·자문 흐름, 피해 범위 통제, 결정 대기열, Skill 통합
+- [시작 승인과 버전 전환](../research/overhaul/OV160-001.md): 재정비 상시 위임과 유지관리자 단계 6 시작 요청
 - [실행 장소 규칙](overhaul/venue.md): 실제 호스트·PC 설치·자격 증명 단계는 local 넘기기
 
 ## Completion index
@@ -19,17 +19,17 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 기억 회수 | 17 | 0 | 100.0% |
-| **현재 범위 합계** | **17** | **0** | **100.0%** |
+| 메시지·작업 중재 | 1 | 10 | 9.1% |
+| **현재 범위 합계** | **1** | **10** | **9.1%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
 
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
-| [0.15.3-memory.md](active/0.15.3-memory.md) | `OV153-001–013` | 기억 회수 |
+| [0.16.0-mediation.md](active/0.16.0-mediation.md) | `OV160-001–011` | 메시지·작업 중재 |
 
 ## 이전 근거
 
-- [재정비 순서](overhaul/README.md)·[정식 0.15.2 근거](../research/overhaul/OV152-008.md)
-- [이전 활성 계획 색인](../archive/plans/0.15.2-closeout.md)
+- [재정비 순서](overhaul/README.md)·[정식 0.15.3 근거](../research/overhaul/OV153-010.md)
+- [이전 활성 계획 색인](../archive/plans/0.15.3-closeout.md)

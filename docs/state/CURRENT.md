@@ -1,29 +1,24 @@
 # 현재 상태
 
-- 제품 버전: `0.15.3`
-- 공개 안정판·PC 설치: `0.15.3` (2026-11-20). [정식 근거](../research/overhaul/OV153-010.md). 단계 5 항목 17/17 완료, 다음은 재정비 단계 6
-- 작업: 재정비 단계 5 0.15.3 기억 회수, 브랜치 `feature/overhaul-5-0.15.3-memory`. [소유 계획](../plans/active/0.15.3-memory.md)·[시작 근거](../research/overhaul/OV153-001.md)
-- 현재 요청(2026-11-19 유지관리자, local 세션): OV153-014·015 범위 추가와 이 세션에서 구현, 정식 0.15.3 출시까지 계속. 이 세션만 사용량 보호 해제. 원문 "Continue with your implementation while disabling the usage guard for this session only. Do not stop until 0.15.3 stable version is released"
-- 진행: OV153-001–007·009 완료. [구현 근거](../research/overhaul/OV153-002-006.md)·[회수율 재측정](../research/overhaul/OV153-007.md) 22/40→32/40(보류 3/10→5/10)·[단계 검토](../research/overhaul/stage-5-review.md)·[develop 병합](../research/overhaul/OV153-009.md)
-- 공개 시험 0.15.3-test.1(OV153-008) 완료. [공개 시험 근거](../research/overhaul/OV153-008.md). 워크플로 실행은 cloud 가능([확인 기록](../plans/overhaul/venue.md))
-- **cloud 부분 완료**(2026-11-17): [OV153-011](../research/overhaul/OV153-011.md)(추가 범위 A1–A4 포함)·[OV153-012](../research/overhaul/OV153-012.md)·[OV153-013](../research/overhaul/OV153-013.md) 구현·독립 검토·develop 병합, CI 통과. [0.15.3-test.2](../research/overhaul/OV153-011-test2.md) 게시·세 OS 수용 통과. 출시 노트·구독자 안내·정식 공개 문서 준비 완료
-- **정식 0.15.3 보류**(2026-11-17 유지관리자): [에이전트 주도 프로젝트 설정 OV153-011](../research/overhaul/OV153-011-request.md) 포함 전 출시 금지. 시험판 재수용·이 PC 확인 뒤 출시
-- **0.15.3 범위 추가**(2026-11-17 유지관리자): [대화형 설정 화면 가독성 OV153-012](../research/overhaul/OV153-012-request.md). 기능·문구 유지, 질문 구분·제목·구역·꾸밈 추가
-- **cloud 위임**(2026-11-17): OV153-011 구현부터 test.2 수용·문서 준비까지 cloud 세션 담당, local 단계만 남으면 종료. [위임 순서](../research/overhaul/OV153-cloud-mandate.md)
-- **0.15.3 범위 추가**(2026-11-19 유지관리자): [호스트별 5시간·주간 사용량 보호 OV153-014](../research/overhaul/OV153-014-request.md)·[CLI 오타 추천과 도움말 OV153-015](../research/overhaul/OV153-015-request.md). [npm 설치 뒤 갱신 결함 OV153-016](../research/overhaul/OV153-016-request.md) 추가. 구현 근거 [014](../research/overhaul/OV153-014.md)·[015](../research/overhaul/OV153-015.md)·[016](../research/overhaul/OV153-016.md), 이 PC 확인 [OV153-010](../research/overhaul/OV153-010.md). [0.15.3-test.3 공개 시험](../research/overhaul/OV153-test3.md) 게시·세 OS 수용 통과, test.3 대리 확인에서 찾은 결함은 [OV153-017](../research/overhaul/OV153-017-request.md)([수정 근거](../research/overhaul/OV153-017.md))로 수정, [0.15.3-test.4 공개 시험](../research/overhaul/OV153-test4.md) 게시·세 OS 수용 통과
-- **local 세션 시작점**: [0.15.3 local 인계](../research/overhaul/OV153-local-handoff.md). test.2 설치, 실제 Claude·Codex 세션의 Skill 설정(빈 폴더·기존 프로젝트), A4 재현, OV153-012 실제 터미널, OV153-013 재현, 통과 뒤 정식 OV153-010. cloud 남은 작업 없음
+- 제품 버전: `0.16.0`
+- 공개 안정판·PC 설치: `0.15.3` (2026-11-20). [정식 근거](../research/overhaul/OV153-010.md)
+- 작업: 재정비 단계 6 0.16.0 메시지·작업 중재, 브랜치 `feature/overhaul-6-0.16.0-mediation`. [소유 계획](../plans/active/0.16.0-mediation.md)·[시작 근거](../research/overhaul/OV160-001.md)
+- 현재 요청(2026-11-20 유지관리자, cloud 세션): 단계 6 시작과 cloud 항목 구현, 단계 검토·develop 병합·0.16.0-test.1 세 OS 수용 뒤 local 단계만 남으면 인계 문서 작성과 종료. 원문 "Start and run overhaul stage 6 (product 0.16.0, message mediation)"
+- 현재 위치: OV160-001 완료(단계 브랜치·계획 전환·버전 0.16.0·공개 0.15.3 원본 동결). 다음은 OV160-002 핵심 수신 상자
+- 실행 장소: cloud 세션, 실행 가능한 `hive` 없음, 07 사전 확인 생략([실행 장소](../plans/overhaul/venue.md))
+- **local 세션 시작점**: 아직 없음. cloud 항목 완료 뒤 인계 문서 작성
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
-- [0.15.2 종료 상태](../archive/state/0.15.2-closeout.md)·[0.15.2 수정 근거](../research/overhaul/OV152-002-005.md)·[앱 선택 안내](../research/overhaul/OV152-010.md)·[정식 0.15.1 근거와 한계](../research/overhaul/OV151-010.md) 보존
+- [0.15.3 종료 상태](../archive/state/0.15.3-closeout.md)·[0.15.3 단계 검토](../research/overhaul/stage-5-review.md) 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
-- 구현 목표: `0.15.3`
-- 현재 등록 항목: 17/17 완료
+- 구현 목표: `0.16.0`
+- 현재 등록 항목: 1/11 완료
 
-- `agent-owned`: 없음
-- `awaiting-user-authority`: 없음
+- `agent-owned`: `OV160-002`, `OV160-003`, `OV160-004`, `OV160-005`, `OV160-006`, `OV160-007`, `OV160-008`, `OV160-009`, `OV160-010`
+- `awaiting-user-authority`: `OV160-011`
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
 <!-- HIVE:PLAN-STATE:END -->
