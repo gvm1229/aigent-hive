@@ -4,7 +4,7 @@
 - 공개 안정판·PC 설치: `0.15.3` (2026-11-20). [정식 근거](../research/overhaul/OV153-010.md)
 - 작업: 재정비 단계 6 0.16.0 메시지·작업 중재, 브랜치 `feature/overhaul-6-0.16.0-mediation`. [소유 계획](../plans/active/0.16.0-mediation.md)·[시작 근거](../research/overhaul/OV160-001.md)
 - 현재 요청(2026-11-20 유지관리자, cloud 세션): OV160-013 Claude 사용량 측정 없음 해결과 0.16.0-test.2 공개 시험, local 인계 갱신. 정식 제외
-- 현재 위치: OV160-001–010·013 완료. [측정 없음 경고 후 계속·상태 표시줄 연결](../research/overhaul/OV160-013.md), [0.16.0-test.1](../research/overhaul/OV160-009.md). 0.16.0-test.2 게시·세 OS 수용은 [test.2 기록](../research/overhaul/OV160-013-test2.md). 다음은 local OV160-012
+- 현재 위치: OV160-001–010·013 완료. [측정 없음 경고 후 계속·상태 표시줄 연결](../research/overhaul/OV160-013.md), [develop 병합](../research/overhaul/OV160-010.md)·[0.16.0-test.1](../research/overhaul/OV160-009.md). 0.16.0-test.2 게시·세 OS 수용은 [test.2 기록](../research/overhaul/OV160-013-test2.md). 다음은 local OV160-012
 - [단계 6 검토](../research/overhaul/stage-6-review.md): Fable 5.2 1차 REQUEST CHANGES(B1·B2) → 수정 → 2차 REQUEST CHANGES(N1) → 수정 → 3차 APPROVE WITH FIXES, N4′ 수정 완료
 - 계획 조정(2026-11-20, 상시 위임의 권고안): split 항목의 local 부분을 새 OV160-012로 모음([실행 장소](../plans/overhaul/venue.md) 제안 채택). 계획 검사가 local 대기 항목에 의존하는 cloud 항목 완료를 막기 때문. test.1은 develop 전용 워크플로라 병합(010) 뒤로 순서 정정
 - 실행 장소: cloud 세션, 실행 가능한 `hive` 없음, 07 사전 확인 생략([실행 장소](../plans/overhaul/venue.md))
