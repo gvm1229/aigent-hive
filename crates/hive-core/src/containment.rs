@@ -1065,18 +1065,36 @@ mod tests {
 
     #[test]
     fn containment_checks_must_lie_outside_the_worktree() {
-        let worktree = Path::new("/work/task-1");
-        assert!(check_is_outside(Path::new("/work/scores/s.md"), worktree));
-        assert!(check_is_outside(Path::new("/work/task-10/s.md"), worktree));
-        assert!(!check_is_outside(Path::new("/work/task-1/s.md"), worktree));
+        // A POSIX-rooted path is not absolute on Windows; give it a drive there.
+        let abs = |path: &str| {
+            if cfg!(windows) {
+                format!("C:{path}")
+            } else {
+                path.to_owned()
+            }
+        };
+        let worktree_path = abs("/work/task-1");
+        let worktree = Path::new(&worktree_path);
+        assert!(check_is_outside(
+            Path::new(&abs("/work/scores/s.md")),
+            worktree
+        ));
+        assert!(check_is_outside(
+            Path::new(&abs("/work/task-10/s.md")),
+            worktree
+        ));
+        assert!(!check_is_outside(
+            Path::new(&abs("/work/task-1/s.md")),
+            worktree
+        ));
         assert!(!check_is_outside(worktree, worktree));
         assert!(!check_is_outside(Path::new("relative.md"), worktree));
         let record = CheckPinRecord {
             schema_version: 1,
             flow_id: "flow-1".into(),
-            worktree: "/work/task-1".into(),
+            worktree: abs("/work/task-1"),
             checks: vec![PinnedCheck {
-                path: "/work/scores/s.md".into(),
+                path: abs("/work/scores/s.md"),
                 digest: crate::sha256_digest(b"score"),
                 bytes: 5,
             }],
@@ -1085,7 +1103,7 @@ mod tests {
         .seal()
         .unwrap();
         let mut inside = record.clone();
-        inside.checks[0].path = "/work/task-1/s.md".into();
+        inside.checks[0].path = abs("/work/task-1/s.md");
         assert!(inside.seal().is_err());
         let mut tampered = record;
         tampered.checks[0].digest = crate::sha256_digest(b"other");
