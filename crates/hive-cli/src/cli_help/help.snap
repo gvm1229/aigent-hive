@@ -18,6 +18,7 @@ Aigent Hive: AI 코딩 도구에 지침·지식·안전 장치를 더하는 로�
   roster          신 이름 목록과 역할 배정 보기
   summon          신 이름으로 기능 호출
   msg             역할 사이 메시지 보내기·받기
+  stop            새 메시지 중지와 취소 요청
   <신 이름>       신 이름으로 Skill 기능 실행 (hive roster --help)
 
 지식
@@ -392,6 +393,7 @@ Configuration
   roster          Show named roles and assignments
   summon          Call a function by its named role
   msg             Send and read role messages
+  stop            Stop new messages and request cancel
   <god>           Run a Skill by its named role (hive roster --help)
 
 Knowledge

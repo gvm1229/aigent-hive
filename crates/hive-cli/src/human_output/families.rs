@@ -190,6 +190,7 @@ fn message_details(data: &Value, ko: bool, out: &mut String) {
         }
     }
     flow_details(data, ko, out);
+    stop_details(data, ko, out);
     if let Some(summon) = data.get("summon").filter(|summon| summon.is_object()) {
         let receipts = summon["receipts"].as_array().map_or(0, Vec::len);
         let _ = write!(out, "\n- {} · {} · {}", summon["id"].as_str().unwrap_or("-"),
@@ -197,6 +198,40 @@ fn message_details(data: &Value, ko: bool, out: &mut String) {
             label_for(ko, &format!("확인증 {receipts}개"), &format!("receipts: {receipts}")));
     }
     crate::msg::decide::human_details(data, ko, out);
+}
+
+/// Stop results: claimed work is never interrupted; unsupported host cancel is said plainly.
+fn stop_details(data: &Value, ko: bool, out: &mut String) {
+    let stops: Vec<&Value> = data.get("stop").filter(|stop| stop.is_object()).map_or_else(
+        || data["active"].as_array().map_or_else(Vec::new, |items| items.iter().collect()),
+        |stop| vec![stop],
+    );
+    for stop in stops {
+        let _ = write!(
+            out,
+            "\n{} {} · {}",
+            label_for(ko, "중지", "Stop"),
+            stop["record"]["stop_id"].as_str().unwrap_or("-"),
+            label_for(ko, "새 메시지 거부, 강제 취소 없음", "new messages refused, no forced cancel"),
+        );
+        for entry in stop["in_progress"].as_array().into_iter().flatten() {
+            let support = entry["host_cancel"].as_str().unwrap_or("-");
+            let support_text = match (support, ko) {
+                ("unsupported", true) => "공식 취소 미지원",
+                ("unverified", true) => "공식 취소 미검증, 호스트 확인증 필요",
+                ("unsupported", false) => "official cancel unsupported",
+                ("unverified", false) => "official cancel unverified; host receipt needed",
+                _ => support,
+            };
+            let _ = write!(
+                out,
+                "\n- {} · {} · {}",
+                entry["message_id"].as_str().unwrap_or("-"),
+                label_for(ko, "취소 요청", "cancel requested"),
+                support_text,
+            );
+        }
+    }
 }
 
 /// Flow status lines come from Hive records (`display` is built from the recorded profile and
@@ -249,6 +284,8 @@ fn message_line(message: &Value, ko: bool, out: &mut String) {
         "dispatch-uncertain" => "실행 불명, 자동 재호출 없음",
         "expired" => "만료",
         "quarantined" => "격리, 전달 안 함",
+        "cancel-requested" => "취소 요청, Hive가 끊지 않음",
+        "cancelled" => "호스트 공식 취소로 종료",
         _ => state,
     };
     let sender = &message["sender"];

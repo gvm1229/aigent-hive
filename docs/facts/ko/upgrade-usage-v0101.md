@@ -9,7 +9,7 @@ summary: "Historical project state 선인증 migration과 guard disable 없는 �
 tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:81c8223df0cba01511f0da69e8bc2b79bca26a22fa0439af874f6b4ed320606e"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:4de73afc7e39e6cfb92df9241c16f48f71c2870eedf93b55c6e81317cf30c8cb"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
   - "repo:crates/hive-cli/src/user_install.rs#sha256:3064034c88ce11c947486618e149d977963e8bc15f4a7c3a0acbe1b428f2fcf8"
   - "repo:crates/hive-projection/src/lib.rs#sha256:b94be713e63437cc87ff8768c52662f7d7996c0a8080c4f99a2e4aa4cc8fb6e5"

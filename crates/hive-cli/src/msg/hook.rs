@@ -350,10 +350,19 @@ fn collect(call: &Call<'_>, event_id: &str, session_digest: &str) -> Result<Noti
     }
     found.sort_by_key(|(sequence, _, _)| *sequence);
     for (_, message_id, loaded) in found {
+        // Inside an active stop nothing is handed back, so the host is never asked to continue.
+        if loaded.stopped_by.is_some() {
+            notice.withheld.push((message_id, "stopped".to_owned()));
+            continue;
+        }
         let (state, _) = loaded.state(context.now);
         match state {
             MessageState::Queued | MessageState::Claimed => notice.pending.push(message_id),
-            MessageState::Expired | MessageState::DispatchUncertain | MessageState::Quarantined => {
+            MessageState::Expired
+            | MessageState::DispatchUncertain
+            | MessageState::Quarantined
+            | MessageState::CancelRequested
+            | MessageState::Cancelled => {
                 notice
                     .withheld
                     .push((message_id, state.as_str().to_owned()));

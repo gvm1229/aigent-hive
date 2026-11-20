@@ -10,7 +10,7 @@ tags: [orchestration, roster]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/orchestration.rs#sha256:bd252c5454ed7a152bab69ab0f06a1f094ac1c8505ae73d3b7e99000de22a086"
-  - "repo:crates/hive-cli/src/summon.rs#sha256:8e5e337c89fbebfa38867739ab98602cb8b11fb00329262684ef910ea7125ad9"
+  - "repo:crates/hive-cli/src/summon.rs#sha256:ee1486820a33fe58898f293b7bebb79ca399b6e99b479122f9ee41041af8adf5"
   - "repo:crates/hive-core/src/roster.rs#sha256:d17b1efd3bead532a9cc44cf95d8add4f6ebab53e2305f699637c0daba80ebb7"
   - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:ce73d78bda06047d4fe899e1f62f669389978675d668fe37a5a6800bfb76bd10"
 links: [hook-inbox-evidence, orchestration-ownership]

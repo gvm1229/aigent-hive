@@ -81,7 +81,7 @@ summary_ko = "여러 작업의 역할을 배정하고 작업 간 인계를 기�
 ownership_ko = "조율"
 role = "hive-complex-implementer"
 aliases = []
-commands = ["orchestration", "session", "hook", "policy", "summon", "msg"]
+commands = ["orchestration", "session", "hook", "policy", "summon", "msg", "stop"]
 skills = ["poseidon", "team-execution"]
 steps = ["Use team-execution for bounded team coordination; record a role handoff only through the handoff mode of the run Skill. Preserve exact run, authority, receipt and cancellation bindings."]
 

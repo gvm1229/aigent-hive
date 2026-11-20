@@ -78,6 +78,7 @@ USAGE:
     hive roster --help
     hive summon --help
     hive msg --help
+    hive stop --help
     hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
@@ -342,6 +343,7 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("prune") => storage::run_prune(&arguments[1..]),
         Some("summon") => summon::run(&arguments[1..]),
         Some("msg") => msg::run(&arguments[1..]),
+        Some("stop") => msg::run_stop(&arguments[1..]),
         Some("roster") => roster::run(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),

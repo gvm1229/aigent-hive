@@ -1356,6 +1356,8 @@ impl SummonEnvelope {
         {
             return Err("invalid or unsupported inert summon envelope".into());
         }
+        // A worker profile may never grant more than its role's least-privilege policy.
+        crate::containment::validate_worker_argv(&self.role, &self.profile)?;
         let root = format!(".hive/runs/{}/", self.run_id);
         for path in [&self.task_file, &self.result_path] {
             crate::validate_project_relative(std::path::Path::new(path))
@@ -1427,6 +1429,15 @@ mod summon_tests {
         let mut changed = e.clone();
         changed.enabled = true;
         assert!(changed.validate().is_err());
+        let mut escalated = e.clone();
+        escalated.role = "hive-routine-implementer".into();
+        escalated.validate().unwrap();
+        for arg in &mut escalated.profile.argv {
+            if arg == "workspace-write" {
+                "danger-full-access".clone_into(arg);
+            }
+        }
+        assert!(escalated.validate().unwrap_err().contains("worker argv"));
         let mut changed = e.clone();
         changed.profile.provider = "gemini".into();
         changed.profile.supported = false;

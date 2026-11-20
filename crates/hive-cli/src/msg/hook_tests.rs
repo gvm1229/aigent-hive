@@ -562,3 +562,37 @@ fn msg_hook_bad_authority_and_late_results_are_quarantined() {
     assert!(text.contains(&format!("{late} (quarantined)")), "{text}");
     assert!(!text.contains("too late"));
 }
+
+#[test]
+fn msg_hook_inside_a_stop_hands_back_nothing_and_never_continues_the_host() {
+    let f = fixture();
+    let binding = f.apply("codex", &["--return", "block"]);
+    let id = f.send("review", None);
+    f.claim(&id, "900");
+    let acked = f.ack(&id, "LGTM", "1001");
+    assert_eq!(acked["code"], "hive.msg-acknowledged", "{acked}");
+    let stopped =
+        serde_json::to_value(super::stop::test_execute(&f.scoped(&["--now", "1002"]))).unwrap();
+    assert_eq!(stopped["code"], "hive.stop-requested", "{stopped}");
+    let inbox = f.count(".hive/mediation/inbox");
+    let claims = f.count(".hive/mediation/claims");
+    let outcome = f.hook(
+        "codex",
+        "Stop",
+        &binding,
+        &[],
+        &stop("s-stop", false, "done"),
+    );
+    let response = parse_response(&outcome.response);
+    // No delivered result: no block decision, so the host is never asked to continue.
+    assert!(response.get("decision").is_none(), "{response}");
+    let record = f.record(&outcome);
+    assert_eq!(record["delivered"], json!([]));
+    assert_eq!(record["withheld"], json!([id]));
+    assert!(!f
+        .target
+        .join(hive_core::hook_events::delivery_path(&id))
+        .exists());
+    assert_eq!(f.count(".hive/mediation/inbox"), inbox);
+    assert_eq!(f.count(".hive/mediation/claims"), claims);
+}

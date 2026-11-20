@@ -10,8 +10,8 @@
 //! frozen at start and the message state derived from claim and receipt files. Hive never
 //! launches a host or worker and never reads a CLI screen.
 use super::{
-    checked_id, deliver, duration, failure, list_entries, load, option, publish_new, read_record,
-    record_bytes, success, Context, EntryKind, MsgError, Published, SendRequest,
+    checked_id, containment, deliver, duration, failure, list_entries, load, option, publish_new,
+    read_record, record_bytes, stop, success, Context, EntryKind, MsgError, Published, SendRequest,
 };
 use crate::run::{parse_options, read_explicit_file, required};
 use crate::ActionResult;
@@ -305,6 +305,9 @@ fn create_step(
     attempt: u32,
     replaces: Option<ReplacedMessage>,
 ) -> Result<(String, Vec<String>), MsgError> {
+    // OV160-005: no step inside an active stop, and none after a pinned check changed.
+    stop::gate(context, Some(&record.flow_id), Some(&record.task))?;
+    containment::verify_checks(context, &record.flow_id)?;
     let step = &record.steps[index];
     if !profile_current(context, &step.profile) {
         return Err(MsgError::blocked(
@@ -392,13 +395,13 @@ fn flow_state_label(state: FlowState, korean: bool) -> &'static str {
         (FlowState::Waiting, true) => "대기",
         (FlowState::Active, true) => "진행 중",
         (FlowState::Blocked, true) => "확인 불가, 자동 재개 없음",
-        (FlowState::Stopped, true) => "격리로 중단",
+        (FlowState::Stopped, true) => "격리·취소로 중단",
         (FlowState::Completed, true) => "완료",
         (FlowState::Ready, false) => "next step ready",
         (FlowState::Waiting, false) => "waiting",
         (FlowState::Active, false) => "in progress",
         (FlowState::Blocked, false) => "uncertain, no automatic resume",
-        (FlowState::Stopped, false) => "stopped by quarantine",
+        (FlowState::Stopped, false) => "stopped by quarantine or cancel",
         (FlowState::Completed, false) => "completed",
     }
 }
@@ -447,15 +450,34 @@ fn step_view(context: &Context, step: &FlowStep, observed: &StepObservation) -> 
     })
 }
 
-fn flow_view(context: &Context, record: &FlowRecord, observed: &[StepObservation]) -> Value {
+/// Flow state with containment: a recorded or live check drift stops the flow.
+fn effective(
+    context: &Context,
+    record: &FlowRecord,
+    observed: &[StepObservation],
+) -> Result<(FlowState, Option<usize>, Value), MsgError> {
     let (state, current) = derive(observed);
+    let checks = containment::checks_view(context, &record.flow_id)?;
+    if checks["drift"] == true && state != FlowState::Completed {
+        return Ok((FlowState::Stopped, current, checks));
+    }
+    Ok((state, current, checks))
+}
+
+fn flow_view(
+    context: &Context,
+    record: &FlowRecord,
+    observed: &[StepObservation],
+) -> Result<Value, MsgError> {
+    let (state, current, checks) = effective(context, record, observed)?;
+    let stopped_by = stop::stops(context)?.covering(Some(&record.flow_id), Some(&record.task));
     let steps: Vec<Value> = record
         .steps
         .iter()
         .zip(observed)
         .map(|(step, observed)| step_view(context, step, observed))
         .collect();
-    json!({
+    Ok(json!({
         "kind": "flow",
         "flow_id": record.flow_id,
         "flow_kind": record.kind,
@@ -467,11 +489,13 @@ fn flow_view(context: &Context, record: &FlowRecord, observed: &[StepObservation
         "allow_same_provider": record.allow_same_provider,
         "brief": {"path": record.brief_file, "digest": record.brief_digest, "bytes": record.brief_bytes},
         "steps": steps,
+        "checks": checks,
+        "stopped_by": stopped_by,
         "source": "hive-records",
         "workers_launched": 0,
         "auto_redispatch": false,
         "trust": UNTRUSTED_DATA,
-    })
+    }))
 }
 
 /// Status result for an unchanged flow; blocked and stopped flows say how to continue.
@@ -479,10 +503,15 @@ fn status_result(
     context: &Context,
     record: &FlowRecord,
     observed: &[StepObservation],
-) -> ActionResult {
-    let (state, current) = derive(observed);
-    let view = flow_view(context, record, observed);
-    match state {
+) -> Result<ActionResult, MsgError> {
+    let (state, current, checks) = effective(context, record, observed)?;
+    let view = flow_view(context, record, observed)?;
+    Ok(match state {
+        FlowState::Stopped if checks["drift"] == true => success(
+            "hive.msg-flow-stopped",
+            "a pinned score or check input changed after the flow started; the flow is quarantined and never continues",
+            json!({"flow": view, "redispatched": false, "waited": false}),
+        ),
         FlowState::Blocked => {
             let digest = current
                 .and_then(|index| observed[index].latest())
@@ -501,7 +530,7 @@ fn status_result(
         }
         FlowState::Stopped => success(
             "hive.msg-flow-stopped",
-            "a quarantined step stopped the flow; it never continues",
+            "a quarantined or cancelled step stopped the flow; it never continues",
             json!({"flow": view, "redispatched": false, "waited": false}),
         ),
         _ => success(
@@ -509,7 +538,7 @@ fn status_result(
             format!("flow state: {}", state.as_str()),
             json!({"flow": view, "waited": false}),
         ),
-    }
+    })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -537,12 +566,17 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
             "--from",
             "--key",
             "--ttl",
+            "--check",
+            "--worktree",
             "--now",
             "--target",
             "--user-root",
         ],
     )?;
     let context = Context::open(&options)?;
+    if option(&options, "--worktree").is_some() && option(&options, "--check").is_none() {
+        return Err(MsgError::input("--worktree is used only with --check"));
+    }
     let kind =
         FlowKind::parse(option(&options, "--kind").unwrap_or("review")).map_err(MsgError::input)?;
     let builder = resolve_profile(&context, required(&options, "--builder")?, "--builder")?;
@@ -579,11 +613,30 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let mut profiles = vec![builder, reviewer];
     profiles.extend(advisor);
     let roles: Vec<&str> = profiles.iter().map(|p| p.role.as_str()).collect();
+    // A scored flow names its pinned check in the automatic key, so a changed check is a new flow.
+    let check_digest = option(&options, "--check")
+        .map(|check| {
+            read_explicit_file(Path::new(check), containment::MAX_CHECK_BYTES)
+                .map(|bytes| sha256_digest(&bytes))
+        })
+        .transpose()?;
     let key = option(&options, "--key").map_or_else(
-        || flow::default_flow_key(kind, &task, &initiator, &roles, &brief_digest),
+        || {
+            let key = flow::default_flow_key(kind, &task, &initiator, &roles, &brief_digest);
+            check_digest
+                .as_ref()
+                .map_or_else(|| key.clone(), |digest| format!("{key}:check:{digest}"))
+        },
         str::to_owned,
     );
     let flow_id = flow::flow_id_for(&mediation::idempotency_digest(&key).map_err(MsgError::input)?);
+    // Inside an active stop nothing is written, not even the brief.
+    stop::gate(&context, Some(&flow_id), Some(&task))?;
+    let pins = option(&options, "--check")
+        .map(|check| {
+            containment::pin_check(&context, &flow_id, check, option(&options, "--worktree"))
+        })
+        .transpose()?;
     let kinds = [StepKind::Builder, StepKind::Reviewer, StepKind::Advisor];
     let record = FlowRecord {
         schema_version: FLOW_SCHEMA_VERSION,
@@ -642,6 +695,19 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
             true
         }
     };
+    if let Some(pins) = pins {
+        let path = hive_core::containment::check_pin_path(&flow_id);
+        match publish_new(&context.target, &path, &record_bytes(&pins)?)? {
+            Published::Created => changed.push(path),
+            Published::SameBytes => {}
+            Published::Different(_) => {
+                return Err(MsgError::conflict(
+                    "hive.msg-key-conflict",
+                    "this flow already pinned different check inputs; use a new --key",
+                ))
+            }
+        }
+    }
     let record = load_flow(&context, &flow_id)?;
     let (observed, created, step_changed) = advance(&context, &record)?;
     changed.extend(step_changed);
@@ -659,7 +725,7 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let mut result = success(
         code,
         message,
-        json!({"flow": flow_view(&context, &record, &observed), "duplicate": duplicate,
+        json!({"flow": flow_view(&context, &record, &observed)?, "duplicate": duplicate,
             "created_message": created, "waited": false}),
     );
     result.changed_paths = changed;
@@ -692,12 +758,12 @@ fn advance_command(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let record = load_flow(&context, required(&options, "--flow")?)?;
     let (observed, created, changed) = advance(&context, &record)?;
     let Some(created) = created else {
-        return Ok(status_result(&context, &record, &observed));
+        return status_result(&context, &record, &observed);
     };
     let mut result = success(
         "hive.msg-flow-advanced",
         "the previous step is acknowledged; the next step message is queued",
-        json!({"flow": flow_view(&context, &record, &observed), "created_message": created,
+        json!({"flow": flow_view(&context, &record, &observed)?, "created_message": created,
             "waited": false}),
     );
     result.changed_paths = changed;
@@ -710,7 +776,7 @@ fn status_command(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let context = Context::open(&options)?;
     let record = load_flow(&context, required(&options, "--flow")?)?;
     let observed = observe(&context, &record)?;
-    Ok(status_result(&context, &record, &observed))
+    status_result(&context, &record, &observed)
 }
 
 /// Explicit resume of a blocked step: one new attempt for the confirmed blocked envelope.
@@ -736,14 +802,15 @@ fn requeue(arguments: &[String]) -> Result<ActionResult, MsgError> {
         return Ok(success(
             "hive.msg-flow-requeue-duplicate",
             "this blocked message was already requeued; nothing new was created",
-            json!({"flow": flow_view(&context, &record, &observed), "duplicate": true,
+            json!({"flow": flow_view(&context, &record, &observed)?, "duplicate": true,
                 "redispatched": false, "waited": false}),
         ));
     }
+    let view = flow_view(&context, &record, &observed)?;
     let refused = |message: &str| {
         Ok(failure(
             MsgError::conflict("hive.msg-flow-requeue-refused", message),
-            Some(json!({"flow": flow_view(&context, &record, &observed)})),
+            Some(json!({"flow": view.clone()})),
         ))
     };
     let (state, current) = derive(&observed);
@@ -782,7 +849,7 @@ fn requeue(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let mut result = success(
         "hive.msg-flow-requeued",
         "a new message for the blocked step is queued; the uncertain message stays as evidence",
-        json!({"flow": flow_view(&context, &record, &observed), "created_message": created,
+        json!({"flow": flow_view(&context, &record, &observed)?, "created_message": created,
             "redispatched": false, "waited": false}),
     );
     result.changed_paths = changed;
@@ -806,7 +873,7 @@ pub(super) fn after_ack(
         .and_then(|link| {
             let record = load_flow(context, &link.flow_id)?;
             let (observed, created, changed) = advance(context, &record)?;
-            Ok((flow_view(context, &record, &observed), created, changed))
+            Ok((flow_view(context, &record, &observed)?, created, changed))
         });
     let data = result.data.get_or_insert_with(|| json!({}));
     match outcome {

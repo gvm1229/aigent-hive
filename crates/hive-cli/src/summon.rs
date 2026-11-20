@@ -145,6 +145,12 @@ fn execute(args: &[String]) -> Result<serde_json::Value, String> {
     if let Some(existing) = duplicate_request(&target, &envelope, &digest)? {
         return Ok(existing);
     }
+    // OV160-005: no new envelope inside an active project stop.
+    if let Some(stop_id) = crate::msg::project_stop(&target)? {
+        return Err(format!(
+            "stop {stop_id} is active: no new summon envelope is prepared; clear it with `hive stop clear`"
+        ));
+    }
     let mutation: Vec<String> = options
         .iter()
         .filter(|(k, _)| {

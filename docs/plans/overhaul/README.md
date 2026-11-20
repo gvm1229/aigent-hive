@@ -103,7 +103,7 @@
 | 4 재검토 수정 | [0.15.1-review-fixes.md](../active/0.15.1-review-fixes.md) | 있음 | 2026-11-14 Fable REQUEST CHANGES·Skill 설명·지식 기록 요청·세 번째 검토 | 10/10 |
 | 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 10/10·정식 |
 | 5 0.15.3 기억 | [0.15.3-memory.md](../active/0.15.3-memory.md) | 있음 | 0.15.2 정식 | 17/17·정식 |
-| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 7/12 |
+| 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 8/12 |
 | 7 0.17.0 호스트 야간 반복 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md) | 있음 | 0.16.0 정식 | 0/11 |
 
 ## 불변 조건

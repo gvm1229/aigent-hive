@@ -52,6 +52,11 @@ pub enum MessageState {
     Expired,
     /// A tampered envelope, unresolvable sender, invalid receipt or late result.
     Quarantined,
+    /// Claimed work inside an active stop (OV160-005). Hive did not interrupt it; it waits for
+    /// the host's official cancel receipt or the end of its lease.
+    CancelRequested,
+    /// A host official cancel receipt binds the claim. Any later result is quarantined.
+    Cancelled,
 }
 
 impl MessageState {
@@ -65,20 +70,26 @@ impl MessageState {
             Self::DispatchUncertain => "dispatch-uncertain",
             Self::Expired => "expired",
             Self::Quarantined => "quarantined",
+            Self::CancelRequested => "cancel-requested",
+            Self::Cancelled => "cancelled",
         }
     }
 
     /// No later state can follow.
     #[must_use]
     pub const fn is_terminal(self) -> bool {
-        matches!(self, Self::Acknowledged | Self::Expired | Self::Quarantined)
+        matches!(
+            self,
+            Self::Acknowledged | Self::Expired | Self::Quarantined | Self::Cancelled
+        )
     }
 }
 
 /// Closed transition table. `None` is "no envelope yet".
 ///
 /// `dispatch-uncertain` never returns to `queued` or `claimed`: a retry is an explicit new
-/// message with a new idempotency key, never an automatic re-dispatch.
+/// message with a new idempotency key, never an automatic re-dispatch. `cancel-requested`
+/// returns to `claimed` only through an explicit stop clear; `cancelled` needs a host receipt.
 #[must_use]
 pub const fn allowed_transition(from: Option<MessageState>, to: MessageState) -> bool {
     use MessageState as S;
@@ -88,7 +99,11 @@ pub const fn allowed_transition(from: Option<MessageState>, to: MessageState) ->
             | (Some(S::Queued), S::Claimed | S::Expired | S::Quarantined)
             | (
                 Some(S::Claimed),
-                S::Acknowledged | S::DispatchUncertain | S::Quarantined
+                S::Acknowledged | S::DispatchUncertain | S::Quarantined | S::CancelRequested
+            )
+            | (
+                Some(S::CancelRequested),
+                S::Claimed | S::Cancelled | S::DispatchUncertain | S::Quarantined
             )
             | (Some(S::DispatchUncertain), S::Quarantined)
     )
@@ -344,6 +359,10 @@ pub struct Observation<'a> {
     pub receipt: Option<&'a MessageReceipt>,
     /// A late or conflicting result was moved to `quarantine/`.
     pub quarantined_result: bool,
+    /// An active stop covers this message (project, its task or its flow).
+    pub cancel_requested: bool,
+    /// Host official cancel receipt, already parsed.
+    pub cancel_receipt: Option<&'a crate::containment::CancelReceipt>,
     pub now: u64,
 }
 
@@ -376,14 +395,24 @@ pub fn derive_state(observation: &Observation<'_>) -> (MessageState, Option<Stri
             Err(reason) => (MessageState::Quarantined, Some(reason)),
         };
     }
+    if let Some(cancel) = observation.cancel_receipt {
+        return match cancel.validate(envelope, claim) {
+            Ok(()) => (MessageState::Cancelled, None),
+            Err(reason) => (MessageState::Quarantined, Some(reason)),
+        };
+    }
     if observation.quarantined_result {
-        return (
-            MessageState::Quarantined,
-            Some("a late result arrived after the claim lease".into()),
-        );
+        let reason = if observation.cancel_requested {
+            "a result arrived after the stop; it was not delivered"
+        } else {
+            "a late result arrived after the claim lease"
+        };
+        return (MessageState::Quarantined, Some(reason.into()));
     }
     if observation.now >= claim.lease_until {
         (MessageState::DispatchUncertain, None)
+    } else if observation.cancel_requested {
+        (MessageState::CancelRequested, None)
     } else {
         (MessageState::Claimed, None)
     }
@@ -551,6 +580,8 @@ mod tests {
             S::DispatchUncertain,
             S::Expired,
             S::Quarantined,
+            S::CancelRequested,
+            S::Cancelled,
         ];
         let allowed: Vec<(Option<S>, S)> = std::iter::once(None)
             .chain(all.iter().copied().map(Some))
@@ -567,7 +598,12 @@ mod tests {
                 (Some(S::Claimed), S::Acknowledged),
                 (Some(S::Claimed), S::DispatchUncertain),
                 (Some(S::Claimed), S::Quarantined),
+                (Some(S::Claimed), S::CancelRequested),
                 (Some(S::DispatchUncertain), S::Quarantined),
+                (Some(S::CancelRequested), S::Claimed),
+                (Some(S::CancelRequested), S::DispatchUncertain),
+                (Some(S::CancelRequested), S::Quarantined),
+                (Some(S::CancelRequested), S::Cancelled),
             ]
         );
         for state in all {
@@ -652,6 +688,8 @@ mod tests {
                 claim,
                 receipt,
                 quarantined_result,
+                cancel_requested: false,
+                cancel_receipt: None,
                 now,
             })
             .0
@@ -710,10 +748,70 @@ mod tests {
             claim: None,
             receipt: None,
             quarantined_result: false,
+            cancel_requested: false,
+            cancel_receipt: None,
             now: 0,
         });
         assert_eq!(tampered.0, MessageState::Quarantined);
         assert!(tampered.1.unwrap().contains("digest"));
+    }
+
+    #[test]
+    fn mediation_stop_overlay_needs_a_host_receipt_to_cancel() {
+        let sealed = envelope(b"body");
+        let claimed = claim(&sealed);
+        let cancel = crate::containment::CancelReceipt {
+            schema_version: 1,
+            message_id: sealed.message_id.clone(),
+            envelope_digest: sealed.envelope_digest.clone(),
+            claim_digest: claimed.digest().unwrap(),
+            stop_id: "stop-0123456789abcdef01234567".into(),
+            host: "codex".into(),
+            method: crate::containment::HOST_OFFICIAL_CANCEL.into(),
+            cancelled_at: 300,
+            forced: false,
+            trust: UNTRUSTED_DATA.into(),
+        };
+        let observe = |requested, receipt, quarantined_result, now| {
+            derive_state(&Observation {
+                envelope: Ok(&sealed),
+                claim: Some(&claimed),
+                receipt: None,
+                quarantined_result,
+                cancel_requested: requested,
+                cancel_receipt: receipt,
+                now,
+            })
+        };
+        assert_eq!(
+            observe(true, None, false, 250).0,
+            MessageState::CancelRequested
+        );
+        // No host receipt: the lease still decides; Hive never claims a forced cancel.
+        assert_eq!(
+            observe(true, None, false, claimed.lease_until).0,
+            MessageState::DispatchUncertain
+        );
+        assert_eq!(
+            observe(true, Some(&cancel), false, 250).0,
+            MessageState::Cancelled
+        );
+        assert!(MessageState::Cancelled.is_terminal());
+        let late = observe(true, None, true, 250);
+        assert_eq!(late.0, MessageState::Quarantined);
+        assert!(late.1.unwrap().contains("after the stop"));
+        let mut forced = cancel.clone();
+        forced.forced = true;
+        assert_eq!(
+            observe(true, Some(&forced), false, 250).0,
+            MessageState::Quarantined
+        );
+        let mut keys = cancel.clone();
+        keys.method = "send-keys".into();
+        assert_eq!(
+            observe(true, Some(&keys), false, 250).0,
+            MessageState::Quarantined
+        );
     }
 
     #[test]

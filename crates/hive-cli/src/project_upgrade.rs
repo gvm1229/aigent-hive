@@ -562,8 +562,19 @@ fn prepare_candidate(
         });
     }
     for (path, bytes) in candidate.support_files {
+        // OV160-005: the rendered harness keeps the local worker limits; an old `max_panes`
+        // value moves to `max_workers`, and a conflict refuses the whole upgrade.
+        let (bytes, migrated) = if path == HARNESS_CONFIG_PATH {
+            carry_worker_limits(target, bytes)?
+        } else {
+            (bytes, false)
+        };
         if insert_exact_if_changed(target, &mut final_files, path.clone(), bytes)? {
-            change_reasons.entry(path).or_insert("setup-support-file");
+            if migrated {
+                change_reasons.insert(path, "worker-limit-migration");
+            } else {
+                change_reasons.entry(path).or_insert("setup-support-file");
+            }
         }
     }
     for path in candidate.deleted_support_files {
@@ -656,6 +667,87 @@ fn prepare_candidate(
 
 /// One reported reason per changed path, in path order. A changed path without a reason is
 /// an internal error: no change may leave the report list silently.
+const HARNESS_CONFIG_PATH: &str = ".hive/config/harness.toml";
+
+/// Carry the installed worker limits into the rendered harness. The setup render does not know
+/// these hand-set keys, so without this an upgrade would silently drop them. `max_panes` is
+/// written as `max_workers` (value preserved); returns `true` when that move happened.
+fn carry_worker_limits(target: &Dir, rendered: Vec<u8>) -> Result<(Vec<u8>, bool), UpdateError> {
+    use hive_core::containment::{self, LimitSource};
+    let Some(local) = read_full_optional(target, Path::new(HARNESS_CONFIG_PATH))? else {
+        return Ok((rendered, false));
+    };
+    let local = std::str::from_utf8(&local).map_err(|_| {
+        UpdateError::Verification("installed harness config is not UTF-8".to_owned())
+    })?;
+    let refuse = |error: containment::LimitError| {
+        UpdateError::Conflict(format!(
+            "{HARNESS_CONFIG_PATH}: {error}; original files were not changed"
+        ))
+    };
+    let limits = containment::worker_limits_from_harness(local).map_err(refuse)?;
+    let seconds_set = toml::from_str::<toml::Table>(local)
+        .is_ok_and(|table| table.contains_key(containment::MAX_WORKER_SECONDS_KEY));
+    if limits.source == LimitSource::Default && !seconds_set {
+        return Ok((rendered, false));
+    }
+    let mut text = String::from_utf8(rendered)
+        .map_err(|_| UpdateError::Internal("rendered harness config is not UTF-8".to_owned()))?;
+    if containment::worker_limits_from_harness(&text)
+        .map_err(refuse)?
+        .source
+        != LimitSource::Default
+    {
+        return Err(UpdateError::Internal(
+            "rendered harness config already sets worker limits".to_owned(),
+        ));
+    }
+    let mut lines = String::new();
+    if limits.source != LimitSource::Default {
+        lines += &[
+            containment::MAX_WORKERS_KEY,
+            " = ",
+            &limits.max_workers.to_string(),
+            "\n",
+        ]
+        .concat();
+    }
+    if seconds_set {
+        lines += &[
+            containment::MAX_WORKER_SECONDS_KEY,
+            " = ",
+            &limits.max_worker_seconds.to_string(),
+            "\n",
+        ]
+        .concat();
+    }
+    // Top-level keys must precede the first table header.
+    let insert_at = text
+        .match_indices("\n[")
+        .next()
+        .map_or(text.len(), |(index, _)| index + 1);
+    if insert_at == text.len() && !text.is_empty() && !text.ends_with('\n') {
+        text.push('\n');
+    }
+    let insert_at = insert_at.min(text.len());
+    text.insert_str(insert_at, &lines);
+    let carried = containment::worker_limits_from_harness(&text).map_err(refuse)?;
+    if carried.max_workers != limits.max_workers
+        || carried.max_worker_seconds != limits.max_worker_seconds
+    {
+        return Err(UpdateError::Internal(
+            "worker limits were not preserved in the rendered harness".to_owned(),
+        ));
+    }
+    Ok((
+        text.into_bytes(),
+        matches!(
+            limits.source,
+            LimitSource::LegacyMaxPanes | LimitSource::BothSame
+        ),
+    ))
+}
+
 fn change_reasons_for(
     changed_paths: &[String],
     reasons: &BTreeMap<String, &'static str>,

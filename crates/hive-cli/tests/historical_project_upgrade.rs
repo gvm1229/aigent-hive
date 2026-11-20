@@ -516,3 +516,74 @@ fn refresh_previews_detection_and_rolls_back_before_confirmed_migration() {
         );
     }
 }
+
+/// OV160-005: an old `max_panes` value moves to `max_workers` only through the previewed and
+/// applied project upgrade; the same value drops the old key; a conflict changes nothing.
+#[test]
+fn compiled_cli_migrates_max_panes_to_max_workers_and_refuses_a_conflict() {
+    let upgrade = |target: &Path, mode: &str| {
+        run_hive(&[
+            "project",
+            "upgrade",
+            "--target",
+            target.to_str().expect("target UTF-8"),
+            mode,
+            "--output",
+            "json",
+        ])
+    };
+    for (suffix, expected) in [
+        ("max_panes = 3\n", Some("max_workers = 3\n")),
+        (
+            "max_workers = 2\nmax_panes = 2\nmax_worker_seconds = 600\n",
+            Some("max_workers = 2\nmax_worker_seconds = 600\n"),
+        ),
+        ("max_workers = 2\nmax_panes = 5\n", None),
+    ] {
+        let temporary = secure_tempdir();
+        let target = temporary.path().join("consumer");
+        fs::create_dir_all(&target).expect("consumer directory");
+        seed_historical_project(&target, "0.15.3");
+        let harness = target.join(".hive/config/harness.toml");
+        let mut bytes = fs::read_to_string(&harness).expect("historical harness");
+        bytes.push_str(suffix);
+        fs::write(&harness, &bytes).expect("old worker limit key");
+        let Some(expected) = expected else {
+            for mode in ["--dry-run", "--apply"] {
+                let output = upgrade(&target, mode);
+                assert!(!output.status.success(), "conflict must refuse {mode}");
+                let result: Value = serde_json::from_slice(&output.stdout).expect("JSON result");
+                assert!(
+                    result["message"]
+                        .as_str()
+                        .unwrap_or("")
+                        .contains("conflicts"),
+                    "{result}"
+                );
+                assert_eq!(fs::read_to_string(&harness).expect("unchanged"), bytes);
+            }
+            continue;
+        };
+        let preview = upgrade(&target, "--dry-run");
+        require_success(&preview, "--dry-run");
+        let result: Value = serde_json::from_slice(&preview.stdout).expect("JSON result");
+        let reasons = result["data"]["change_reasons"].to_string();
+        assert!(
+            reasons.contains(
+                "\"path\":\".hive/config/harness.toml\",\"reason\":\"worker-limit-migration\""
+            ),
+            "{reasons}"
+        );
+        assert_eq!(fs::read_to_string(&harness).expect("preview only"), bytes);
+        for mode in ["--apply", "--validate"] {
+            require_success(&upgrade(&target, mode), mode);
+        }
+        let after = fs::read_to_string(&harness).expect("migrated harness");
+        assert!(after.ends_with(expected), "{after}");
+        assert!(!after.contains("max_panes"), "{after}");
+        assert!(after.contains(&format!(
+            "harness_version = \"{}\"",
+            env!("CARGO_PKG_VERSION")
+        )));
+    }
+}

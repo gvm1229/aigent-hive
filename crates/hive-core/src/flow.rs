@@ -384,9 +384,9 @@ pub fn derive_flow(steps: &[Option<MessageState>]) -> (FlowState, Option<usize>)
             Some(MessageState::Acknowledged) => continue,
             None => FlowState::Ready,
             Some(MessageState::Queued) => FlowState::Waiting,
-            Some(MessageState::Claimed) => FlowState::Active,
+            Some(MessageState::Claimed | MessageState::CancelRequested) => FlowState::Active,
             Some(MessageState::DispatchUncertain | MessageState::Expired) => FlowState::Blocked,
-            Some(MessageState::Quarantined) => FlowState::Stopped,
+            Some(MessageState::Quarantined | MessageState::Cancelled) => FlowState::Stopped,
         };
         return (flow, Some(index));
     }
@@ -402,6 +402,10 @@ pub enum StepDisplay {
     Done,
     Uncertain,
     Quarantined,
+    /// Inside an active stop; Hive did not interrupt the claimed work.
+    CancelRequested,
+    /// A host official cancel receipt ended the step.
+    Cancelled,
 }
 
 impl StepDisplay {
@@ -413,6 +417,8 @@ impl StepDisplay {
             Some(MessageState::Acknowledged) => Self::Done,
             Some(MessageState::DispatchUncertain | MessageState::Expired) => Self::Uncertain,
             Some(MessageState::Quarantined) => Self::Quarantined,
+            Some(MessageState::CancelRequested) => Self::CancelRequested,
+            Some(MessageState::Cancelled) => Self::Cancelled,
         }
     }
 
@@ -424,6 +430,8 @@ impl StepDisplay {
             Self::Done => "done",
             Self::Uncertain => "uncertain",
             Self::Quarantined => "quarantined",
+            Self::CancelRequested => "cancel-requested",
+            Self::Cancelled => "cancelled",
         }
     }
 
@@ -439,6 +447,10 @@ impl StepDisplay {
             (Self::Done, false) => "done",
             (Self::Uncertain, false) => "uncertain",
             (Self::Quarantined, false) => "quarantined",
+            (Self::CancelRequested, true) => "취소 요청됨",
+            (Self::Cancelled, true) => "취소됨",
+            (Self::CancelRequested, false) => "cancel requested",
+            (Self::Cancelled, false) => "cancelled",
         }
     }
 }
