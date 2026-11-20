@@ -1155,16 +1155,11 @@ fn claude_capture_path_for(binding: &SessionBinding) -> Result<PathBuf, AdapterE
     })
 }
 
-/// One stable identity for a target folder. Trailing separators and `.` parts do not matter;
-/// Windows paths compare without case.
+/// One stable identity for a target folder. Trailing separators and `.` parts do not matter.
+/// Letter case is kept, so existing source runtime state keeps its location on every OS.
 fn target_scope_digest(path: &Path) -> String {
     let normalized = path.components().collect::<PathBuf>();
-    let text = normalized.to_string_lossy();
-    if cfg!(windows) {
-        sha256_digest(text.to_lowercase().as_bytes())
-    } else {
-        sha256_digest(text.as_bytes())
-    }
+    sha256_digest(normalized.to_string_lossy().as_bytes())
 }
 
 fn claude_capture_path(session_digest: &str) -> Result<PathBuf, AdapterError> {
