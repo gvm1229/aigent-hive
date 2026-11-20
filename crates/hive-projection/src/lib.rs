@@ -1634,6 +1634,10 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
                 include_bytes!("../../../harness/skills/judge/references/evidence.md"),
             ),
         ],
+        "team-execution" => &[(
+            "references/mediation.md",
+            include_bytes!("../../../harness/skills/team-execution/references/mediation.md"),
+        )],
         _ => &[],
     };
     for (relative, bytes) in resources {
@@ -3205,7 +3209,7 @@ description: Inspect one local file without changing it.
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
             assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 43 } else { 70 };
+            let expected_file_count = if host == Host::Claude { 44 } else { 71 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",

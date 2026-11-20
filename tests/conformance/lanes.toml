@@ -95,6 +95,7 @@ modules = [
   "tests.conformance.integration.test_source_wiki",
   "tests.conformance.integration.test_vector_cli",
   "tests.conformance.integration.test_wiki_cli_e2e",
+  "tests.conformance.integration.test_mediation_reference_handler",
 ]
 
 [lanes.release]

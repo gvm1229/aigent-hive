@@ -45,6 +45,7 @@ BUILTIN_REFERENCE_PATHS = (
     "judge/references/evidence.md",
     "usage-guard/references/control.md",
     "usage-guard/references/sensors.md",
+    "team-execution/references/mediation.md",
 )
 FRESH_HOOK_CAPABILITIES_PATH = Path(
     ".hive/runtime/current-capability-resolution.json"

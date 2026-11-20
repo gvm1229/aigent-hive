@@ -74,7 +74,7 @@ Knowledge paths
   Confidential kinds      : None
 
 Change size
-  Changed file count : 100
+  Changed file count : 101
 
 ------------------------------------------------------------------------
 Apply these changes? [yes/no, default: no]

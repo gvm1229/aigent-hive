@@ -8810,6 +8810,7 @@ mod tests {
             "judge/references/adversarial.md",
             "judge/references/evidence.md",
             "amend-directive/references/transplant.md",
+            "team-execution/references/mediation.md",
         ] {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
@@ -10900,7 +10901,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 42);
+        assert_eq!(deletions.len(), 43);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

@@ -374,6 +374,7 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
                     "checkpoint.md" | "handoff.md" | "resume.md" | "policy-review.md"
                 )
                 | ("judge", "adversarial.md" | "evidence.md")
+                | ("team-execution", "mediation.md")
                 // Retired before 0.16.0; kept so authenticated upgrades can remove it.
                 | ("run-checkpoint", "policy-review.md")
                 | ("amend-directive", "transplant.md")
