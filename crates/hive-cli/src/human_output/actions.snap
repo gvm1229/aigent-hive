@@ -414,6 +414,10 @@ summon
 ko: 역할별 작업 준비 완료, 자동 실행 없음.
 en: Success. Role work prepared; automatic execution remains disabled.
 
+Message
+ko: 역할 사이 메시지 처리 완료.
+en: Success. Role message processed.
+
 AddKnowledge
 ko: 지식 추가 처리 완료.
 en: Success. Knowledge entry added.

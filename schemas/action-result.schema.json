@@ -104,6 +104,7 @@
         "QuerySourceWiki",
         "RebuildSourceWikiIndex",
         "Summon",
+        "Message",
         "Orchestration",
         "OrchestrationStatus",
         "OrchestrationPlan",

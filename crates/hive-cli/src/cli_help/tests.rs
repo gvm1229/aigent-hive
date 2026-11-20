@@ -181,6 +181,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["session.rs"], &["session"], &[]),
     (&["storage.rs"], &["storage", "prune"], &[]),
     (&["summon.rs"], &["summon"], &[]),
+    (&["msg.rs", "msg"], &["msg"], &[]),
     // The usage provider adapters call codexbar and host CLIs, not Hive parsers.
     (&["usage.rs", "usage"], &[], &["--all-accounts", "--format", "--json-only", "--provider",
        "--source", "--stdio", "--version"]),

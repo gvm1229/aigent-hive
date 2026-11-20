@@ -105,6 +105,7 @@ pub(super) const ACTIONS: &[(&str, &str, &str)] = &[
     ("Summon", "역할별 작업 준비 완료, 자동 실행 없음", "Role work prepared; automatic execution remains disabled"),
     ("roster", "역할별 모델과 설정 확인 완료", "Role models and settings inspected"),
     ("summon", "역할별 작업 준비 완료, 자동 실행 없음", "Role work prepared; automatic execution remains disabled"),
+    ("Message", "역할 사이 메시지 처리 완료", "Role message processed"),
     ("AddKnowledge", "지식 추가 처리 완료", "Knowledge entry added"),
     ("AuthorizeConfidentialKnowledge", "지식 기밀 사용 승인 처리 완료", "Confidential knowledge approval processed"),
     ("DeleteKnowledge", "지식 삭제 처리 완료", "Knowledge deletion processed"),

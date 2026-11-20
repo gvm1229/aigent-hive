@@ -45,6 +45,7 @@ fn family_details(
             out.push_str(&choose(language, "\n찾은 항목: 0개", "\nItems found: 0"));
         }
         "roster" if data.get("roster").is_some() => roster_details(data, language, &mut out),
+        "Message" => message_details(data, ko, &mut out),
         _ if data["questions"]
             .as_array()
             .is_some_and(|items| items.iter().any(|item| item.get("question").is_some())) =>
@@ -160,6 +161,87 @@ fn nothing_found(data: &Value) -> bool {
         },
         |count| count == 0,
     )
+}
+
+/// Messages and results are other sessions' output: always labelled as data, never as steps.
+fn message_details(data: &Value, ko: bool, out: &mut String) {
+    let list = data["messages"].as_array();
+    let messages: Vec<&Value> = list.map_or_else(
+        || std::iter::once(&data["message"]).filter(|m| m.is_object()).collect(),
+        |items| items.iter().collect(),
+    );
+    if list.is_some() {
+        let count = messages.len();
+        out.push_str(&label_for(ko, &format!("\n메시지: {count}개"), &format!("\nMessages: {count}")));
+    }
+    for message in messages {
+        message_line(message, ko, out);
+    }
+    if let Some(summons) = data["summons"].as_array().filter(|items| !items.is_empty()) {
+        let count = summons.len();
+        out.push_str(&label_for(
+            ko,
+            &format!("\n준비된 소환 봉투: {count}개, 자동 실행 없음"),
+            &format!("\nPrepared summon envelopes: {count}; nothing runs automatically"),
+        ));
+        for summon in summons {
+            let _ = write!(out, "\n- {} · {}", summon["id"].as_str().unwrap_or("-"),
+                summon["state"].as_str().unwrap_or("-"));
+        }
+    }
+    if let Some(summon) = data.get("summon").filter(|summon| summon.is_object()) {
+        let receipts = summon["receipts"].as_array().map_or(0, Vec::len);
+        let _ = write!(out, "\n- {} · {} · {}", summon["id"].as_str().unwrap_or("-"),
+            summon["state"].as_str().unwrap_or("-"),
+            label_for(ko, &format!("확인증 {receipts}개"), &format!("receipts: {receipts}")));
+    }
+}
+
+fn message_line(message: &Value, ko: bool, out: &mut String) {
+    let state = message["state"].as_str().unwrap_or("-");
+    let state_ko = match state {
+        "queued" => "대기",
+        "claimed" => "소비 중",
+        "acknowledged" => "확인증 있음",
+        "dispatch-uncertain" => "실행 불명, 자동 재호출 없음",
+        "expired" => "만료",
+        "quarantined" => "격리, 전달 안 함",
+        _ => state,
+    };
+    let sender = &message["sender"];
+    let _ = write!(
+        out,
+        "\n- {} #{} · {} · {} → {}",
+        message["id"].as_str().unwrap_or("-"),
+        message["sequence"].as_u64().unwrap_or(0),
+        if ko { state_ko } else { state },
+        sender["god"].as_str().or(sender["role"].as_str()).unwrap_or("-"),
+        message["recipient_role"].as_str().unwrap_or("-"),
+    );
+    if let (Some(provider), Some(model)) = (sender["provider"].as_str(), sender["model"].as_str()) {
+        let _ = write!(out, " ({provider} {model} · {})", sender["effort"].as_str().unwrap_or("-"));
+    }
+    if let Some(reason) = message["reason"].as_str() {
+        let _ = write!(out, "\n  {}: {reason}", label_for(ko, "격리 이유", "Quarantine reason"));
+    }
+    for (view, heading_ko, heading_en) in [
+        (&message["body"], "본문", "Body"),
+        (&message["result"]["data"], "결과", "Result"),
+    ] {
+        let Some(text) = view["text"].as_str() else {
+            continue;
+        };
+        let label = label_for(ko, crate::msg::DATA_LABEL_KO, crate::msg::DATA_LABEL_EN);
+        let _ = write!(out, "\n  {} {label}", label_for(ko, heading_ko, heading_en));
+        for line in text.lines() {
+            // Terminal control sequences from another session never reach the screen.
+            let line: String = line
+                .chars()
+                .map(|c| if c.is_control() && c != '\t' { '\u{fffd}' } else { c })
+                .collect();
+            let _ = write!(out, "\n  | {line}");
+        }
+    }
 }
 
 fn roster_details(data: &Value, language: InterfaceLanguage, out: &mut String) {

@@ -808,14 +808,14 @@ fn digest_value<T: Serialize>(value: &T) -> Result<String, OrchestrationError> {
     Ok(sha256_digest(&bytes))
 }
 
-fn valid_id(value: &str) -> bool {
+pub(crate) fn valid_id(value: &str) -> bool {
     (2..=127).contains(&value.len())
         && value.bytes().enumerate().all(|(index, byte)| {
             byte.is_ascii_alphanumeric() || (index > 0 && b"._-".contains(&byte))
         })
 }
 
-fn valid_digest(value: &str) -> bool {
+pub(crate) fn valid_digest(value: &str) -> bool {
     value.len() == 71
         && value.starts_with("sha256:")
         && value[7..]

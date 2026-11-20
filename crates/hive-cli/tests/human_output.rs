@@ -42,6 +42,7 @@ fn every_command_family_defaults_to_human_errors_in_both_languages() {
         vec!["storage", "--unknown"],
         vec!["prune", "--unknown"],
         vec!["summon"],
+        vec!["msg", "inbox"],
         vec!["roster"],
         vec!["role", "validate"],
         vec!["agent", "validate"],
