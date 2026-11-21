@@ -8,7 +8,7 @@
 - [단계 6 검토](../research/overhaul/stage-6-review.md): Fable 5.2 1차 REQUEST CHANGES(B1·B2) → 수정 → 2차 REQUEST CHANGES(N1) → 수정 → 3차 APPROVE WITH FIXES, N4′ 수정 완료
 - 계획 조정(2026-11-20, 상시 위임의 권고안): split 항목의 local 부분을 새 OV160-012로 모음([실행 장소](../plans/overhaul/venue.md) 제안 채택). 계획 검사가 local 대기 항목에 의존하는 cloud 항목 완료를 막기 때문. test.1은 develop 전용 워크플로라 병합(010) 뒤로 순서 정정
 - 실행 장소: 2026-11-21 local 세션(이 PC, 0.16.0-test.3 설치, 07 사전 확인 실행). 다음 수정은 cloud
-- **다음 시작점**: OV160-014·015·018·019 완료(2026-11-21 local, Codex 작업자 + 통합 세션). OV160-016은 Codex 사용 한도 소진(재개 2026-12-15)으로 중단, 미검증 진행분은 브랜치 `fix/ov160-016-transactions`. 남은 순서 016 → 021 → 020, OV160-017은 Antigravity 1.2.17 콜백 고정물(local) 대기
+- **다음 시작점**: OV160-014·015·018·019 완료(2026-11-21 local, Codex 작업자 + 통합 세션). OV160-016은 Codex 사용 한도 소진(재개 2026-12-15)으로 중단, 미검증 진행분은 브랜치 `fix/ov160-016-transactions`. 남은 순서 016 → 021 → 020, OV160-017은 Antigravity 1.2.17 콜백 고정물(local) 대기. Codex 위임은 호환성 확인만(유지관리자 2026-11-21), Codex 한도 소진 동안 Codex 확인은 정식 비차단. 위임 중 사용량 급감 보호는 OV160-022
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
 - [0.15.3 종료 상태](../archive/state/0.15.3-closeout.md)·[0.15.3 단계 검토](../research/overhaul/stage-5-review.md)·[단계 5·0.15.2 근거 색인](../research/overhaul/stage-5-closeout.md) 보존
@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.16.0`
-- 현재 등록 항목: 12/21 완료
+- 현재 등록 항목: 12/22 완료
 
-- `agent-owned`: `OV160-016`, `OV160-021`, `OV160-020`
+- `agent-owned`: `OV160-016`, `OV160-021`, `OV160-020`, `OV160-022`
 - `awaiting-user-authority`: `OV160-011`
 - `awaiting-external-evidence`: `OV160-012`, `OV160-017`
 - `blocked`: 없음

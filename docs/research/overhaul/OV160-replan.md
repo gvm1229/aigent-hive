@@ -144,8 +144,17 @@
 
 - 의존: 014a·014b·015·016·017·018·019. 014b를 0.17.0으로 옮기면 계획 조각의 OV160-020 의존에서 OV160-021 삭제
 - 절차: 기존 번호 시험 절차(OV160-013-test2와 동일) → 세 OS 수용 + 재가동한 공개 갱신 단계 → 이 PC: **백업 먼저**(`~/.hive/config`·`~/.hive/install` 사본) → `npm install -g aigent-hive@0.16.0-test.4` → `hive update`(재설치 없이 성공 기대) → 019 스크립트 → 사람 확인(터미널 사용량, **연결 뒤 새로 연 Code 탭 세션** 사용량, 훅 왕복, 교차 검토 `--reviewer athena --reviewer-provider claude`) → `hive project registry rebuild` 미리보기로 이 PC 등록 목록(2026-11-21 수동 재구성 16개)과 비교
+- Codex 확인 비차단(유지관리자 2026-11-21): Codex 사용 한도 소진 동안 Codex 호환성 확인(Codex 훅 실행, `codex exec` 작업자, Codex 작성자 교차 검토)은 정식 차단 아님. 결과는 "미검증(Codex 한도)"으로 기록하고 한도 회복 뒤 확인. 원문 "Being unable to run codex must not be a blocker."
 - 통과 뒤: OV160-003·004·007 `complete`(새 근거), OV160-012 `complete`, `check-plan-state.py --release` 통과, OV160-011 정식
 - 실패 시: 해당 항목 `reopened`, 근거 기록, 다음 번호 시험
+
+### OV160-022 위임 실행 중 사용량 급감 보호
+
+- 발견(2026-11-21 local): Codex 작업자 4개 병렬 실행 약 40분 만에 Codex 30일 한도 남은 양 94% → 0%(재설정 2026-12-15). Hive 읽기는 정확(`hive usage show --host codex`: 실행 전 94%, 소진 뒤 0%, 같은 창 `window_minutes` 43200). 원인: 07 사전 확인이 작업 시작 때 1회뿐이고, 조율 세션도 위임 작업 중 Codex 사용량 재확인 없음. 저장된 중간 보호(`usage_guard.midway`)는 기본 비활성
+- 조사(제한): `crates/hive-core/src/preferences.rs`의 `midway` 설정과 `usage_control/monitor.rs` 동작 확인, 위임 감시 도구(`codex-run.py`)가 중간 재확인을 부를 수 있는지 판단. 결정 규칙: 기존 중간 보호로 위임 작업 중단이 가능하면 위임 안내·감시 도구에서 켜는 방식, 불가하면 `hive usage enforce`를 일정 간격 재호출하는 감시 단계 추가
+- 변경 후보: 병렬 위임 작업 수만큼 기준을 나눈 작업별 예산, 남은 양 급감(예: 10분에 20%p 이상) 시 새 위임 중지 안내
+- 확인: 중간 재확인 시험, 이 사건 기록을 근거 문서에 보존
+- 0.16.0 차단 아님(정식 조건 OV160-020과 무관)
 
 ## 5. 최종 완료 기준
 
