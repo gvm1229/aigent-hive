@@ -332,6 +332,11 @@ struct UserCommandArguments {
 pub(crate) enum InstallError {
     Input(String),
     Conflict(String),
+    PriorNotAdoptable {
+        occupied_path: String,
+        backup_location: String,
+    },
+    BackupTooLarge,
     Unsupported(String),
     Verification(String),
     Internal(String),
@@ -341,7 +346,8 @@ impl InstallError {
     const fn status(&self) -> &'static str {
         match self {
             Self::Input(_) | Self::Internal(_) => "error",
-            Self::Conflict(_) => "conflict",
+            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => "conflict",
+            Self::BackupTooLarge => "error",
             Self::Unsupported(_) => "unsupported",
             Self::Verification(_) => "verification-failed",
         }
@@ -350,7 +356,8 @@ impl InstallError {
     const fn exit_code(&self) -> u8 {
         match self {
             Self::Input(_) => 2,
-            Self::Conflict(_) => 3,
+            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => 3,
+            Self::BackupTooLarge => 2,
             Self::Unsupported(_) => 4,
             Self::Verification(_) => 5,
             Self::Internal(_) => 10,
@@ -364,6 +371,10 @@ impl InstallError {
             | Self::Unsupported(message)
             | Self::Verification(message)
             | Self::Internal(message) => message,
+            Self::PriorNotAdoptable { .. } => {
+                "occupied user file cannot be adopted as prior Hive installation"
+            }
+            Self::BackupTooLarge => "transaction backup would exceed 512 MiB",
         }
     }
 
@@ -371,6 +382,14 @@ impl InstallError {
         match self {
             Self::Input(message) => Self::Input(message + suffix),
             Self::Conflict(message) => Self::Conflict(message + suffix),
+            Self::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => Self::PriorNotAdoptable {
+                occupied_path,
+                backup_location: backup_location + suffix,
+            },
+            Self::BackupTooLarge => Self::BackupTooLarge,
             Self::Unsupported(message) => Self::Unsupported(message + suffix),
             Self::Verification(message) => Self::Verification(message + suffix),
             Self::Internal(message) => Self::Internal(message + suffix),
@@ -5304,24 +5323,9 @@ fn apply_plan(
     claude_state_before: Option<ClaudeHostState>,
     antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
-    let mut backup_nonce = [0_u8; 16];
-    getrandom::fill(&mut backup_nonce).map_err(|error| {
-        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
-    })?;
-    let mut encoded_nonce = String::with_capacity(32);
-    for byte in backup_nonce {
-        encoded_nonce.push(char::from(HEX[usize::from(byte >> 4)]));
-        encoded_nonce.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}-{encoded_nonce}",
-        arguments.host.as_str(),
-        unix_seconds()?,
-        std::process::id()
-    ));
+    let backup_relative = new_backup_relative(arguments.host)?;
     let snapshots = preflight_plan(&arguments.root_cap, plan)?;
     let index_existed = root_index_exists(&arguments.root_cap)?;
     let mut backup_entries = Vec::new();
@@ -5805,6 +5809,114 @@ fn persist_backup(
         expected.as_deref(),
         expected_permissions,
     )
+}
+
+fn new_backup_relative(host: UserHost) -> Result<PathBuf, InstallError> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce)
+        .map_err(|error| InstallError::Internal(format!("cannot obtain user backup entropy: {error}")))?;
+    let mut encoded = String::with_capacity(32);
+    for byte in nonce {
+        encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    Ok(PathBuf::from(format!(
+        ".hive/backups/user-install/{}/{}-{}-{encoded}",
+        host.as_str(),
+        unix_seconds()?,
+        std::process::id()
+    )))
+}
+
+fn save_preflight_backup(
+    arguments: &UserArguments,
+    paths: &[PathBuf],
+) -> Result<PathBuf, InstallError> {
+    let backup_relative = new_backup_relative(arguments.host)?;
+    let mut entries = Vec::new();
+    let mut total_bytes = 0_u64;
+    for relative in paths {
+        let existing = read_optional_regular(&arguments.root_cap, relative, MAX_USER_FILE_BYTES)?;
+        let permissions = if existing.is_some() {
+            file_permissions(&arguments.root_cap, relative)?
+        } else {
+            FilePermissions {
+                executable: false,
+                unix_mode: installed_unix_mode(false),
+            }
+        };
+        if let Some(bytes) = existing.as_deref() {
+            total_bytes = total_bytes.saturating_add(bytes.len() as u64);
+            if total_bytes > 512 * 1024 * 1024 {
+                return Err(InstallError::BackupTooLarge);
+            }
+            write_atomic_with_permissions(
+                &arguments.root_cap,
+                &backup_relative.join("files").join(relative),
+                bytes,
+                permissions,
+                None,
+                None,
+            )?;
+        }
+        entries.push(UserBackupEntry {
+            path: portable(relative),
+            existed: existing.is_some(),
+            digest: existing.as_deref().map(sha256_digest),
+            installed_digest: existing.as_deref().map(sha256_digest),
+            installed_executable: existing.as_ref().map(|_| permissions.executable),
+            installed_unix_mode: existing.as_ref().and(permissions.unix_mode),
+            executable: permissions.executable,
+            unix_mode: permissions.unix_mode,
+        });
+    }
+    let plan_digest = sha256_digest(
+        &serde_json::to_vec(&entries)
+            .map_err(|error| InstallError::Internal(error.to_string()))?,
+    );
+    let backup = UserBackupManifest {
+        schema_version: 2,
+        host: arguments.host,
+        plan_digest,
+        host_mutations: Vec::new(),
+        index_existed: root_index_exists(&arguments.root_cap)?,
+        index_removal: None,
+        codex_state_before: None,
+        claude_state_before: None,
+        antigravity_state_before: None,
+        host_owned_state: None,
+        pending_host_transition: None,
+        codex_plugin_was_latent_before_marketplace_add: false,
+        entries,
+    };
+    persist_backup(arguments, &backup_relative, &backup)?;
+    Ok(backup_relative)
+}
+
+fn transaction_backup_paths(host: UserHost) -> Vec<PathBuf> {
+    let mut paths = [
+        ".hive/config/projects.yml",
+        ".hive/config/collections.yml",
+        ".hive/config/user-setup.yml",
+        ".hive/config/user-feature-answers.yml",
+        ".hive/config/user-preferences.json",
+        ".hive/config/rag-trust.json",
+        ".hive/roster.toml",
+        ".hive/runtime/usage-monitor/config.json",
+        ".hive/runtime/usage-monitor/disable.json",
+        ".claude/settings.json",
+        ".claude/CLAUDE.md",
+        ".codex/AGENTS.md",
+        ".gemini/GEMINI.md",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .collect::<Vec<_>>();
+    paths.retain(|path| {
+        !matches!(path.to_str(), Some(".claude/settings.json")) || host == UserHost::Claude
+    });
+    paths
 }
 
 fn read_transaction_journal(
@@ -7028,15 +7140,41 @@ fn failure(action: &'static str, error: &InstallError) -> ActionResult {
         code: match error {
             InstallError::Input(_) => "hive.user-install-invalid-input",
             InstallError::Conflict(_) => "hive.user-install-conflict",
+            InstallError::PriorNotAdoptable { .. } => "hive.user-install-prior-not-adoptable",
+            InstallError::BackupTooLarge => "hive.backup-too-large",
             InstallError::Unsupported(_) => "hive.user-install-unsupported",
             InstallError::Verification(_) => "hive.user-install-verification-failed",
             InstallError::Internal(_) => "hive.internal-error",
         },
-        message: error.message().to_owned(),
+        message: match error {
+            InstallError::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => format!(
+                "occupied path cannot be adopted: {occupied_path}; no owned files were removed; backup: {backup_location}"
+            ),
+            _ => error.message().to_owned(),
+        },
         changed_paths: Vec::new(),
         evidence: Vec::new(),
-        next_action: None,
-        data: None,
+        next_action: match error {
+            InstallError::PriorNotAdoptable { .. } => {
+                Some("restore the saved copy with hive backup restore --host <host> --transaction <id>".to_owned())
+            }
+            _ => None,
+        },
+        data: match error {
+            InstallError::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => Some(json!({
+                "occupied_path": occupied_path,
+                "backup_location": backup_location,
+                "files_removed": false,
+                "restore_command": "hive backup restore --host <host> --transaction <id>"
+            })),
+            _ => None,
+        },
     }
 }
 
