@@ -20,8 +20,8 @@
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
 | 메시지·작업 중재 | 11 | 2 | 84.6% |
-| local 확인 실패 수정 | 0 | 1 | 0.0% |
-| **현재 범위 합계** | **11** | **3** | **78.6%** |
+| local 실패 수정과 개선판 | 0 | 8 | 0.0% |
+| **현재 범위 합계** | **11** | **10** | **52.4%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -29,7 +29,7 @@
 | Fragment | Checklist | 범위 |
 | --- | --- | --- |
 | [0.16.0-mediation.md](active/0.16.0-mediation.md) | `OV160-001–013` | 메시지·작업 중재 |
-| [0.16.0-local-fixes.md](active/0.16.0-local-fixes.md) | `OV160-014` | local 확인 실패 수정 |
+| [0.16.0-local-fixes.md](active/0.16.0-local-fixes.md) | `OV160-014–021` | local 실패 수정과 개선판 |
 
 ## 이전 근거
 
