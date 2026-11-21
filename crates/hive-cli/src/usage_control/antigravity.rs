@@ -13,7 +13,31 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const VERSION: &str = "1.1.18";
+const VERSION_RANGE_MIN: (u32, u32, u32) = (1, 1, 18);
+const VERSION_RANGE_MAX: (u32, u32, u32) = (2, 0, 0);
+
+// TODO: use crate::user_install::parse_three_part_version after lane A integration.
+fn parse_three_part_version(value: &str) -> Option<(u32, u32, u32)> {
+    let mut parts = value.split('.');
+    let raw = [parts.next()?, parts.next()?, parts.next()?];
+    if parts.next().is_some() {
+        return None;
+    }
+    let parsed = (
+        raw[0].parse::<u32>().ok()?,
+        raw[1].parse::<u32>().ok()?,
+        raw[2].parse::<u32>().ok()?,
+    );
+    (raw[0] == parsed.0.to_string()
+        && raw[1] == parsed.1.to_string()
+        && raw[2] == parsed.2.to_string())
+    .then_some(parsed)
+}
+
+fn supported_version(value: &str) -> bool {
+    parse_three_part_version(value)
+        .is_some_and(|version| version >= VERSION_RANGE_MIN && version < VERSION_RANGE_MAX)
+}
 const POOLS: [&str; 2] = ["gemini-weekly", "3p-weekly"];
 const MAX_AGE: u64 = 120;
 
@@ -56,7 +80,7 @@ struct StoredBucket {
 }
 
 fn normalize(input: &Input, now: u64, millis: u128) -> Result<Capture, SensorError> {
-    if input.version != VERSION {
+    if !supported_version(&input.version) {
         return Err(SensorError::UnsupportedVersion);
     }
     if input.conversation_id.is_empty()
@@ -230,7 +254,7 @@ fn snapshot(
     account: Option<&str>,
     now: u64,
 ) -> Result<NormalizedSnapshot, SensorError> {
-    if c.schema_version != 1 || c.sensor_version != VERSION {
+    if c.schema_version != 1 || !supported_version(&c.sensor_version) {
         return Err(SensorError::UnsupportedVersion);
     }
     if c.session_digest != binding.session_digest || binding.host_scope != "antigravity" {
@@ -313,6 +337,22 @@ mod tests {
             "quota":{"gemini-weekly":{"remaining_fraction":0.8,"reset_time":"2030-01-01T00:00:00Z"},
             "3p-weekly":{"remaining_fraction":0.01,"reset_time":"2030-01-01T00:00:00Z"}}})).unwrap()
     }
+    #[test]
+    fn accepts_supported_version_range() {
+        assert!(supported_version("1.1.18"));
+        assert!(supported_version("1.2.17"));
+        assert!(!supported_version("1.1.17"));
+        assert!(!supported_version("2.0.0"));
+        assert!(!supported_version("1.2"));
+        assert!(!supported_version("01.2.17"));
+    }
+    #[test]
+    #[ignore = "needs local 1.2.17 fixture"]
+    fn antigravity_accepts_real_1_2_17_callback() {
+        let mut callback = input();
+        callback.version = "1.2.17".to_owned();
+        normalize(&callback, 1_700_000_000, 1_700_000_000_000).expect("supported callback");
+    }
     fn binding() -> SessionBinding {
         bind_session(
             &ParsedBinding {
@@ -349,7 +389,7 @@ mod tests {
         );
         assert!(normalize(&i, 100, 100_000).is_err());
         let mut i = input();
-        i.version = "1.1.19".to_owned();
+        i.version = "1.1.17".to_owned();
         assert!(matches!(
             normalize(&i, 100, 100_000),
             Err(SensorError::UnsupportedVersion)

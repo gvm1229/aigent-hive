@@ -120,8 +120,12 @@ fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut S
             format!(
                 "{} ({} {}%)",
                 on_off(&settings["usage_guard_enabled"]),
-                label_for(ko, "남은 사용량 기준", "stop below"),
-                settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0)
+                if settings["native_direction"] == "used" {
+                    label_for(ko, "사용한 양 기준", "stop at used")
+                } else {
+                    label_for(ko, "남은 사용량 기준", "stop below")
+                },
+                settings["native_value"].as_u64().unwrap_or_else(|| settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0))
             ),
         ),
         (label_for(ko, "선택한 Skill", "Selected Skills"), skills.to_string()),

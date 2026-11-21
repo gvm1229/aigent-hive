@@ -237,14 +237,25 @@ fn claim(
 }
 
 fn notice(config: &InstalledUsageConfig, sample: &UsageSnapshot, kind: &str) -> Value {
+    let native_direction = super::super::native_usage_direction(&config.primary_host);
+    let native_value = if native_direction == "used" {
+        100.0 - sample.remaining_percent
+    } else {
+        sample.remaining_percent
+    };
     json!({
         "kind": kind, "window": sample.quota_window, "quota_pool": sample.quota_pool,
         "remaining_percent": sample.remaining_percent, "resets_at": sample.resets_at_unix_seconds,
+        "native_direction": native_direction, "native_value": native_value,
         "message": match (config.interface_language.as_str(), kind) {
+            ("ko", "quota-empty") if native_direction == "used" => "확인한 사용량 구간의 사용량이 100%입니다.",
             ("ko", "quota-empty") => "확인한 사용량 구간의 잔여량이 0%입니다.",
+            ("ko", _) if native_direction == "used" => "확인한 사용량 구간의 사용량이 안내 기준 이상입니다.",
             ("ko", _) => "확인한 사용량 구간의 잔여량이 안내 기준 이하입니다.",
+            (_, "quota-empty") if native_direction == "used" => "A measured usage window has 100% used.",
             (_, "quota-empty") => "A measured usage window has no quota remaining.",
-            _ => "A measured usage window is at or below your warning threshold.",
+            (_, _) if native_direction == "used" => "A measured usage window is at or above your used threshold.",
+            _ => "A measured usage window is at or below your remaining threshold.",
         }
     })
 }
@@ -282,6 +293,18 @@ mod tests {
             resets_at_unix_seconds: 10000,
             source_confidence: SourceConfidence::High,
         }
+    }
+
+    #[test]
+    fn quota_notice_includes_native_direction_and_value() {
+        let mut config = config();
+        let codex = notice(&config, &sample(15.0, 1), "quota-low");
+        assert_eq!(codex["native_direction"], "remaining");
+        assert_eq!(codex["native_value"], 15.0);
+        config.primary_host = "claude".to_owned();
+        let claude = notice(&config, &sample(15.0, 1), "quota-low");
+        assert_eq!(claude["native_direction"], "used");
+        assert_eq!(claude["native_value"], 85.0);
     }
 
     #[test]

@@ -202,6 +202,27 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
 fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String> {
     let before = data["previous_remaining_percent"].as_u64()?;
     let after = data["threshold_remaining_percent"].as_u64()?;
+    if let (Some(direction), Some(value), Some(host)) = (
+        data["native_direction"].as_str(),
+        data["native_value"].as_u64(),
+        data["host"].as_str(),
+    ) {
+        let unit = if direction == "used" {
+            "사용한 양"
+        } else {
+            "남은 양"
+        };
+        let english_unit = if direction == "used" {
+            "used"
+        } else {
+            "remaining"
+        };
+        return Some(choose(
+            language,
+            &format!("{host}의 {unit} {value}%에서 사용량 보호를 멈추도록 설정했습니다."),
+            &format!("Set {host} to stop usage protection at {value}% {english_unit} usage."),
+        ));
+    }
     let mut text = if before == after {
         choose(
             language,
@@ -246,6 +267,23 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
         ));
     }
     Some(text)
+}
+
+#[cfg(test)]
+mod usage_direction_tests {
+    use super::{threshold_message, InterfaceLanguage};
+    use serde_json::json;
+
+    #[test]
+    fn host_threshold_output_uses_native_direction_and_value() {
+        let message = threshold_message(
+            &json!({"host":"claude","native_direction":"used","native_value":70,
+                "previous_remaining_percent":20,"threshold_remaining_percent":30}),
+            InterfaceLanguage::Ko,
+        )
+        .unwrap();
+        assert!(message.contains("사용한 양 70%"));
+    }
 }
 
 fn sentence(message: &str) -> String {
@@ -512,6 +550,8 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
         "count" => ("항목 수", "Items"),
         "remaining_percent" => ("남은 사용량(%)", "Remaining usage (%)"),
         "threshold_remaining_percent" => ("남은 사용량 기준(%)", "Remaining usage threshold (%)"),
+        "native_direction" => ("호스트 사용량 기준 방향", "Host-native usage direction"),
+        "native_value" => ("호스트 표시 기준(%)", "Host-native threshold (%)"),
         "used_percent" => ("사용한 양(%)", "Used (%)"),
         "current_version" => ("현재 버전", "Current version"),
         "latest_version" => ("최신 버전", "Latest version"),

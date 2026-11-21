@@ -188,6 +188,13 @@ policy. Never report an AI child as stopped based only on its parent turn stoppi
      saved per-host window choices; `data.host_windows_updated` lists those apps. To give one app
      or one limit a different threshold, use `hive setup --scope user --section usage` instead.
 
+   - One host window can use the native sensor direction. Claude accepts used percent; Codex and Antigravity accept remaining percent. A used threshold below 50 needs explicit `--confirm`. The host must have saved window choices; `all` changes each guarded supported window.
+
+     ```text
+     hive usage threshold --user-root <user-root> --host <host> --window five-hour|weekly|all --stop-used-percent <1..100> [--confirm]
+     hive usage threshold --user-root <user-root> --host <host> --window five-hour|weekly|all --stop-remaining-percent <0..99>
+     ```
+
    - A project threshold requires an explicit integer and a valid installed project harness.
      Never reinterpret a non-Hive target request as a global change:
 

@@ -1129,11 +1129,16 @@ const USAGE_HELP: Detailed = Detailed {
         ("--process-id <번호>", "현재 프로세스 번호 (위와 같음)", "Current process id (same)"),
     ],
     optional: &[
-        ("--host <호스트>", "codex, claude, antigravity 중 하나", "One of codex, claude, antigravity"),
+        ("--host <호스트>", "codex, claude, antigravity 중 하나; host threshold에는 --window과 함께 사용", "One of codex, claude, antigravity; use with --window for host thresholds"),
+        ("--window <five-hour|weekly|all>", "호스트별 보호 창 (host threshold)", "Per-host guarded window (host threshold)"),
+        ("--stop-used-percent <1..100>", "사용한 비율 기준; 50 미만은 --confirm 필요", "Used-percentage threshold; values below 50 need --confirm"),
+        ("--stop-remaining-percent <0..99>", "남은 비율 기준 (host threshold)", "Remaining-percentage threshold (host threshold)"),
+        ("--confirm", "사용 기준 50% 미만 설정 확인", "Confirm a used threshold below 50%"),
         ("--remaining-percent <0..99>", "모든 보호 한도의 남은 양 기준 % (threshold)", "Threshold %, all guarded limits (threshold)"),
         ("--output json", "기계용 JSON 출력", "Machine-readable JSON output"),
     ],
     examples: &["hive usage threshold --user-root <user-root> --remaining-percent 20",
+                "hive usage threshold --user-root <user-root> --host claude --window weekly --stop-used-percent 80",
                 "hive usage monitor status --user-root <user-root>"],
 };
 

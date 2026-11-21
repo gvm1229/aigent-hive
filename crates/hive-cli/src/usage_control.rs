@@ -39,6 +39,7 @@ USAGE:
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]
     hive usage threshold (--target <configured-project>|--user-root <user-root>) --remaining-percent <0..99> [--output json]
+    hive usage threshold --user-root <user-root> --host <codex|claude|antigravity> --window <five-hour|weekly|all> (--stop-used-percent <1..100>|--stop-remaining-percent <0..99>) [--confirm] [--output json]
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle|enable-reset-guard|disable-reset-guard|enable-zero-quota-guard|disable-zero-quota-guard [--confirm-session-disable] [--confirm-reset-guard-disable] [--confirm-zero-quota-guard-disable] [--output json]
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json [--user-root <dir>] [--output json]
     hive usage statusline --host claude [--user-root <dir>]
@@ -68,6 +69,10 @@ struct ThresholdArguments {
     target: Option<PathBuf>,
     user_root: Option<PathBuf>,
     remaining_percent: u8,
+    host: Option<String>,
+    window: Option<String>,
+    native_direction: Option<String>,
+    native_value: Option<u8>,
 }
 
 #[derive(Debug)]
@@ -1227,9 +1232,42 @@ fn parse_enforce(arguments: &[String]) -> Result<EnforceArguments, AdapterError>
 fn parse_threshold(arguments: &[String]) -> Result<ThresholdArguments, AdapterError> {
     let options = parse_key_value_options(
         arguments,
-        &["--target", "--user-root", "--remaining-percent"],
-        false,
+        &[
+            "--target",
+            "--user-root",
+            "--remaining-percent",
+            "--host",
+            "--window",
+            "--stop-used-percent",
+            "--stop-remaining-percent",
+        ],
+        true,
     )?;
+    let confirm = optional(&options, "--confirm").is_some();
+    if options.iter().any(|(option, _)| {
+        matches!(
+            *option,
+            "--confirm-session-disable"
+                | "--confirm-reset-guard-disable"
+                | "--confirm-zero-quota-guard-disable"
+        )
+    }) {
+        return Err(AdapterError::Input(
+            "usage threshold accepts only --confirm".to_owned(),
+        ));
+    }
+    if let Some(host) = optional(&options, "--host") {
+        return parse_host_threshold(&options, host, confirm);
+    }
+    if optional(&options, "--window").is_some()
+        || optional(&options, "--stop-used-percent").is_some()
+        || optional(&options, "--stop-remaining-percent").is_some()
+        || confirm
+    {
+        return Err(AdapterError::Input(
+            "--window, stop-percent options, and --confirm require --host".to_owned(),
+        ));
+    }
     let raw = required(&options, "--remaining-percent")?;
     let remaining_percent = raw
         .parse::<u8>()
@@ -1251,7 +1289,121 @@ fn parse_threshold(arguments: &[String]) -> Result<ThresholdArguments, AdapterEr
         target,
         user_root,
         remaining_percent,
+        host: None,
+        window: None,
+        native_direction: None,
+        native_value: None,
     })
+}
+
+fn parse_host_threshold(
+    options: &[(&str, &str)],
+    host: &str,
+    confirm: bool,
+) -> Result<ThresholdArguments, AdapterError> {
+    let sensor = hive_core::preferences::HOST_USAGE_SENSORS
+        .iter()
+        .find(|sensor| sensor.host == host)
+        .ok_or_else(|| {
+            AdapterError::Input("--host must be codex, claude, or antigravity".to_owned())
+        })?;
+    let user_root = optional(options, "--user-root")
+        .map(PathBuf::from)
+        .ok_or_else(|| AdapterError::Input("host thresholds require --user-root".to_owned()))?;
+    if optional(options, "--target").is_some() || optional(options, "--remaining-percent").is_some()
+    {
+        return Err(AdapterError::Input(
+            "host thresholds cannot be combined with --target or --remaining-percent".to_owned(),
+        ));
+    }
+    let window = required(options, "--window")?;
+    if !matches!(window, "five-hour" | "weekly" | "all")
+        || (window != "all" && !sensor.windows.contains(&window))
+    {
+        return Err(AdapterError::Input(format!(
+            "--window must be one of: {}",
+            sensor.windows.join(", ")
+        )));
+    }
+    let used = optional(options, "--stop-used-percent");
+    let remaining = optional(options, "--stop-remaining-percent");
+    if used.is_some() == remaining.is_some() {
+        return Err(AdapterError::Input(
+            "provide exactly one of --stop-used-percent or --stop-remaining-percent".to_owned(),
+        ));
+    }
+    let (direction, value) = if let Some(raw) = used {
+        let value = parse_percent(raw, 1, 100, "--stop-used-percent")?;
+        if value < 50 && !confirm {
+            return Err(AdapterError::Input(
+                "--stop-used-percent below 50 requires --confirm".to_owned(),
+            ));
+        }
+        ("used", value)
+    } else {
+        (
+            "remaining",
+            parse_percent(
+                remaining.unwrap_or_default(),
+                0,
+                99,
+                "--stop-remaining-percent",
+            )?,
+        )
+    };
+    let host_direction = match sensor.direction {
+        hive_core::preferences::UsageDirection::Used => "used",
+        hive_core::preferences::UsageDirection::Remaining => "remaining",
+    };
+    if direction != host_direction {
+        return Err(AdapterError::Input(format!(
+            "{host} sensor input uses --stop-{host_direction}-percent"
+        )));
+    }
+    let remaining_percent = if direction == "used" {
+        100 - value
+    } else {
+        value
+    };
+    Ok(ThresholdArguments {
+        target: None,
+        user_root: Some(user_root),
+        remaining_percent,
+        host: Some(host.to_owned()),
+        window: Some(window.to_owned()),
+        native_direction: Some(direction.to_owned()),
+        native_value: Some(value),
+    })
+}
+
+fn parse_percent(raw: &str, min: u8, max: u8, option: &str) -> Result<u8, AdapterError> {
+    raw.parse::<u8>()
+        .ok()
+        .filter(|value| (min..=max).contains(value) && value.to_string() == raw)
+        .ok_or_else(|| {
+            AdapterError::Input(format!(
+                "{option} must be an integer from {min} through {max}"
+            ))
+        })
+}
+
+pub(super) fn native_usage_direction(host: &str) -> &'static str {
+    match hive_core::preferences::HOST_USAGE_SENSORS
+        .iter()
+        .find(|sensor| sensor.host == host)
+        .map(|sensor| sensor.direction)
+    {
+        Some(hive_core::preferences::UsageDirection::Used) => "used",
+        _ => "remaining",
+    }
+}
+
+fn native_usage_value(host: &str, remaining: u8) -> u8 {
+    if native_usage_direction(host) == "used" {
+        100 - remaining
+    } else {
+        remaining
+    }
 }
 
 fn parse_optional_host(options: &[(&str, &str)]) -> Result<Option<String>, AdapterError> {
@@ -1351,7 +1503,8 @@ fn parse_key_value_options<'a>(
         let option = arguments[index].as_str();
         if matches!(
             option,
-            "--confirm-session-disable"
+            "--confirm"
+                | "--confirm-session-disable"
                 | "--confirm-reset-guard-disable"
                 | "--confirm-zero-quota-guard-disable"
         ) {
@@ -1554,6 +1707,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         next_action: None,
         data: Some(json!({
             "threshold_remaining_percent": config.threshold,
+            "native_direction": native_usage_direction(&config.primary_host),
+            "native_value": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
@@ -1668,6 +1823,8 @@ fn enforce_captured(
                 "session_id_digest": binding.session_digest,
                 "process_id": binding.process_id,
                 "threshold_remaining_percent": config.threshold,
+                "native_direction": native_usage_direction(&config.primary_host),
+                "native_value": native_usage_value(&config.primary_host, config.threshold),
                 "global_threshold_remaining_percent": config.global_threshold,
                 "project_threshold_remaining_percent": config.project_threshold,
                 "scope": "automatic-dispatch-preflight",
@@ -2616,6 +2773,8 @@ fn allowed_result(
             "process_id": binding.process_id,
             "selected_window": observation.selected_window,
             "threshold_remaining_percent": config.threshold,
+            "native_direction": native_usage_direction(&config.primary_host),
+            "native_value": native_usage_value(&config.primary_host, config.threshold),
             "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "measured_at": observation.measured_at,
             "scope": "automatic-dispatch-preflight",
@@ -2668,6 +2827,8 @@ fn session_disabled_result(
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
             "threshold_remaining_percent": config.threshold,
+            "native_direction": native_usage_direction(&config.primary_host),
+            "native_value": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "scope": "automatic-dispatch-preflight",
@@ -2731,6 +2892,8 @@ fn policy_changed_result(binding: &SessionBinding, config: &InstalledUsageConfig
             "session_id_digest": binding.session_digest,
             "process_id": binding.process_id,
             "threshold_remaining_percent": config.threshold,
+            "native_direction": native_usage_direction(&config.primary_host),
+            "native_value": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "session_recheck_required": true,
@@ -2799,49 +2962,64 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
     }
 }
 
+fn set_host_threshold(
+    arguments: &ThresholdArguments,
+    host: &str,
+) -> Result<ActionResult, AdapterError> {
+    let update = crate::user_setup::set_operational_host_usage_threshold(
+        arguments
+            .user_root
+            .as_deref()
+            .expect("host threshold requires user root"),
+        host,
+        arguments
+            .window
+            .as_deref()
+            .expect("host threshold requires window"),
+        arguments.remaining_percent,
+    )
+    .map_err(AdapterError::Safety)?;
+    let changed = !update.changed_paths.is_empty();
+    let direction = arguments.native_direction.as_deref().unwrap_or("remaining");
+    let native_value = arguments.native_value.unwrap_or(update.current);
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "SetUsageThreshold",
+        status: "success",
+        exit_code: 0,
+        code: if changed {
+            "hive.usage-host-threshold-updated"
+        } else {
+            "hive.usage-host-threshold-unchanged"
+        },
+        message: if changed {
+            format!("{host} {direction} usage threshold updated")
+        } else {
+            format!("{host} {direction} usage threshold already matched")
+        },
+        changed_paths: update.changed_paths,
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: USER_CONFIG_PATH.to_owned(),
+            digest: sha256_digest(&update.config_bytes),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "scope":"host", "host":host, "window":arguments.window,
+            "previous_remaining_percent":update.previous,
+            "threshold_remaining_percent":update.current,
+            "native_direction":direction, "native_value":native_value,
+            "session_recheck_required":changed
+        })),
+    })
+}
+
 fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, AdapterError> {
+    if let Some(host) = arguments.host.as_deref() {
+        return set_host_threshold(arguments, host);
+    }
     if let Some(user_root) = arguments.user_root.as_deref() {
-        let update = crate::user_setup::set_operational_usage_threshold(
-            user_root,
-            arguments.remaining_percent,
-        )
-        .map_err(AdapterError::Safety)?;
-        let changed = !update.changed_paths.is_empty();
-        return Ok(ActionResult {
-            schema_version: 1,
-            action: "SetUsageThreshold",
-            status: "success",
-            exit_code: 0,
-            code: if changed {
-                "hive.usage-global-threshold-updated"
-            } else {
-                "hive.usage-global-threshold-unchanged"
-            },
-            message: if changed {
-                format!(
-                    "global usage threshold was updated atomically, including every guarded window of: [{}]",
-                    update.host_windows_updated.join(", ")
-                )
-            } else {
-                "global usage threshold already matched the requested value".to_owned()
-            },
-            changed_paths: update.changed_paths,
-            evidence: vec![Evidence {
-                kind: "file",
-                locator: USER_CONFIG_PATH.to_owned(),
-                digest: sha256_digest(&update.config_bytes),
-            }],
-            next_action: None,
-            data: Some(json!({
-                "scope": "global",
-                "previous_remaining_percent": update.previous,
-                "threshold_remaining_percent": update.current,
-                "stored_global_threshold_remaining_percent": update.current,
-                "host_windows_updated": update.host_windows_updated,
-                "applies_to": "legacy-threshold-and-every-guarded-host-window",
-                "session_recheck_required": changed,
-            })),
-        });
+        return set_global_threshold(user_root, arguments.remaining_percent);
     }
     let project = arguments.target.as_deref().ok_or_else(|| {
         AdapterError::Input("project usage threshold target is missing".to_owned())
@@ -2896,6 +3074,46 @@ fn set_threshold(arguments: &ThresholdArguments) -> Result<ActionResult, Adapter
             "previous_remaining_percent": current,
             "threshold_remaining_percent": arguments.remaining_percent,
             "stored_project_threshold_remaining_percent": arguments.remaining_percent,
+            "session_recheck_required": changed,
+        })),
+    })
+}
+
+fn set_global_threshold(
+    user_root: &Path,
+    remaining_percent: u8,
+) -> Result<ActionResult, AdapterError> {
+    let update = crate::user_setup::set_operational_usage_threshold(user_root, remaining_percent)
+        .map_err(AdapterError::Safety)?;
+    let changed = !update.changed_paths.is_empty();
+    Ok(ActionResult {
+        schema_version: 1,
+        action: "SetUsageThreshold",
+        status: "success",
+        exit_code: 0,
+        code: if changed {
+            "hive.usage-global-threshold-updated"
+        } else {
+            "hive.usage-global-threshold-unchanged"
+        },
+        message: if changed {
+            format!("global usage threshold was updated atomically, including every guarded window of: [{}]", update.host_windows_updated.join(", "))
+        } else {
+            "global usage threshold already matched the requested value".to_owned()
+        },
+        changed_paths: update.changed_paths,
+        evidence: vec![Evidence {
+            kind: "file",
+            locator: USER_CONFIG_PATH.to_owned(),
+            digest: sha256_digest(&update.config_bytes),
+        }],
+        next_action: None,
+        data: Some(json!({
+            "scope": "global", "previous_remaining_percent": update.previous,
+            "threshold_remaining_percent": update.current,
+            "stored_global_threshold_remaining_percent": update.current,
+            "host_windows_updated": update.host_windows_updated,
+            "applies_to": "legacy-threshold-and-every-guarded-host-window",
             "session_recheck_required": changed,
         })),
     })
@@ -3913,10 +4131,11 @@ mod tests {
     use super::{
         bind_session, capture_and_settle, claude_capture_path, control_path, control_session,
         effective_enabled, enforce, halt_path, native_then_consented_fallback,
-        parse_installed_config, read_claude_capture_snapshot, read_effective_config, set_threshold,
-        status, ActionResult, AdapterError, CaptureArguments, EnforceArguments, FileSnapshot,
-        LoadedControl, OverrideState, ParsedBinding, SessionAction, SessionArguments,
-        SessionBinding, SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
+        native_usage_direction, native_usage_value, parse_installed_config, parse_threshold,
+        read_claude_capture_snapshot, read_effective_config, set_threshold, status, ActionResult,
+        AdapterError, CaptureArguments, EnforceArguments, FileSnapshot, LoadedControl,
+        OverrideState, ParsedBinding, SessionAction, SessionArguments, SessionBinding,
+        SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
@@ -4249,6 +4468,91 @@ mod tests {
     }
 
     #[test]
+    fn host_used_threshold_converts_and_requires_confirmation_below_half() {
+        let args = |percent: &str, confirm: bool| {
+            let mut args = vec![
+                "--user-root".into(),
+                "C:/unused".into(),
+                "--host".into(),
+                "claude".into(),
+                "--window".into(),
+                "weekly".into(),
+                "--stop-used-percent".into(),
+                percent.into(),
+            ];
+            if confirm {
+                args.push("--confirm".into());
+            }
+            args
+        };
+        let parsed = parse_threshold(&args("61", false)).unwrap();
+        assert_eq!(parsed.remaining_percent, 39);
+        assert_eq!(parsed.native_direction.as_deref(), Some("used"));
+        assert_eq!(parsed.native_value, Some(61));
+        assert!(parse_threshold(&args("49", false)).is_err());
+        assert_eq!(
+            parse_threshold(&args("49", true))
+                .unwrap()
+                .remaining_percent,
+            51
+        );
+        let mut wrong_direction = args("40", false);
+        wrong_direction[6] = "--stop-remaining-percent".into();
+        assert!(parse_threshold(&wrong_direction).is_err());
+    }
+
+    #[test]
+    fn display_direction_per_host() {
+        assert_eq!(native_usage_direction("claude"), "used");
+        assert_eq!(native_usage_value("claude", 35), 65);
+        assert_eq!(native_usage_direction("codex"), "remaining");
+        assert_eq!(native_usage_value("codex", 35), 35);
+        assert_eq!(native_usage_direction("antigravity"), "remaining");
+    }
+
+    #[test]
+    fn host_threshold_requires_saved_window_choice_and_updates_only_selected_window() {
+        let user = temporary_target();
+        write_version_two_policy(
+            user.path(),
+            "claude",
+            hive_core::preferences::UsageProtection::from_legacy(true, false, false),
+        );
+        assert!(crate::user_setup::set_operational_host_usage_threshold(
+            user.path(),
+            "claude",
+            "weekly",
+            35
+        )
+        .unwrap_err()
+        .contains("no per-window usage settings"));
+        set_host_windows(
+            user.path(),
+            Some(
+                json!({"five_hour_limit":true,"guard":"both","five_hour_stop_remaining_percent":20,"weekly_stop_remaining_percent":30}),
+            ),
+        );
+        let update = crate::user_setup::set_operational_host_usage_threshold(
+            user.path(),
+            "claude",
+            "weekly",
+            35,
+        )
+        .unwrap();
+        assert_eq!(update.previous, 30);
+        let stored: Value = serde_yaml::from_slice(&update.config_bytes).unwrap();
+        assert_eq!(stored["usage_guard"]["stop_remaining_percent"], 20);
+        assert_eq!(
+            stored["usage_guard"]["host_windows"]["claude"]["weekly_stop_remaining_percent"],
+            35
+        );
+        assert_eq!(
+            stored["usage_guard"]["host_windows"]["claude"]["five_hour_stop_remaining_percent"],
+            20
+        );
+    }
+
+    #[test]
     fn antigravity_shows_one_provider_threshold_and_rejects_a_five_hour_shape() {
         let user = temporary_target();
         write_version_two_policy(
@@ -4322,6 +4626,10 @@ mod tests {
                 target: None,
                 user_root: Some(user.path().into()),
                 remaining_percent: percent,
+                host: None,
+                window: None,
+                native_direction: None,
+                native_value: None,
             })
             .unwrap()
         };
@@ -5526,6 +5834,10 @@ mod tests {
             target: Some(project.path().to_owned()),
             user_root: None,
             remaining_percent: 10,
+            host: None,
+            window: None,
+            native_direction: None,
+            native_value: None,
         })
         .expect("threshold update");
         assert_eq!(
@@ -5561,6 +5873,10 @@ mod tests {
             target: Some(project.path().to_owned()),
             user_root: None,
             remaining_percent: 60,
+            host: None,
+            window: None,
+            native_direction: None,
+            native_value: None,
         })
         .expect("restore blocking threshold");
         assert_eq!(
@@ -5571,6 +5887,10 @@ mod tests {
             target: Some(project.path().to_owned()),
             user_root: None,
             remaining_percent: 10,
+            host: None,
+            window: None,
+            native_direction: None,
+            native_value: None,
         })
         .expect("lower threshold again");
         let mut capture: Value = serde_json::from_slice(
@@ -5674,6 +5994,10 @@ usage_guard:
             target: Some(project.path().to_owned()),
             user_root: None,
             remaining_percent: 40,
+            host: None,
+            window: None,
+            native_direction: None,
+            native_value: None,
         })
         .expect("configured project threshold");
         assert_eq!(changed.code, "hive.usage-threshold-updated");
@@ -5730,6 +6054,10 @@ usage_guard:
                 target: Some(target.path().to_owned()),
                 user_root: None,
                 remaining_percent: 40,
+                host: None,
+                window: None,
+                native_direction: None,
+                native_value: None,
             })
             .is_err());
             assert!(!target.path().join(".hive").exists());
