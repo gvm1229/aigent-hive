@@ -59,3 +59,12 @@ class DirectiveReadingTests(unittest.TestCase):
         for content in (b"{", b" " * 65537):
             path.write_bytes(content)
             self.assertTrue(CHECK(self.root)[1])
+
+    def test_accepts_ten_percent_headroom_and_rejects_excess(self):
+        self.data["scenarios"]["startup"]["baseline_bytes"] = 1000
+        self.data["scenarios"]["startup"]["max_bytes"] = 1100
+        self.save()
+        self.assertEqual(CHECK(self.root)[1], [])
+        self.data["scenarios"]["startup"]["max_bytes"] = 1200
+        self.save()
+        self.assertTrue(CHECK(self.root)[1])

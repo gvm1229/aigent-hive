@@ -10,11 +10,11 @@ tags: [directives, routing, v0-10]
 aliases: ["Directive optimization"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
-  - "repo:.agents/directives/04-documentation-state.md#sha256:8125c0cdce9daeffb4f2c2b4ad258d4b63a0ff363429bfebb4f4d5852532ff91"
+  - "repo:.agents/directives/04-documentation-state.md#sha256:468031856977484a5c5c39e1af40f4efbe7c953ded7bfc6fa7e4bdabcbc00d82"
   - "repo:AGENTS.md#sha256:0588c67a687a50d00387ab18e2dda2d79a8bcf3344b67f63849cd5f8cab0dabb"
   - "repo:docs/architecture/agent-directive-ownership.md#sha256:db0d5c52f75c5ce82354cde25673a5ff701bf99b3458f4f311b7844555b0df05"
   - "repo:harness/template/AGENTS.md.jinja#sha256:fe7f06cc88b566a9ab1ef2919d8ca43830aa963a98208c084c56b5c12f26c864"
-  - "repo:scripts/check-agent-directives.py#sha256:d0520ff0a53524541cff7965258c89e2a2a2d03df1066312d854ac1ced41e5f9"
+  - "repo:scripts/check-agent-directives.py#sha256:b575636bcb279f1839fbd57c0aec697da34cd4cdc4709ca66e2bc6e122442b00"
 links: [agent-autonomous-continuation, artifact-boundaries, historical-project-base-coverage]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

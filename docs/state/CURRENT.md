@@ -17,12 +17,13 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.16.0`
-- 현재 등록 항목: 11/21 완료
+- 현재 등록 항목: 8/21 완료
 
 - `agent-owned`: `OV160-014`, `OV160-016`, `OV160-021`, `OV160-017`, `OV160-018`, `OV160-015`, `OV160-019`, `OV160-020`
 - `awaiting-user-authority`: `OV160-011`
 - `awaiting-external-evidence`: `OV160-012`
 - `blocked`: 없음
+- `reopened`: `OV160-003`, `OV160-004`, `OV160-007`
 <!-- HIVE:PLAN-STATE:END -->
 
 - [단계 3 종료 상태·유효한 근거와 한계](../archive/state/0.15.0-closeout.md)

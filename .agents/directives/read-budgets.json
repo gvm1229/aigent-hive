@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "baseline_revision": "0ca942bf0319f292e1d81ed1d44ac5c60342642b",
+  "baseline_revision": "15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2",
   "unit": "UTF-8 bytes, not model tokens",
   "scenarios": {
     "startup": {
-      "baseline_bytes": 13518,
-      "max_bytes": 10464,
+      "baseline_bytes": 10375,
+      "max_bytes": 11413,
       "files": [
         "AGENTS.md",
         ".agents/directives/01-behavior.md",
@@ -13,8 +13,8 @@
       ]
     },
     "code-edit": {
-      "baseline_bytes": 50813,
-      "max_bytes": 30487,
+      "baseline_bytes": 30176,
+      "max_bytes": 33194,
       "files": [
         "AGENTS.md",
         ".agents/directives/00-editing-discipline.md",
@@ -33,8 +33,8 @@
       ]
     },
     "source-maintenance": {
-      "baseline_bytes": 50813,
-      "max_bytes": 30487,
+      "baseline_bytes": 30533,
+      "max_bytes": 33587,
       "files": [
         "AGENTS.md",
         ".agents/directives/00-editing-discipline.md",
@@ -53,8 +53,8 @@
       ]
     },
     "plan-authoring": {
-      "baseline_bytes": 50813,
-      "max_bytes": 34260,
+      "baseline_bytes": 34151,
+      "max_bytes": 37567,
       "files": [
         "AGENTS.md",
         ".agents/directives/00-editing-discipline.md",
@@ -73,8 +73,8 @@
       ]
     },
     "release": {
-      "baseline_bytes": 55325,
-      "max_bytes": 45508,
+      "baseline_bytes": 45564,
+      "max_bytes": 50121,
       "files": [
         "AGENTS.md",
         ".agents/directives/00-editing-discipline.md",

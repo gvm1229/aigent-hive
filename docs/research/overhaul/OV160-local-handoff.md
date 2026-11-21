@@ -114,5 +114,5 @@ hive msg flow status --flow <flow-id> --target . --user-root $HOME
 2. develop→main PR(일반 병합). 이 PR이 구독자 안내 승인
 3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.3`, `acceptance_run_id=44842442665`
 4. `release-publish.yml`: `channel=stable`, 3의 후보 run ID, `send_subscriber_update=true`. npm 전파 지연(종료 6)이면 같은 입력에 `recover_published_packages=true`
-5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인
+5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인, `python3 scripts/check-plan-state.py --release` 확인
 6. 근거 `OV160-011.md`, 계획 OV160-011·012 `complete`, 단계 브랜치 `feature/overhaul-6-0.16.0-mediation` 원격·로컬 삭제, 단계 7 시작은 [재정비 순서](../../plans/overhaul/README.md)

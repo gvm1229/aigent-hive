@@ -15,13 +15,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--release", action="store_true")
     args = parser.parse_args()
     try:
         plan = load_plan(args.root)
+        reopened = [item.id for item in plan.criteria.values() if item.state == "reopened"]
+        if args.release and (reopened or plan.warnings):
+            print(json.dumps({"status": "invalid", "message": "release blocked by reopened criteria",
+                              "reopened": reopened, "warnings": plan.warnings}, ensure_ascii=False))
+            return 1
         changes = render(plan, write=args.write)
         status = "updated" if args.write and changes else "stale" if changes else "valid"
         print(json.dumps({"status": status, "version": plan.version,
-                          "criteria": len(plan.criteria), "changed_paths": changes}, ensure_ascii=False))
+                          "criteria": len(plan.criteria), "changed_paths": changes,
+                          "warnings": plan.warnings}, ensure_ascii=False))
         return int(bool(changes) and not args.write)
     except (PlanError, OSError) as error:
         print(json.dumps({"status": "invalid", "message": str(error)}, ensure_ascii=False))

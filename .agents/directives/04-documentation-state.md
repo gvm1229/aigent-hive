@@ -2,8 +2,9 @@
 
 Canonical active plans: docs/plans/PLAN.md (goals, completion index, links/order; no checkboxes),
 concern-owned fragments (unique criterion IDs), docs/state/CURRENT.md (evidence, blockers, unrun
-checks, next work). Each stays below 8KiB. Archive chronology; backlog/archive do not count toward
-completion. Count each acceptance assertion once.
+checks, next work). Plan fragments stay below 32KiB; root `PLAN.md` and `CURRENT.md` stay below
+8KiB. Archive chronology; backlog/archive do not count toward completion. Count each acceptance
+assertion once.
 
 Durable maintainer rules for repo agent behavior belong in `.agents/directives/`, or the owning plan for plan-scoped rules; never only in host-private memory (maintainer, 2026-11-12).
 
