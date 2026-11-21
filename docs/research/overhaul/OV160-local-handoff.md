@@ -1,5 +1,6 @@
 # 0.16.0 local 인계 — local 세션 시작점
 
+- **2026-11-21 test.3 local 결과: 실패**([OV160-012](OV160-012.md)). cloud가 R1–R6 수정과 test.4 게시 뒤 이 문서 대상 갱신. 그 전에는 실행 금지
 - 작성: 2026-11-20 cloud 세션. cloud 범위 작업 전부 완료 뒤의 유일한 local 진입 문서
 - 대상 시험판: `aigent-hive@0.16.0-test.3`(후보 [44838848659](https://github.com/gvm1229/aigent-hive/actions/runs/44838848659), develop `73d21b87`, 세 OS 수용 [44842442665](https://github.com/gvm1229/aigent-hive/actions/runs/44842442665)). 근거 [시험 기록](OV160-013-test2.md). test.2는 Windows 수용 실패로 설치 금지. test.1 기록은 [OV160-009](OV160-009.md)
 - test.3 추가 내용(test.1 대비): [OV160-013](OV160-013.md) 측정 없음 경고 후 계속, 소스 폴더 Claude 기록, 기록 실패 사유, 동의 기반 `statusLine` 연결
