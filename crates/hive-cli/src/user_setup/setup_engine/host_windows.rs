@@ -70,8 +70,8 @@ fn instantiate(template: &Question, host: &str) -> Option<Question> {
             Some(hive_core::preferences::UsageDirection::Used)
         ) && [FIVE_HOUR_THRESHOLD, WEEKLY_THRESHOLD].contains(&template.id.as_str())
         {
-            question.help.ko.push_str(" 입력값은 저장할 잔여량 기준. 사용한 비율로 지정하려면 hive usage threshold의 --stop-used-percent 사용.");
-            question.help.en.push_str(" This setup field stores a remaining-quota floor. To enter a used percentage, use --stop-used-percent with hive usage threshold.");
+            question.help.ko.push_str(" 입력값은 저장할 잔여량 기준. 사용한 비율 입력은 hive usage threshold --help 참고.");
+            question.help.en.push_str(" This setup field stores a remaining-quota floor. For a used percentage, see hive usage threshold --help.");
         }
     }
     Some(question)
@@ -255,8 +255,8 @@ mod tests {
             .iter()
             .find(|question| question.id == "usage-host-weekly-threshold-codex")
             .unwrap();
-        assert!(claude.help.en.contains("--stop-used-percent"));
-        assert!(!codex.help.en.contains("--stop-used-percent"));
+        assert!(claude.help.en.contains("used percentage"));
+        assert!(!codex.help.en.contains("used percentage"));
     }
 
     #[test]

@@ -123,8 +123,10 @@ fn normalize(input: &Input, now: u64, millis: u128) -> Result<Capture, SensorErr
 }
 
 fn supported_version(value: &str) -> bool {
-    crate::user_install::parse_three_part_version(value)
-        .is_ok_and(|version| (MIN_VERSION..MAX_VERSION).contains(&version))
+    crate::user_install::parse_three_part_version(value).is_ok_and(|version| {
+        value == format!("{}.{}.{}", version.0, version.1, version.2)
+            && (MIN_VERSION..MAX_VERSION).contains(&version)
+    })
 }
 
 fn path(session_digest: &str) -> Result<PathBuf, AdapterError> {

@@ -311,11 +311,19 @@ check, probe-native, capture, summarize-tokens, fallback-install
 
 선택 옵션
   --host <호스트>              codex, claude, antigravity 중 하나
+  --window <five-hour|weekly|all>
+                               호스트별 보호 창
+  --stop-used-percent <1..100> 사용한 비율 기준 (호스트별)
+  --stop-remaining-percent <0..99>
+                               남은 비율 기준 (호스트별)
+  --confirm                    사용한 비율 50 미만 확인
   --remaining-percent <0..99>  모든 보호 한도의 남은 양 기준 % (threshold)
   --output json                기계용 JSON 출력
 
 예시
   hive usage threshold --user-root <user-root> --remaining-percent 20
+  hive usage threshold --user-root <user-root> --host claude --window weekly
+      --stop-used-percent 80
   hive usage monitor status --user-root <user-root>
 
 전체 형식
@@ -686,11 +694,19 @@ Required options
 
 Optional
   --host <호스트>              One of codex, claude, antigravity
+  --window <five-hour|weekly|all>
+                               Per-host guarded window
+  --stop-used-percent <1..100> Used-percent threshold (per host)
+  --stop-remaining-percent <0..99>
+                               Remaining-percent threshold (per host)
+  --confirm                    Confirm a used value below 50
   --remaining-percent <0..99>  Threshold %, all guarded limits (threshold)
   --output json                Machine-readable JSON output
 
 Examples
   hive usage threshold --user-root <user-root> --remaining-percent 20
+  hive usage threshold --user-root <user-root> --host claude --window weekly
+      --stop-used-percent 80
   hive usage monitor status --user-root <user-root>
 
 Full syntax
