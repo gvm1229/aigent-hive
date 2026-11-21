@@ -5,7 +5,7 @@
 > Product version: `0.16.0`
 > 공개 Stable: `0.15.3`
 > 현재 단계: 단계 6 cloud 부분 완료, OV160-012 이 PC 확인 대기
-> 공개 시험: `0.16.0-test.1` 게시·세 OS 수용 완료([근거](../research/overhaul/OV160-009.md))
+> 공개 시험: `0.16.0-test.3` 게시·세 OS 수용 완료([근거](../research/overhaul/OV160-013-test2.md)), test.2는 Windows 수용 실패
 > 작업 브랜치: `develop`(단계 브랜치 병합 완료, 정식 뒤 삭제)
 
 ## 목표와 결정

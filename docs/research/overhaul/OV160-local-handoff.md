@@ -1,7 +1,7 @@
 # 0.16.0 local 인계 — local 세션 시작점
 
 - 작성: 2026-11-20 cloud 세션. cloud 범위 작업 전부 완료 뒤의 유일한 local 진입 문서
-- 대상 시험판: `aigent-hive@0.16.0-test.3`(후보·세 OS 수용 실행 번호는 게시 뒤 기록, 게시 전에는 설치 금지). 근거 [시험 기록](OV160-013-test2.md). test.2는 Windows 수용 실패로 설치 금지. test.1 기록은 [OV160-009](OV160-009.md)
+- 대상 시험판: `aigent-hive@0.16.0-test.3`(후보 [44838848659](https://github.com/gvm1229/aigent-hive/actions/runs/44838848659), develop `73d21b87`, 세 OS 수용 [44842442665](https://github.com/gvm1229/aigent-hive/actions/runs/44842442665)). 근거 [시험 기록](OV160-013-test2.md). test.2는 Windows 수용 실패로 설치 금지. test.1 기록은 [OV160-009](OV160-009.md)
 - test.3 추가 내용(test.1 대비): [OV160-013](OV160-013.md) 측정 없음 경고 후 계속, 소스 폴더 Claude 기록, 기록 실패 사유, 동의 기반 `statusLine` 연결
 - develop 이력 주의: cloud가 2026-11-20 19:57Z에 자기 커밋 3개(`3cae7fde`·`adb96315`·`02e4c39d`)를 작성자 정정으로 교체(현재 develop 이력). 그 사이 pull한 local 사본은 `git fetch origin develop` 뒤 `git reset --keep origin/develop`
 - 포함: 파일 수신 상자 `hive msg`([OV160-002](OV160-002.md)), 훅 사건·비동기 반환([OV160-003](OV160-003.md)), 작성·검토·자문 흐름([OV160-004](OV160-004.md)), 피해 범위 통제·`hive stop`([OV160-005](OV160-005.md)), 결정 대기열·Discord 발신([OV160-006](OV160-006.md)), Skill 통합([OV160-007](OV160-007.md)), usage-guard 축소·`hive advanced`([OV160-008](OV160-008.md)), [단계 검토 수정](stage-6-review.md)
@@ -102,7 +102,7 @@ hive msg flow status --flow <flow-id> --target . --user-root $HOME
 
 1. 정식 공개 문서 준비(README·설치 안내·출시 목록·`docs/public-stable-release.json`)와 구독자 안내 `docs/releases/0.16.0.subscriber.ko.md` 작성, `python scripts/check-public-stable-docs.py` 통과
 2. develop→main PR(일반 병합). 이 PR이 구독자 안내 승인
-3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.3`, `acceptance_run_id=<test.3 세 OS 수용 실행 번호>`
+3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.3`, `acceptance_run_id=44842442665`
 4. `release-publish.yml`: `channel=stable`, 3의 후보 run ID, `send_subscriber_update=true`. npm 전파 지연(종료 6)이면 같은 입력에 `recover_published_packages=true`
 5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인
 6. 근거 `OV160-011.md`, 계획 OV160-011·012 `complete`, 단계 브랜치 `feature/overhaul-6-0.16.0-mediation` 원격·로컬 삭제, 단계 7 시작은 [재정비 순서](../../plans/overhaul/README.md)
