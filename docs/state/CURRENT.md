@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.16.0`
-- 현재 등록 항목: 12/22 완료
+- 현재 등록 항목: 13/23 완료
 
-- `agent-owned`: `OV160-016`, `OV160-021`, `OV160-020`, `OV160-022`
+- `agent-owned`: `OV160-021`, `OV160-020`, `OV160-022`, `OV160-023`
 - `awaiting-user-authority`: `OV160-011`
 - `awaiting-external-evidence`: `OV160-012`, `OV160-017`
 - `blocked`: 없음
