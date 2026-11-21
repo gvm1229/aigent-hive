@@ -181,3 +181,8 @@
 - 2026-11-21, 같은 검토자: **APPROVE WITH FIXES**. 차단 3건(016·014b 순환 의존, 채택 목록 전달 방식, CI 스크립트 재가동 범위)·권고 6건·사소 4건
 - 반영: 판정 함수 `hive_exclusive_entry`를 016 소유로 이동, `adopt_unauthenticated_prior` 인자와 채택 불가 종료 조건, `public-update-ci.py` 수정 목록과 Claude·Codex는 단위 시험 담당 명시, `startsWith` 금지와 허용 표시 주석, `hive update` 중단 위치(UI:1792·`update_activation.rs:188`)와 변경 전 일괄 판정, `.hive/runtime`·`.hive/claims` 처리, 검증 버전 0.15.0–0.15.3, `reopened-evidence` 키와 `release.yml` 연결, `--reviewer-provider`와 antigravity→gemini, 비관리 종류 경계, 사소 4건
 - 검토자 미확인: 정식 경로 소유 파일(이 세션에서 `release.yml` 확인), `.hive/plugins/**` 내용, v0.15.0 이전 마켓플레이스 틀
+
+## 8. 구현 근거
+
+- [OV160-014](OV160-014.md)·[OV160-015](OV160-015.md)·[OV160-017](OV160-017.md)·[OV160-018](OV160-018.md)·[OV160-019](OV160-019.md)
+- 이전 단계 근거: [OV160-010 develop 병합](OV160-010.md)

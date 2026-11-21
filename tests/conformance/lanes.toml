@@ -35,6 +35,7 @@ owner = "harness-core"
 contract = "CLI capabilities, setup schema, Skills, projections, roles, scheduling, and result contracts"
 release_gate = true
 modules = [
+  "tests.conformance.contracts.test_acceptance_workflow_has_no_version_pins",
   "tests.conformance.contracts.test_legacy_bridge_transport",
   "tests.conformance.contracts.test_setup_connection_loss",
   "tests.conformance.contracts.test_setup_console_interrupt",

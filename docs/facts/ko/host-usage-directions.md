@@ -9,9 +9,9 @@ summary: "호스트 센서 표 하나로 입력 방향·보호 창·지원 버�
 tags: [guard, sensor, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:b830054a7de89161421441148b7683d339ab383d31f3a1441690556a10fd2daf"
-  - "repo:crates/hive-cli/src/usage_control/antigravity.rs#sha256:16907c56509e4dbc868d045112af64c55cbb402d227bc5384bb254cf0ae8fe6a"
-  - "repo:crates/hive-cli/src/user_setup/setup_engine/host_windows.rs#sha256:26016906f758d48f982e3f378034b569d079b3c3448c738dba0cf4276c408420"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:f9c9ac485204ada707f82e2cfb79c49f9b39ed45b705b72c776df695c1211cee"
+  - "repo:crates/hive-cli/src/usage_control/antigravity.rs#sha256:ead5c18719be74afaaebb8fca8fd580e9aff48d018fc4bab4df1d51032aef909"
+  - "repo:crates/hive-cli/src/user_setup/setup_engine/host_windows.rs#sha256:ee75646866ee30dc744c5b1eb4987c03993752bab6e930731d3abe27cf5a2443"
   - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
 links: [usage-guard-thresholds, usage-sensor-policy]
 reviewed_revision: "git:9c19940d54e90822e384a95b9482071620324e98"

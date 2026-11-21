@@ -9,7 +9,7 @@ summary: "0.14.0 CLI 구현의 제한된 근거와 전체 운영체제·모델·
 tags: [guard, planning, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
+  - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
   - "repo:docs/decisions/interactive-cli-0.14.0.md#sha256:40e381b151d7da2535c5c2c0a956202e26edb23567a081f4782b6c420939baf7"
   - "repo:docs/plans/0.14.0-implementation.md#sha256:6156945bf5ddefbe7269030560097b261f3324ee77ae54b36df1940c80fb2160"
   - "repo:docs/research/cli-usage-settings-0.14.0.md#sha256:135a213351bf10e7d4ac861da0a2ead5af4e881fd375cf81a8a9fe1c1401d07e"

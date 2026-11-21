@@ -111,7 +111,7 @@ role = "hive-routine-implementer"
 aliases = ["Aether", "에테르"]
 commands = ["usage"]
 skills = ["aither", "usage-guard"]
-steps = ["Use usage-guard to inspect or adjust only the authorized usage scope; obey an installed halt without further work.", "For host thresholds, follow the sensor direction: Claude uses used percent; Codex and Antigravity use remaining percent."]
+steps = ["Use usage-guard to inspect or adjust only the authorized usage scope; obey an installed halt without further work."]
 
 [[gods]]
 name = "hades"
