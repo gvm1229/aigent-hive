@@ -10,7 +10,7 @@ tags: [consumer-harness, preservation, skills, upgrade]
 aliases: ["PUG93"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:b9439680a397b8459548cffabf6ebd0ff74f5e5ca4977ec8adda5e9676f92a0b"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:605860709c8b6c291fa4b8eaebde983a9cfa551677dc2b91c6e9f323ab71ac07"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:3a45f65d21038c488be8a8321f8c4df95b4e85d1e6170c98567d47bb0f14300b"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:33b0a59a13b659d8b98b583e682316b8df27964f7efc798af34967c8411cfe9e"
   - "repo:crates/hive-update/src/merge.rs#sha256:f9c983dc6fb71aa50994332395faaa55058d8e95add818221bed9c8073510558"
   - "repo:harness/skills/project-refresh/SKILL.md#sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067"

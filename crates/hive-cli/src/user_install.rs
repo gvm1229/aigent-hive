@@ -332,6 +332,11 @@ struct UserCommandArguments {
 pub(crate) enum InstallError {
     Input(String),
     Conflict(String),
+    PriorNotAdoptable {
+        occupied_path: String,
+        backup_location: String,
+    },
+    BackupTooLarge,
     Unsupported(String),
     Verification(String),
     Internal(String),
@@ -340,8 +345,8 @@ pub(crate) enum InstallError {
 impl InstallError {
     const fn status(&self) -> &'static str {
         match self {
-            Self::Input(_) | Self::Internal(_) => "error",
-            Self::Conflict(_) => "conflict",
+            Self::Input(_) | Self::Internal(_) | Self::BackupTooLarge => "error",
+            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => "conflict",
             Self::Unsupported(_) => "unsupported",
             Self::Verification(_) => "verification-failed",
         }
@@ -349,8 +354,8 @@ impl InstallError {
 
     const fn exit_code(&self) -> u8 {
         match self {
-            Self::Input(_) => 2,
-            Self::Conflict(_) => 3,
+            Self::Input(_) | Self::BackupTooLarge => 2,
+            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => 3,
             Self::Unsupported(_) => 4,
             Self::Verification(_) => 5,
             Self::Internal(_) => 10,
@@ -364,6 +369,10 @@ impl InstallError {
             | Self::Unsupported(message)
             | Self::Verification(message)
             | Self::Internal(message) => message,
+            Self::PriorNotAdoptable { .. } => {
+                "occupied user file cannot be adopted as prior Hive installation"
+            }
+            Self::BackupTooLarge => "transaction backup would exceed 512 MiB",
         }
     }
 
@@ -371,6 +380,14 @@ impl InstallError {
         match self {
             Self::Input(message) => Self::Input(message + suffix),
             Self::Conflict(message) => Self::Conflict(message + suffix),
+            Self::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => Self::PriorNotAdoptable {
+                occupied_path,
+                backup_location: backup_location + suffix,
+            },
+            Self::BackupTooLarge => Self::BackupTooLarge,
             Self::Unsupported(message) => Self::Unsupported(message + suffix),
             Self::Verification(message) => Self::Verification(message + suffix),
             Self::Internal(message) => Self::Internal(message + suffix),
@@ -732,6 +749,22 @@ const UNINSTALL_FILES: &[&str] = &[
     ".hive/config/user-setup-review.yml",
     ".hive/config/projects.yml",
 ];
+/// The preserving reinstall may delete only regenerable Hive trees and files. User data
+/// (`projects.yml`, runtime state, backups, claims) is never removed on this path.
+const REINSTALL_REMOVABLE_TREES: &[&str] = &[
+    ".hive/install",
+    ".hive/install-transactions",
+    ".hive/marketplaces",
+    ".hive/plugins",
+    ".hive/index",
+    ".hive/guides",
+];
+const REINSTALL_REMOVABLE_FILES: &[&str] = &[
+    ROOT_INDEX_RELATIVE,
+    ".hive/config/user-active-skills.yml",
+    ".hive/config/user-setup-progress.yml",
+    ".hive/config/user-setup-review.yml",
+];
 
 fn execute_uninstall(
     arguments: &UserUninstallArguments,
@@ -797,10 +830,10 @@ fn execute_uninstall(
     {
         remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
     }
-    for relative in UNINSTALL_TREES {
+    for relative in REINSTALL_REMOVABLE_TREES {
         remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
-    for relative in UNINSTALL_FILES {
+    for relative in REINSTALL_REMOVABLE_FILES {
         remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
     for relative in [
@@ -2712,8 +2745,15 @@ fn preserving_reinstall_dry_run(
                 ".hive/knowledge",
                 ".hive/config/user-setup.yml",
                 ".hive/config/user-feature-answers.yml",
-                ".hive/config/user-preferences.json"
+                ".hive/config/user-preferences.json",
+                ".hive/config/projects.yml",
+                ".hive/config/collections.yml",
+                ".hive/runtime",
+                ".hive/backups",
+                ".hive/claims",
+                ".hive/history"
             ],
+            "backup_transaction_planned": true,
         })),
     }
 }
@@ -2723,6 +2763,17 @@ fn execute_preserving_reinstall(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    // Backup first (OV160-016): copy user data, host guidance and every ownership manifest
+    // before anything is removed, and report where the copy is.
+    let mut backup_paths = transaction_backup_paths(arguments.host);
+    for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+        backup_paths.push(PathBuf::from(format!(
+            ".hive/install/{}.json",
+            host.as_str()
+        )));
+    }
+    backup_paths.push(PathBuf::from(".hive/install/user-projection.json"));
+    let backup_relative = save_preflight_backup(arguments, &backup_paths)?;
     let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
     let removed = execute_uninstall(
         &UserUninstallArguments {
@@ -2739,8 +2790,16 @@ fn execute_preserving_reinstall(
     "user-scope Hive installation completed after preserving knowledge and saved preferences"
         .clone_into(&mut reinstalled.message);
     reinstalled.changed_paths.extend(removed.changed_paths);
+    reinstalled.changed_paths.push(portable(&backup_relative));
     reinstalled.changed_paths.sort();
     reinstalled.changed_paths.dedup();
+    let backup_value = json!(portable(&backup_relative));
+    match reinstalled.data.as_mut() {
+        Some(serde_json::Value::Object(map)) => {
+            map.insert("preinstall_backup".to_owned(), backup_value);
+        }
+        _ => reinstalled.data = Some(json!({ "preinstall_backup": backup_value })),
+    }
     Ok(reinstalled)
 }
 
@@ -5309,24 +5368,9 @@ fn apply_plan(
     claude_state_before: Option<ClaudeHostState>,
     antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
-    let mut backup_nonce = [0_u8; 16];
-    getrandom::fill(&mut backup_nonce).map_err(|error| {
-        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
-    })?;
-    let mut encoded_nonce = String::with_capacity(32);
-    for byte in backup_nonce {
-        encoded_nonce.push(char::from(HEX[usize::from(byte >> 4)]));
-        encoded_nonce.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}-{encoded_nonce}",
-        arguments.host.as_str(),
-        unix_seconds()?,
-        std::process::id()
-    ));
+    let backup_relative = new_backup_relative(arguments.host)?;
     let snapshots = preflight_plan(&arguments.root_cap, plan)?;
     let index_existed = root_index_exists(&arguments.root_cap)?;
     let mut backup_entries = Vec::new();
@@ -5810,6 +5854,114 @@ fn persist_backup(
         expected.as_deref(),
         expected_permissions,
     )
+}
+
+fn new_backup_relative(host: UserHost) -> Result<PathBuf, InstallError> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(|error| {
+        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
+    })?;
+    let mut encoded = String::with_capacity(32);
+    for byte in nonce {
+        encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    Ok(PathBuf::from(format!(
+        ".hive/backups/user-install/{}/{}-{}-{encoded}",
+        host.as_str(),
+        unix_seconds()?,
+        std::process::id()
+    )))
+}
+
+fn save_preflight_backup(
+    arguments: &UserArguments,
+    paths: &[PathBuf],
+) -> Result<PathBuf, InstallError> {
+    let backup_relative = new_backup_relative(arguments.host)?;
+    let mut entries = Vec::new();
+    let mut total_bytes = 0_u64;
+    for relative in paths {
+        let existing = read_optional_regular(&arguments.root_cap, relative, MAX_USER_FILE_BYTES)?;
+        let permissions = if existing.is_some() {
+            file_permissions(&arguments.root_cap, relative)?
+        } else {
+            FilePermissions {
+                executable: false,
+                unix_mode: installed_unix_mode(false),
+            }
+        };
+        if let Some(bytes) = existing.as_deref() {
+            total_bytes = total_bytes.saturating_add(bytes.len() as u64);
+            if total_bytes > 512 * 1024 * 1024 {
+                return Err(InstallError::BackupTooLarge);
+            }
+            write_atomic_with_permissions(
+                &arguments.root_cap,
+                &backup_relative.join("files").join(relative),
+                bytes,
+                permissions,
+                None,
+                None,
+            )?;
+        }
+        entries.push(UserBackupEntry {
+            path: portable(relative),
+            existed: existing.is_some(),
+            digest: existing.as_deref().map(sha256_digest),
+            installed_digest: existing.as_deref().map(sha256_digest),
+            installed_executable: existing.as_ref().map(|_| permissions.executable),
+            installed_unix_mode: existing.as_ref().and(permissions.unix_mode),
+            executable: permissions.executable,
+            unix_mode: permissions.unix_mode,
+        });
+    }
+    let plan_digest = sha256_digest(
+        &serde_json::to_vec(&entries).map_err(|error| InstallError::Internal(error.to_string()))?,
+    );
+    let backup = UserBackupManifest {
+        schema_version: 2,
+        host: arguments.host,
+        plan_digest,
+        host_mutations: Vec::new(),
+        index_existed: root_index_exists(&arguments.root_cap)?,
+        index_removal: None,
+        codex_state_before: None,
+        claude_state_before: None,
+        antigravity_state_before: None,
+        host_owned_state: None,
+        pending_host_transition: None,
+        codex_plugin_was_latent_before_marketplace_add: false,
+        entries,
+    };
+    persist_backup(arguments, &backup_relative, &backup)?;
+    Ok(backup_relative)
+}
+
+fn transaction_backup_paths(host: UserHost) -> Vec<PathBuf> {
+    let mut paths = [
+        ".hive/config/projects.yml",
+        ".hive/config/collections.yml",
+        ".hive/config/user-setup.yml",
+        ".hive/config/user-feature-answers.yml",
+        ".hive/config/user-preferences.json",
+        ".hive/config/rag-trust.json",
+        ".hive/roster.toml",
+        ".hive/runtime/usage-monitor/config.json",
+        ".hive/runtime/usage-monitor/disable.json",
+        ".claude/settings.json",
+        ".claude/CLAUDE.md",
+        ".codex/AGENTS.md",
+        ".gemini/GEMINI.md",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .collect::<Vec<_>>();
+    paths.retain(|path| {
+        !matches!(path.to_str(), Some(".claude/settings.json")) || host == UserHost::Claude
+    });
+    paths
 }
 
 fn read_transaction_journal(
@@ -7033,15 +7185,41 @@ fn failure(action: &'static str, error: &InstallError) -> ActionResult {
         code: match error {
             InstallError::Input(_) => "hive.user-install-invalid-input",
             InstallError::Conflict(_) => "hive.user-install-conflict",
+            InstallError::PriorNotAdoptable { .. } => "hive.user-install-prior-not-adoptable",
+            InstallError::BackupTooLarge => "hive.backup-too-large",
             InstallError::Unsupported(_) => "hive.user-install-unsupported",
             InstallError::Verification(_) => "hive.user-install-verification-failed",
             InstallError::Internal(_) => "hive.internal-error",
         },
-        message: error.message().to_owned(),
+        message: match error {
+            InstallError::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => format!(
+                "occupied path cannot be adopted: {occupied_path}; no owned files were removed; backup: {backup_location}"
+            ),
+            _ => error.message().to_owned(),
+        },
         changed_paths: Vec::new(),
         evidence: Vec::new(),
-        next_action: None,
-        data: None,
+        next_action: match error {
+            InstallError::PriorNotAdoptable { .. } => {
+                Some("restore the saved copy with hive backup restore --host <host> --transaction <id>".to_owned())
+            }
+            _ => None,
+        },
+        data: match error {
+            InstallError::PriorNotAdoptable {
+                occupied_path,
+                backup_location,
+            } => Some(json!({
+                "occupied_path": occupied_path,
+                "backup_location": backup_location,
+                "files_removed": false,
+                "restore_command": "hive backup restore --host <host> --transaction <id>"
+            })),
+            _ => None,
+        },
     }
 }
 
@@ -9013,11 +9191,46 @@ mod tests {
         assert!(knowledge.is_file());
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
 
+        // OV160-016: user data outside the regenerable allowlist survives, and a backup is
+        // written before anything is removed.
+        let projects = temporary.path().join(".hive/config/projects.yml");
+        let projects_bytes = b"schema_version: 1\nprojects: []\n# sentinel\n";
+        fs::write(&projects, projects_bytes).unwrap();
+        let mut sentinels = Vec::new();
+        for relative in [
+            ".hive/backups/manual/keep.txt",
+            ".hive/claims/keep.json",
+            ".hive/runtime/usage-guard/keep.json",
+        ] {
+            let path = temporary.path().join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, relative.as_bytes()).unwrap();
+            sentinels.push(path);
+        }
         let repaired = execute(UserOperation::Install, &install, &runner)
             .expect("automatic preserving reinstall");
         assert_eq!(
             repaired.code,
             "hive.user-install-complete-after-preserving-reinstall"
+        );
+        assert_eq!(fs::read(&projects).unwrap(), projects_bytes);
+        assert_eq!(fs::read(&runtime).unwrap(), b"user execution history");
+        for path in &sentinels {
+            assert!(path.is_file(), "{} must survive", path.display());
+        }
+        let backup = repaired.data.as_ref().unwrap()["preinstall_backup"]
+            .as_str()
+            .expect("backup location reported")
+            .to_owned();
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(&backup)
+                    .join("files/.hive/config/projects.yml")
+            )
+            .unwrap(),
+            projects_bytes
         );
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
         assert_eq!(
