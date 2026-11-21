@@ -422,6 +422,29 @@ fn result(code: &'static str, message: &str, data: Value, changed: Vec<String>) 
     }
 }
 
+fn applied_next_action(host: HookHost, options: &[(&str, &str)]) -> Result<String, MsgError> {
+    let target = required(options, "--target")?;
+    let user_root = required(options, "--user-root")?;
+    let status = format!(
+        "hive msg hooks status --host {} --target \"{}\" --user-root \"{}\"",
+        host.as_str(),
+        target.replace('"', "\\\""),
+        user_root.replace('"', "\\\"")
+    );
+    Ok(match host {
+        HookHost::Codex => format!(
+            "Trust this project in Codex when prompted, then verify the project hooks with: {status}"
+        ),
+        HookHost::Claude => format!(
+            "If using Claude automatic mode, add project-specific permission rules for `Bash(hive msg:*)` and `Bash(codex exec:*)` in `.claude/settings.json`, using your chosen permission policy. Then verify the hook record with: {status}"
+        ),
+        HookHost::Gemini => format!(
+            "Gemini hooks remain preview-only until their event support is verified. Check the recorded status with: {status}"
+        ),
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 pub(super) fn run(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let action = arguments
         .first()
@@ -522,7 +545,11 @@ pub(super) fn run(arguments: &[String]) -> Result<ActionResult, MsgError> {
             "project hook entries written; host loading and effect still need a live check",
         )
     };
-    Ok(result(code, message, data, changed))
+    let mut output = result(code, message, data, changed);
+    if operation == "install" {
+        output.next_action = Some(applied_next_action(scope.host, &options)?);
+    }
+    Ok(output)
 }
 
 fn status(context: &Context, options: &[(&str, &str)]) -> Result<ActionResult, MsgError> {

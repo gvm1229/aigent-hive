@@ -121,7 +121,8 @@ pub(crate) fn monitor_policy(
         "codex",
         &target,
         true,
-    );
+        Some(&runtime),
+    )?;
     let loaded = load_control(&runtime, &binding)?;
     if let Some(control) = loaded.control.as_ref() {
         let target_digest = sha256_digest(target.requested_path().to_string_lossy().as_bytes());
@@ -269,7 +270,13 @@ pub(super) fn register_for_arguments(
     if !crate::usage_monitor::monitor_enabled(&runtime) {
         return Ok(None);
     }
-    let binding = bind_runtime_session(&arguments.binding, &config.primary_host, &target, true);
+    let binding = bind_runtime_session(
+        &arguments.binding,
+        &config.primary_host,
+        &target,
+        true,
+        Some(&runtime),
+    )?;
     let loaded = load_control(&runtime, &binding)?;
     if loaded.state != OverrideState::Current {
         return Ok(None);

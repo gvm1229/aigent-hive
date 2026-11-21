@@ -127,9 +127,14 @@ fn parse_arguments(arguments: &[String]) -> Result<Arguments, String> {
     }
     let user_root =
         PathBuf::from(user_root.ok_or_else(|| "update check requires --user-root".to_owned())?);
-    if !user_root.is_absolute() {
-        return Err("--user-root must be an absolute directory".to_owned());
-    }
+    let absolute = if user_root.is_absolute() {
+        user_root
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("cannot resolve current directory: {error}"))?
+            .join(user_root)
+    };
+    let user_root = hive_core::normalize_platform_root(&absolute);
     Ok(Arguments { user_root })
 }
 
@@ -346,6 +351,22 @@ mod tests {
         )
         .expect("user config");
         temporary
+    }
+
+    #[test]
+    fn relative_user_root_is_resolved_from_current_directory() {
+        let arguments = parse_arguments(&[
+            "--check".into(),
+            "--user-root".into(),
+            ".".into(),
+            "--output".into(),
+            "json".into(),
+        ])
+        .expect("relative user root");
+        assert_eq!(
+            arguments.user_root,
+            hive_core::normalize_platform_root(&std::env::current_dir().unwrap())
+        );
     }
 
     #[test]

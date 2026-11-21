@@ -25,6 +25,7 @@ use hive_core::mediation::{
 };
 use hive_core::sha256_digest;
 use serde_json::{json, Value};
+use std::collections::BTreeSet;
 use std::path::Path;
 
 const ALLOW_SAME_PROVIDER: &str = "--allow-same-provider";
@@ -207,12 +208,19 @@ fn derive(observed: &[StepObservation]) -> (FlowState, Option<usize>) {
 // Profiles.
 
 /// Roster-resolved profile; the god is the named god or the first god mapped to the role.
-fn resolve_profile(context: &Context, name: &str, flag: &str) -> Result<StepProfile, MsgError> {
+fn resolve_profile(
+    context: &Context,
+    name: &str,
+    flag: &str,
+    provider: Option<&str>,
+) -> Result<StepProfile, MsgError> {
     checked_id(name, flag)?;
-    let (role, provider, resolved) = context
-        .roster
-        .resolve_named(name)
-        .map_err(|error| MsgError::input(format!("{flag}: unknown role: {error}")))?;
+    let resolution = provider.map_or_else(
+        || context.roster.resolve_named(name),
+        |provider| context.roster.resolve_named_for(name, provider),
+    );
+    let (role, provider, resolved) =
+        resolution.map_err(|error| MsgError::input(format!("{flag}: unknown role: {error}")))?;
     let god = hive_core::gods::find(name)
         .map(|god| god.name.to_owned())
         .or_else(|| {
@@ -234,13 +242,60 @@ fn resolve_profile(context: &Context, name: &str, flag: &str) -> Result<StepProf
 fn profile_current(context: &Context, profile: &StepProfile) -> bool {
     context
         .roster
-        .resolve_named(&profile.role)
+        .resolve_named_for(&profile.role, &profile.provider)
         .is_ok_and(|(_, provider, role)| {
             provider == profile.provider
                 && role.model.as_deref() == Some(profile.model.as_str())
                 && role.effort.as_deref() == Some(profile.effort.as_str())
         })
 }
+
+fn selected_provider_names(user_root: &str, except: &str) -> Result<Vec<String>, MsgError> {
+    let root = crate::user_install::open_user_root_for_setup(Path::new(user_root))
+        .map_err(MsgError::input)?;
+    let Some(config) = crate::user_setup::load_operational_config(&root)
+        .map_err(|error| MsgError::input(error.message().to_owned()))?
+    else {
+        return Ok(Vec::new());
+    };
+    Ok(config
+        .selected_hosts
+        .iter()
+        .map(|host| match host.as_str() {
+            "antigravity" => "gemini",
+            provider => provider,
+        })
+        .filter(|provider| *provider != except)
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect())
+}
+
+fn provider_command(options: &[(&str, &str)], providers: &[String]) -> String {
+    let mut base = String::from("hive msg flow start");
+    for (option, value) in options {
+        if *option != "--reviewer-provider" {
+            base.push(' ');
+            base.push_str(option);
+            base.push_str(" \"");
+            base.push_str(&value.replace('"', "\\\""));
+            base.push('"');
+        }
+    }
+    let commands = if providers.is_empty() {
+        format!("{base} --allow-same-provider")
+    } else {
+        providers
+            .iter()
+            .map(|provider| format!("{base} --reviewer-provider {provider}"))
+            .collect::<Vec<_>>()
+            .join(" OR ")
+    };
+    format!("Choose a reviewer provider and run: {commands}")
+}
+
+type StepInput = (String, Option<String>, Vec<u8>, Option<PreviousResult>);
 
 // ---------------------------------------------------------------------------------------------
 // Step creation.
@@ -252,14 +307,14 @@ fn step_input(
     record: &FlowRecord,
     observed: &[StepObservation],
     index: usize,
-) -> Result<(String, Vec<u8>, Option<PreviousResult>), MsgError> {
+) -> Result<StepInput, MsgError> {
     let step = &record.steps[index];
     if index == 0 {
         let brief = context
             .target
             .read_optional(Path::new(&record.brief_file), MAX_BODY_BYTES)?
             .ok_or_else(|| MsgError::blocked("hive.msg-flow-quarantined", "brief is missing"))?;
-        Ok((record.initiator_role.clone(), brief, None))
+        Ok((record.initiator_role.clone(), None, brief, None))
     } else {
         let previous_step = &record.steps[index - 1];
         let latest = observed[index - 1]
@@ -292,7 +347,12 @@ fn step_input(
             result_bytes: receipt.result_bytes,
         };
         let body = flow::step_body(record, step, previous_step, &previous, &bytes);
-        Ok((previous_step.profile.role.clone(), body, Some(previous)))
+        Ok((
+            previous_step.profile.role.clone(),
+            Some(previous_step.profile.provider.clone()),
+            body,
+            Some(previous),
+        ))
     }
 }
 
@@ -319,9 +379,13 @@ fn create_step(
         ));
     }
     let step_index = u32::try_from(index).unwrap_or(u32::MAX);
-    let (sender_role, body, previous) = step_input(context, record, observed, index)?;
+    let (sender_role, sender_provider, body, previous) =
+        step_input(context, record, observed, index)?;
     let request = SendRequest {
-        sender: context.sender(&sender_role)?,
+        sender: match sender_provider {
+            Some(provider) => context.sender_for_provider(&sender_role, &provider)?,
+            None => context.sender(&sender_role)?,
+        },
         recipient: step.profile.role.clone(),
         task: Some(record.task.clone()),
         body,
@@ -560,6 +624,7 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
             "--kind",
             "--builder",
             "--reviewer",
+            "--reviewer-provider",
             "--advisor",
             "--task",
             "--file",
@@ -579,10 +644,59 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
     }
     let kind =
         FlowKind::parse(option(&options, "--kind").unwrap_or("review")).map_err(MsgError::input)?;
-    let builder = resolve_profile(&context, required(&options, "--builder")?, "--builder")?;
-    let reviewer = resolve_profile(&context, required(&options, "--reviewer")?, "--reviewer")?;
+    let builder = resolve_profile(
+        &context,
+        required(&options, "--builder")?,
+        "--builder",
+        None,
+    )?;
+    let reviewer_name = required(&options, "--reviewer")?;
+    let reviewer_provider = if let Some(provider) = option(&options, "--reviewer-provider") {
+        if !matches!(provider, "codex" | "claude" | "gemini") {
+            return Err(MsgError::input(
+                "--reviewer-provider must be codex, claude or gemini",
+            ));
+        }
+        Some(provider.to_owned())
+    } else if allow_same_provider {
+        None
+    } else {
+        let others =
+            selected_provider_names(required(&options, "--user-root")?, &builder.provider)?;
+        if others.len() == 1 {
+            Some(others[0].clone())
+        } else {
+            let reviewer = resolve_profile(&context, reviewer_name, "--reviewer", None)?;
+            let reason = check_cross_provider(&builder, &reviewer, false)
+                .err()
+                .unwrap_or_else(|| {
+                    "reviewer provider is not uniquely selected; choose one with --reviewer-provider"
+                        .to_owned()
+                });
+            return Err(
+                MsgError::blocked("hive.msg-flow-same-provider", reason).with_next_action(
+                    provider_command(
+                        &options,
+                        &context
+                            .roster
+                            .providers
+                            .keys()
+                            .filter(|provider| *provider != &builder.provider)
+                            .cloned()
+                            .collect::<Vec<_>>(),
+                    ),
+                ),
+            );
+        }
+    };
+    let reviewer = resolve_profile(
+        &context,
+        reviewer_name,
+        "--reviewer",
+        reviewer_provider.as_deref(),
+    )?;
     let advisor = option(&options, "--advisor")
-        .map(|name| resolve_profile(&context, name, "--advisor"))
+        .map(|name| resolve_profile(&context, name, "--advisor", None))
         .transpose()?;
     check_cross_provider(&builder, &reviewer, allow_same_provider)
         .map_err(|reason| MsgError::blocked("hive.msg-flow-same-provider", reason))?;

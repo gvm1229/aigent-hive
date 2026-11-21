@@ -405,6 +405,7 @@ pub(crate) fn dispatch_preflight(
 }
 
 /// Reread mutable policy and session records immediately before an authorization is published.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result<(), AdapterError> {
     if preflight.result.exit_code != 0 {
         return Err(AdapterError::Safety(
@@ -437,7 +438,8 @@ pub(crate) fn verify_dispatch_preflight(preflight: &DispatchPreflight) -> Result
         &config.primary_host,
         &target,
         global.is_some(),
-    );
+        Some(runtime),
+    )?;
     let control = load_control(runtime, &binding)?;
     if effective_policy_digest(&config)? != preflight.trace.policy_digest
         || runtime_digest(control.snapshot.bytes()) != preflight.trace.control_digest
@@ -959,7 +961,8 @@ fn capture_claude_bytes(
         "claude",
         &inspected,
         global_runtime,
-    );
+        Some(&runtime),
+    )?;
     let relative = claude_capture_path_for(&binding)?;
     let desired = serde_json::to_vec(&capture)
         .map_err(|error| AdapterError::Internal(format!("cannot encode capture: {error}")))?
@@ -1161,8 +1164,14 @@ fn claude_capture_path_for(binding: &SessionBinding) -> Result<PathBuf, AdapterE
 }
 
 /// One stable identity for a target folder. Trailing separators and `.` parts do not matter.
-/// Letter case is kept, so existing source runtime state keeps its location on every OS.
+/// Disk case is used when available; bindings retain an existing as-given runtime scope.
 fn target_scope_digest(path: &Path) -> String {
+    let resolved = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let normalized = resolved.components().collect::<PathBuf>();
+    sha256_digest(normalized.to_string_lossy().as_bytes())
+}
+
+fn target_scope_digest_as_given(path: &Path) -> String {
     let normalized = path.components().collect::<PathBuf>();
     sha256_digest(normalized.to_string_lossy().as_bytes())
 }
@@ -1583,12 +1592,29 @@ fn bind_runtime_session(
     primary_host: &str,
     target: &PinnedTarget,
     global_runtime: bool,
-) -> SessionBinding {
+    runtime: Option<&PinnedTarget>,
+) -> Result<SessionBinding, AdapterError> {
     let mut binding = bind_session(parsed, primary_host);
     if global_runtime {
         binding.runtime_scope = Some(target_scope_digest(target.requested_path()));
+        let legacy_scope = target_scope_digest_as_given(target.requested_path());
+        if binding.runtime_scope.as_deref() != Some(legacy_scope.as_str()) {
+            if let Some(runtime) = runtime {
+                let mut legacy = binding.clone();
+                legacy.runtime_scope = Some(legacy_scope);
+                let control_exists = runtime
+                    .read_optional(&control_path(&legacy), MAX_CONTROL_BYTES)?
+                    .is_some();
+                let capture_exists = runtime
+                    .read_optional(&claude_capture_path_for(&legacy)?, MAX_CAPTURE_BYTES)?
+                    .is_some();
+                if control_exists || capture_exists {
+                    binding.runtime_scope = legacy.runtime_scope;
+                }
+            }
+        }
     }
-    binding
+    Ok(binding)
 }
 
 fn required<'a>(options: &[(&'a str, &'a str)], name: &str) -> Result<&'a str, AdapterError> {
@@ -1619,7 +1645,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
             &config.primary_host,
             &target,
             config.target_class.uses_global_runtime(),
-        );
+            None,
+        )?;
         target.verify_current()?;
         return Ok(disabled::result("ShowUsageStatus", &binding, &config));
     }
@@ -1630,7 +1657,8 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         &config.primary_host,
         &target,
         global_runtime.is_some(),
-    );
+        Some(runtime),
+    )?;
     let loaded = load_control(runtime, &binding)?;
     let halt = load_halt(runtime, &binding)?;
     let guard_enabled = effective_enabled(&loaded, config.guard_enabled);
@@ -1778,7 +1806,8 @@ fn enforce_captured(
             &config.primary_host,
             &target,
             config.target_class.uses_global_runtime(),
-        );
+            None,
+        )?;
         *trace = disabled::trace(&config)?;
         target.verify_current()?;
         return Ok(disabled::result("CheckUsage", &binding, &config));
@@ -1790,7 +1819,8 @@ fn enforce_captured(
         &config.primary_host,
         &target,
         global_runtime.is_some(),
-    );
+        Some(runtime),
+    )?;
     let mut policy_digest = effective_policy_digest(&config)?;
     let loaded = load_control(runtime, &binding)?;
     trace.policy_digest.clone_from(&policy_digest);
@@ -3140,7 +3170,8 @@ fn control_session(arguments: &SessionArguments) -> Result<ActionResult, Adapter
         &config.primary_host,
         &target,
         global_runtime.is_some(),
-    );
+        Some(runtime),
+    )?;
     let loaded = load_control(runtime, &binding)?;
     let currently_enabled = effective_enabled(&loaded, config.ordinary_enabled());
     let zero_action = matches!(
@@ -4129,9 +4160,10 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
 #[cfg(test)]
 mod tests {
     use super::{
-        bind_session, capture_and_settle, claude_capture_path, control_path, control_session,
-        effective_enabled, enforce, halt_path, native_then_consented_fallback,
-        native_usage_direction, native_usage_value, parse_installed_config, parse_threshold,
+        bind_runtime_session, bind_session, capture_and_settle, claude_capture_path,
+        claude_capture_path_for, control_path, control_session, effective_enabled, enforce,
+        halt_path, native_then_consented_fallback, native_usage_direction, native_usage_value,
+        parse_installed_config, parse_threshold,
         read_claude_capture_snapshot, read_effective_config, set_threshold, status, ActionResult,
         AdapterError, CaptureArguments, EnforceArguments, FileSnapshot, LoadedControl,
         OverrideState, ParsedBinding, SessionAction, SessionArguments, SessionBinding,
@@ -4142,10 +4174,40 @@ mod tests {
     use serde_json::{json, Value};
     use std::cell::Cell;
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     const NOW: u64 = 1_000;
+
+    #[cfg(windows)]
+    #[test]
+    fn target_case_resolution_reuses_an_existing_as_given_fingerprint_location() {
+        let project = tempfile::tempdir().unwrap();
+        let runtime_dir = tempfile::tempdir().unwrap();
+        let alternate = PathBuf::from(project.path().to_string_lossy().to_uppercase());
+        let target = PinnedTarget::open_usage(&alternate).unwrap();
+        let runtime = PinnedTarget::open_usage(runtime_dir.path()).unwrap();
+        let actual = super::target_scope_digest(project.path());
+        let as_given = super::target_scope_digest_as_given(&alternate);
+        assert_ne!(actual, as_given);
+        let parsed = ParsedBinding {
+            session_id: "case-test".into(),
+            process_id: 1,
+        };
+        let mut prior = bind_session(&parsed, "codex");
+        prior.runtime_scope = Some(as_given.clone());
+        for relative in [
+            control_path(&prior),
+            claude_capture_path_for(&prior).unwrap(),
+        ] {
+            let path = runtime_dir.path().join(&relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"legacy record").unwrap();
+        }
+        let selected = bind_runtime_session(&parsed, "codex", &target, true, Some(&runtime))
+            .expect("runtime scope");
+        assert_eq!(selected.runtime_scope.as_deref(), Some(as_given.as_str()));
+    }
 
     fn binding(session_id: &str) -> SessionBinding {
         bind_session(

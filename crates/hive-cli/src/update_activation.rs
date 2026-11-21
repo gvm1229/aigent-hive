@@ -639,9 +639,14 @@ fn parse_arguments(arguments: &[String]) -> Result<UpdateArguments, String> {
                     .get(index + 1)
                     .ok_or_else(|| "missing value for --user-root".to_owned())?;
                 let path = PathBuf::from(value);
-                if !path.is_absolute() {
-                    return Err("--user-root must be an absolute directory".to_owned());
-                }
+                let absolute = if path.is_absolute() {
+                    path
+                } else {
+                    env::current_dir()
+                        .map_err(|error| format!("cannot resolve current directory: {error}"))?
+                        .join(path)
+                };
+                let path = hive_core::normalize_platform_root(&absolute);
                 user_root = Some(path);
                 index += 2;
             }
@@ -1354,6 +1359,18 @@ mod tests {
     use std::io::Cursor;
     use tempfile::tempdir;
 
+    #[test]
+    fn relative_user_root_is_resolved_from_current_directory() {
+        let arguments =
+            parse_arguments(&["--user-root".into(), ".".into()]).expect("relative user root");
+        assert_eq!(
+            arguments.user_root,
+            Some(hive_core::normalize_platform_root(
+                &std::env::current_dir().unwrap()
+            ))
+        );
+    }
+
     struct FakeRegistry(Vec<u8>);
 
     impl RegistrySource for FakeRegistry {
@@ -1697,7 +1714,7 @@ mod tests {
             UpdateChannel::Test
         );
         assert!(parse_arguments(&["--channel".to_owned(), "preview".to_owned()]).is_err());
-        assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_err());
+        assert!(parse_arguments(&["--user-root".to_owned(), "relative".to_owned()]).is_ok());
         assert!(parse_arguments(&["--confirm".to_owned(), "--confirm".to_owned()]).is_err());
     }
 

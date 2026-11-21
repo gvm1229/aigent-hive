@@ -19,6 +19,12 @@ fn fixture() -> Fixture {
     std::fs::create_dir_all(target.join(".hive")).unwrap();
     std::fs::create_dir_all(home.join(".hive")).unwrap();
     std::fs::write(home.join(".hive/roster.toml"), ROSTER).unwrap();
+    std::fs::create_dir_all(home.join(".hive/config")).unwrap();
+    std::fs::write(
+        home.join(".hive/config/user-setup.yml"),
+        "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\nprofile:\n  id: web-developer\npersona:\n  id: balanced\nselected_hosts:\n  - codex\n  - claude\nskills:\n  mode: individual\n  selected:\n    - user-setup\nusage_guard:\n  enabled: false\n  stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n",
+    )
+    .unwrap();
     let brief = root.path().join("brief.md");
     std::fs::write(&brief, "Implement the parser change and summarize it.").unwrap();
     Fixture {
@@ -232,6 +238,55 @@ fn msg_flow_orders_steps_and_advances_only_after_ack() {
 }
 
 #[test]
+fn reviewer_provider_uses_the_single_other_selected_host_and_keeps_it_for_later_steps() {
+    let f = fixture();
+    std::fs::write(
+        f.home.join(".hive/config/user-setup.yml"),
+        std::fs::read_to_string(f.home.join(".hive/config/user-setup.yml"))
+            .unwrap()
+            .replace("- claude", "- antigravity"),
+    )
+    .unwrap();
+    std::fs::write(
+        f.home.join(".hive/roster.toml"),
+        format!(
+            "{ROSTER}\n[providers.gemini.roles.hive-independent-judge]\nmodel = 'gemini-review'\neffort = 'high'\n"
+        ),
+    )
+    .unwrap();
+    let started = f.start(&["--advisor", "artemis"]);
+    assert_eq!(started["code"], "hive.msg-flow-started", "{started}");
+    assert_eq!(step(&started, 1)["provider"], "gemini");
+    let builder = id(&started, 0);
+    f.claim(&builder, "hephaistos", "1010");
+    let acked_builder = f.ack(&builder, "builder result", "1020");
+    let reviewer = id(&acked_builder, 1);
+    f.claim(&reviewer, "athena", "1030");
+    let acked_reviewer = f.ack(&reviewer, "review result", "1040");
+    assert_eq!(step(&acked_reviewer, 1)["provider"], "gemini");
+    let advisor = id(&acked_reviewer, 2);
+    let inbox = f.run(&["inbox", "--role", "artemis", "--now", "1041"]);
+    assert_eq!(inbox["data"]["messages"][0]["id"], advisor);
+    assert_eq!(inbox["data"]["messages"][0]["sender"]["provider"], "gemini");
+}
+
+#[test]
+fn ambiguous_reviewer_provider_returns_explicit_next_action() {
+    let f = fixture();
+    let path = f.home.join(".hive/config/user-setup.yml");
+    let config = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("- claude", "- claude\n  - antigravity");
+    std::fs::write(path, config).unwrap();
+    let result = f.start(&[]);
+    assert_eq!(result["code"], "hive.msg-flow-same-provider");
+    assert_eq!(result["exit_code"], 3);
+    let next = result["next_action"].as_str().unwrap();
+    assert!(next.contains("--reviewer-provider claude"));
+    assert!(next.contains("--reviewer-provider gemini"));
+}
+
+#[test]
 fn msg_flow_restart_and_duplicate_advance_create_one_next_step() {
     let f = fixture();
     let started = f.start(&[]);
@@ -393,7 +448,7 @@ fn msg_flow_quarantined_step_stops_the_flow() {
 }
 
 #[test]
-fn msg_flow_refuses_same_provider_review_unless_allowed() {
+fn msg_flow_uses_the_single_other_selected_provider_or_allows_same_provider_explicitly() {
     let f = fixture();
     let brief = f.target.parent().unwrap().join("brief.md");
     let arguments = [
@@ -408,15 +463,16 @@ fn msg_flow_refuses_same_provider_review_unless_allowed() {
         "--file",
         brief.to_str().unwrap(),
     ];
-    let refused = f.run(&arguments);
-    assert_eq!(refused["code"], "hive.msg-flow-same-provider", "{refused}");
-    assert_eq!(refused["exit_code"], 3);
-    assert!(!f.target.join(".hive/mediation/flows").exists());
+    let automatic = f.run(&arguments);
+    assert_eq!(automatic["code"], "hive.msg-flow-started", "{automatic}");
+    assert_eq!(step(&automatic, 1)["provider"], "claude");
+    std::fs::remove_dir_all(f.target.join(".hive/mediation")).unwrap();
     let mut allowed = arguments.to_vec();
     allowed.push("--allow-same-provider");
     let started = f.run(&allowed);
     assert_eq!(started["code"], "hive.msg-flow-started", "{started}");
     assert_eq!(started["data"]["flow"]["allow_same_provider"], true);
+    assert_eq!(step(&started, 1)["provider"], "codex");
     let escape = f.run(&["flow", "status", "--flow", "../x"]);
     assert_eq!(escape["code"], "hive.msg-path-refused", "{escape}");
 }
@@ -451,6 +507,8 @@ fn msg_flow_status_uses_recorded_profiles_and_marks_gemini_unverified() {
         "hephaistos",
         "--reviewer",
         "artemis",
+        "--reviewer-provider",
+        "gemini",
         "--task",
         "task-9",
         "--file",

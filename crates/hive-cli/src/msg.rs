@@ -52,7 +52,7 @@ USAGE:
     hive msg claim --id <message-id> --role <role|god> [--lease <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg ack --id <message-id> --claim <claim-token|claim-digest> --result <file> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg status --id <message-id|summon:<run>:<action>> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
-    hive msg flow start --builder <role|god> --reviewer <role|god> [--advisor <role|god>] --task <id> --file <brief> [--kind review] [--from <role|god>] [--key <flow-key>] [--allow-same-provider] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg flow start --builder <role|god> --reviewer <role|god> [--reviewer-provider codex|claude|gemini] [--advisor <role|god>] --task <id> --file <brief> [--kind review] [--from <role|god>] [--key <flow-key>] [--allow-same-provider] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow advance|status --flow <flow-id> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow requeue --flow <flow-id> --confirm <blocked-envelope-digest> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg hooks preview|apply|remove --host claude|codex|gemini --role <role|god> [--task <id>] [--return context|block] [--confirm <approval-digest>] --target <dir> --user-root <home> [--output json]
@@ -98,6 +98,7 @@ struct MsgError {
     exit_code: u8,
     code: &'static str,
     message: String,
+    next_action: Option<String>,
 }
 
 impl MsgError {
@@ -115,6 +116,7 @@ impl MsgError {
             exit_code,
             code,
             message: message.into(),
+            next_action: None,
         }
     }
     fn conflict(code: &'static str, message: impl Into<String>) -> Self {
@@ -122,6 +124,11 @@ impl MsgError {
     }
     fn blocked(code: &'static str, message: impl Into<String>) -> Self {
         Self::new("blocked", 3, code, message)
+    }
+
+    fn with_next_action(mut self, next_action: impl Into<String>) -> Self {
+        self.next_action = Some(next_action.into());
+        self
     }
 }
 
@@ -163,7 +170,7 @@ fn failure(error: MsgError, data: Option<Value>) -> ActionResult {
         message: error.message,
         changed_paths: Vec::new(),
         evidence: Vec::new(),
-        next_action: None,
+        next_action: error.next_action,
         data,
     }
 }
@@ -245,6 +252,29 @@ impl Context {
                 format!("sender does not resolve through the roster: {error}"),
             )
         })?;
+        Ok(MessageSender {
+            role: role.to_owned(),
+            god: hive_core::gods::find(name).map(|god| god.name.to_owned()),
+            provider: provider.to_owned(),
+            model: resolved.model.unwrap_or_default(),
+            effort: resolved.effort.unwrap_or_default(),
+        })
+    }
+
+    fn sender_for_provider(
+        &self,
+        name: &str,
+        selected_provider: &str,
+    ) -> Result<MessageSender, MsgError> {
+        let (role, provider, resolved) = self
+            .roster
+            .resolve_named_for(name, selected_provider)
+            .map_err(|error| {
+                MsgError::blocked(
+                    "hive.msg-forged-sender",
+                    format!("sender does not resolve through the recorded provider: {error}"),
+                )
+            })?;
         Ok(MessageSender {
             role: role.to_owned(),
             god: hive_core::gods::find(name).map(|god| god.name.to_owned()),
