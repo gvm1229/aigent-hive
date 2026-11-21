@@ -4163,11 +4163,11 @@ mod tests {
         bind_runtime_session, bind_session, capture_and_settle, claude_capture_path,
         claude_capture_path_for, control_path, control_session, effective_enabled, enforce,
         halt_path, native_then_consented_fallback, native_usage_direction, native_usage_value,
-        parse_installed_config, parse_threshold,
-        read_claude_capture_snapshot, read_effective_config, set_threshold, status, ActionResult,
-        AdapterError, CaptureArguments, EnforceArguments, FileSnapshot, LoadedControl,
-        OverrideState, ParsedBinding, SessionAction, SessionArguments, SessionBinding,
-        SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
+        parse_installed_config, parse_threshold, read_claude_capture_snapshot,
+        read_effective_config, set_threshold, status, ActionResult, AdapterError, CaptureArguments,
+        EnforceArguments, FileSnapshot, LoadedControl, OverrideState, ParsedBinding, SessionAction,
+        SessionArguments, SessionBinding, SessionControl, StatusArguments, ThresholdArguments,
+        MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
