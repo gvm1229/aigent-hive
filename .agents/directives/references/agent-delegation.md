@@ -4,7 +4,7 @@ Repository agent rules (maintainer, 2026-11-12). Items marked **maintainer PC** 
 
 ## Roles and launch
 
-- An orchestrator/executor split is allowed: one host plans and reviews; Codex executes heavy work.
+- **Codex scope (maintainer, 2026-11-21):** do not delegate implementation, research, review or documentation to Codex. Use Codex only for compatibility verification of Hive with Codex as a host (Codex CLI/app plugin and Skill display, Codex hooks, `codex exec` worker policy, Codex usage sensing). This replaces the earlier orchestrator/executor split.
 - **Maintainer PC:** launch Codex through `python C:/Users/hojin/.claude/scripts/codex-run.py --brief <file> --workdir <dir> --log <log> --report <report> --model gpt-6-luna`; the watchdog runs `codex exec -m <model> --dangerously-bypass-approvals-and-sandbox -c service_tier="priority"`. The default sandbox cannot read its own PID for 07 or write `.agents/work/active-sessions/`.
 - Use `gpt-6-luna`, the Codex config default; on 2026-11-19 Codex rejected `gpt-6.1-sol` for ChatGPT sign-in ("not supported when using Codex with a ChatGPT account"). Fast mode (`service_tier = "priority"`) is allowed. Codex ULTRAFAST is prohibited: high token use and no support in the maintainer's GPT plan. Never use Claude fast mode.
 - Official `codex exec` is allowed; subscription-account `claude -p` headless print mode is prohibited. Codex must use the maintainer's subscribed ChatGPT sign-in; never inspect credential files to check it.
