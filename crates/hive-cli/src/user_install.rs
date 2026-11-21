@@ -332,11 +332,6 @@ struct UserCommandArguments {
 pub(crate) enum InstallError {
     Input(String),
     Conflict(String),
-    PriorNotAdoptable {
-        occupied_path: String,
-        backup_location: String,
-    },
-    BackupTooLarge,
     Unsupported(String),
     Verification(String),
     Internal(String),
@@ -345,8 +340,8 @@ pub(crate) enum InstallError {
 impl InstallError {
     const fn status(&self) -> &'static str {
         match self {
-            Self::Input(_) | Self::Internal(_) | Self::BackupTooLarge => "error",
-            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => "conflict",
+            Self::Input(_) | Self::Internal(_) => "error",
+            Self::Conflict(_) => "conflict",
             Self::Unsupported(_) => "unsupported",
             Self::Verification(_) => "verification-failed",
         }
@@ -354,8 +349,8 @@ impl InstallError {
 
     const fn exit_code(&self) -> u8 {
         match self {
-            Self::Input(_) | Self::BackupTooLarge => 2,
-            Self::Conflict(_) | Self::PriorNotAdoptable { .. } => 3,
+            Self::Input(_) => 2,
+            Self::Conflict(_) => 3,
             Self::Unsupported(_) => 4,
             Self::Verification(_) => 5,
             Self::Internal(_) => 10,
@@ -369,10 +364,6 @@ impl InstallError {
             | Self::Unsupported(message)
             | Self::Verification(message)
             | Self::Internal(message) => message,
-            Self::PriorNotAdoptable { .. } => {
-                "occupied user file cannot be adopted as prior Hive installation"
-            }
-            Self::BackupTooLarge => "transaction backup would exceed 512 MiB",
         }
     }
 
@@ -380,14 +371,6 @@ impl InstallError {
         match self {
             Self::Input(message) => Self::Input(message + suffix),
             Self::Conflict(message) => Self::Conflict(message + suffix),
-            Self::PriorNotAdoptable {
-                occupied_path,
-                backup_location,
-            } => Self::PriorNotAdoptable {
-                occupied_path,
-                backup_location: backup_location + suffix,
-            },
-            Self::BackupTooLarge => Self::BackupTooLarge,
             Self::Unsupported(message) => Self::Unsupported(message + suffix),
             Self::Verification(message) => Self::Verification(message + suffix),
             Self::Internal(message) => Self::Internal(message + suffix),
@@ -770,8 +753,14 @@ fn execute_uninstall(
     arguments: &UserUninstallArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    refuse_enabled_usage_monitor(&arguments.root_cap)?;
+    execute_uninstall_after_checks(arguments, runner)
+}
+
+/// The usage monitor's scheduled task must be disabled before Hive files are removed.
+fn refuse_enabled_usage_monitor(root_cap: &Dir) -> Result<(), InstallError> {
     if let Some(bytes) = read_optional_regular(
-        &arguments.root_cap,
+        root_cap,
         Path::new(".hive/runtime/usage-monitor/config.json"),
         65_536,
     )? {
@@ -781,6 +770,13 @@ fn execute_uninstall(
             return Err(InstallError::Conflict("disable the usage monitor before uninstall so its scheduled task cannot become orphaned".into()));
         }
     }
+    Ok(())
+}
+
+fn execute_uninstall_after_checks(
+    arguments: &UserUninstallArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
     let mut installed = Vec::new();
@@ -2763,6 +2759,8 @@ fn execute_preserving_reinstall(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    // Refuse before writing a backup, so a refused attempt leaves no extra copy.
+    refuse_enabled_usage_monitor(&arguments.root_cap)?;
     // Backup first (OV160-016): copy user data, host guidance and every ownership manifest
     // before anything is removed, and report where the copy is.
     let mut backup_paths = transaction_backup_paths(arguments.host);
@@ -5895,7 +5893,9 @@ fn save_preflight_backup(
         if let Some(bytes) = existing.as_deref() {
             total_bytes = total_bytes.saturating_add(bytes.len() as u64);
             if total_bytes > 512 * 1024 * 1024 {
-                return Err(InstallError::BackupTooLarge);
+                return Err(InstallError::Conflict(
+                    "transaction backup would exceed 512 MiB; nothing was changed".into(),
+                ));
             }
             write_atomic_with_permissions(
                 &arguments.root_cap,
@@ -7185,41 +7185,15 @@ fn failure(action: &'static str, error: &InstallError) -> ActionResult {
         code: match error {
             InstallError::Input(_) => "hive.user-install-invalid-input",
             InstallError::Conflict(_) => "hive.user-install-conflict",
-            InstallError::PriorNotAdoptable { .. } => "hive.user-install-prior-not-adoptable",
-            InstallError::BackupTooLarge => "hive.backup-too-large",
             InstallError::Unsupported(_) => "hive.user-install-unsupported",
             InstallError::Verification(_) => "hive.user-install-verification-failed",
             InstallError::Internal(_) => "hive.internal-error",
         },
-        message: match error {
-            InstallError::PriorNotAdoptable {
-                occupied_path,
-                backup_location,
-            } => format!(
-                "occupied path cannot be adopted: {occupied_path}; no owned files were removed; backup: {backup_location}"
-            ),
-            _ => error.message().to_owned(),
-        },
+        message: error.message().to_owned(),
         changed_paths: Vec::new(),
         evidence: Vec::new(),
-        next_action: match error {
-            InstallError::PriorNotAdoptable { .. } => {
-                Some("restore the saved copy with hive backup restore --host <host> --transaction <id>".to_owned())
-            }
-            _ => None,
-        },
-        data: match error {
-            InstallError::PriorNotAdoptable {
-                occupied_path,
-                backup_location,
-            } => Some(json!({
-                "occupied_path": occupied_path,
-                "backup_location": backup_location,
-                "files_removed": false,
-                "restore_command": "hive backup restore --host <host> --transaction <id>"
-            })),
-            _ => None,
-        },
+        next_action: None,
+        data: None,
     }
 }
 

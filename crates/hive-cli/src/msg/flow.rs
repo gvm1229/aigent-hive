@@ -651,31 +651,31 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
         None,
     )?;
     let reviewer_name = required(&options, "--reviewer")?;
-    let reviewer_provider = if let Some(provider) = option(&options, "--reviewer-provider") {
-        if !matches!(provider, "codex" | "claude" | "gemini") {
-            return Err(MsgError::input(
-                "--reviewer-provider must be codex, claude or gemini",
-            ));
-        }
-        Some(provider.to_owned())
-    } else if allow_same_provider {
-        None
-    } else {
-        let others =
-            selected_provider_names(required(&options, "--user-root")?, &builder.provider)?;
-        if others.len() == 1 {
-            Some(others[0].clone())
+    let reviewer_provider =
+        if let Some(provider) = option(&options, "--reviewer-provider") {
+            if !matches!(provider, "codex" | "claude" | "gemini") {
+                return Err(MsgError::input(
+                    "--reviewer-provider must be codex, claude or gemini",
+                ));
+            }
+            Some(provider.to_owned())
+        } else if allow_same_provider {
+            None
         } else {
-            let reviewer = resolve_profile(&context, reviewer_name, "--reviewer", None)?;
-            let reason = check_cross_provider(&builder, &reviewer, false)
-                .err()
-                .unwrap_or_else(|| {
-                    "reviewer provider is not uniquely selected; choose one with --reviewer-provider"
-                        .to_owned()
-                });
-            return Err(
-                MsgError::blocked("hive.msg-flow-same-provider", reason).with_next_action(
-                    provider_command(
+            let others =
+                selected_provider_names(required(&options, "--user-root")?, &builder.provider)?;
+            let roster_reviewer = resolve_profile(&context, reviewer_name, "--reviewer", None)?;
+            if check_cross_provider(&builder, &roster_reviewer, false).is_ok() {
+                // The roster already puts the reviewer on another provider: keep test.3 behavior.
+                None
+            } else if others.len() == 1 {
+                Some(others[0].clone())
+            } else {
+                let reason = check_cross_provider(&builder, &roster_reviewer, false)
+                    .err()
+                    .unwrap_or_default();
+                return Err(MsgError::blocked("hive.msg-flow-same-provider", reason)
+                    .with_next_action(provider_command(
                         &options,
                         &context
                             .roster
@@ -684,11 +684,9 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
                             .filter(|provider| *provider != &builder.provider)
                             .cloned()
                             .collect::<Vec<_>>(),
-                    ),
-                ),
-            );
-        }
-    };
+                    )));
+            }
+        };
     let reviewer = resolve_profile(
         &context,
         reviewer_name,
