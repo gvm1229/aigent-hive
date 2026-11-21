@@ -41,6 +41,7 @@ class QualifyLocalHostsTests(unittest.TestCase):
         )
         environment = os.environ.copy()
         environment["FAKE_HIVE_CALLS"] = str(calls)
+        environment["CODEX_SESSION_ID"] = "test-session-from-environment"
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--target", str(self.target), "--user-root", str(self.user),
              "--host", "codex", "--hive", f'"{sys.executable}" "{fake}"'],
@@ -59,6 +60,7 @@ class QualifyLocalHostsTests(unittest.TestCase):
         observed = [json.loads(line) for line in calls.read_text(encoding="utf-8").splitlines()]
         self.assertEqual(observed[0], ["--version"])
         usage_call = next(call for call in observed if call[:2] == ["usage", "enforce"])
+        self.assertEqual(usage_call[usage_call.index("--session-id") + 1], "test-session-from-environment")
         self.assertIn(str(self.work.resolve()), usage_call[usage_call.index("--user-root") + 1])
 
     def test_missing_hive_is_an_input_and_not_a_failed_verdict(self):
@@ -71,6 +73,31 @@ class QualifyLocalHostsTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertFalse(report["hive_available"])
         self.assertNotIn("verdict", report)
+
+    def test_missing_current_session_skips_usage_probe_without_inventing_binding(self):
+        fake = self.root / "hive_fake.py"
+        calls = self.root / "calls.jsonl"
+        fake.write_text(
+            "import json, os, sys\n"
+            "with open(os.environ['FAKE_HIVE_CALLS'], 'a', encoding='utf-8') as f: "
+            "f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "print('AIgent Hive v0.16.0')\n",
+            encoding="utf-8",
+        )
+        environment = os.environ.copy()
+        environment.pop("CODEX_SESSION_ID", None)
+        environment.pop("SESSION_ID", None)
+        environment["FAKE_HIVE_CALLS"] = str(calls)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--target", str(self.target), "--user-root", str(self.user),
+             "--hive", f'"{sys.executable}" "{fake}"'],
+            capture_output=True, text=True, env=environment, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertFalse(report["inputs"]["usage_enforcement"]["supported"])
+        calls_seen = [json.loads(line) for line in calls.read_text(encoding="utf-8").splitlines()]
+        self.assertFalse(any(call[:2] == ["usage", "enforce"] for call in calls_seen))
 
 
 if __name__ == "__main__":

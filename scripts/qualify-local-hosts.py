@@ -101,10 +101,15 @@ def collect(args: argparse.Namespace) -> dict[str, object]:
         scratch_user = scratch / "user-root"
         scratch_target.mkdir()
         scratch_user.mkdir()
-        report["inputs"]["usage_enforcement"] = invoke(
-            command + ["usage", "enforce", "--target", str(scratch_target), "--host", args.host,
-                       "--session-id", "local-qualification", "--process-id", str(os.getpid()),
-                       "--user-root", str(scratch_user), "--output", "json"], cwd=target)
+        session_id = os.environ.get("CODEX_SESSION_ID") or os.environ.get("SESSION_ID")
+        if session_id:
+            report["inputs"]["usage_enforcement"] = invoke(
+                command + ["usage", "enforce", "--target", str(scratch_target), "--host", args.host,
+                           "--session-id", session_id, "--process-id", str(os.getpid()),
+                           "--user-root", str(scratch_user), "--output", "json"], cwd=target)
+        else:
+            report["inputs"]["usage_enforcement"] = {
+                "supported": False, "reason": "current host session identifier is unavailable"}
     hook_host = "gemini" if args.host == "antigravity" else args.host
     report["inputs"]["hook_preview"] = invoke(
         command + ["msg", "hooks", "preview", "--host", hook_host, "--role", "athena",
