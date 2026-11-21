@@ -39,6 +39,58 @@
       "package_integrity": "sha512-yw/ImObXswdYWkPZ6+s2cwpa0D/lL9HAD7yTccyASa2R+iYWTnQ9rrYtd5kTWR+LZde/ey0JdNdUbMutVAGZJw==",
       "binary_sha256": "c308c93bef1893b2a118442f5c711c1bce817c98bffea6e0857d9f5d22650816",
       "code_directory_hash": "cfbf58d87a0cd75d87994bec22e7a52381c8ab1b"
+    },
+    {
+      "platform": "darwin-arm64",
+      "version": "0.15.0",
+      "package_integrity": "sha512-pMqj5HhoKYdNf/AMtd9EX1htNzD5C69XXzvmFriSsZ9hsLI48lcG3agw+NH++TJVE1BdJ2OQQlpU3YPL8AarHA==",
+      "binary_sha256": "f477e3bc994556e5c3c9e8a939cbeaf8cbb59c97459439e38a76e46000864649",
+      "code_directory_hash": "31ee3f9c252331fa46c75e6584f4b2cdaab1a8eb"
+    },
+    {
+      "platform": "linux-x64",
+      "version": "0.15.0",
+      "package_integrity": "sha512-MpBc/K9e332UbhhmgYl7Is1HqkMIgPTUNE0SeS/s8Y6ebk4VkO8blAQRM1qXurXbFCCdmVBQkMLCXBplzGA6gw==",
+      "binary_sha256": "b8a6d7791cc6559917e51c63c32cd01ee75d9a97084fe8c4e8615720152229e9"
+    },
+    {
+      "platform": "darwin-arm64",
+      "version": "0.15.1",
+      "package_integrity": "sha512-PZtJj895txaDUc58GIiBcsN7vNgU2FlFRKrjioi1Zhh5svrpYrqFWZdNbDZKcc1Sl0LR9k3HoZ57v+sBuQiweA==",
+      "binary_sha256": "44da10351cafc8b892e5dcc3d70390c27108b86700a10382e3013efd90da2bb5",
+      "code_directory_hash": "0985e6e329fa5bc529e30c025e4128be1c5392a2"
+    },
+    {
+      "platform": "linux-x64",
+      "version": "0.15.1",
+      "package_integrity": "sha512-BTg2WKUl2AJefSH2D10pF86zugxJZW4pKV9HuXhrByN/0j9nZv3xnW2gDs9Nw6K3de4Rxl/G7wg2ncP7AkjRIw==",
+      "binary_sha256": "10fe5b81a73ec281c7c544ed83dfb024631d8465292e2ab3b3b7700f0e2dddad"
+    },
+    {
+      "platform": "darwin-arm64",
+      "version": "0.15.2",
+      "package_integrity": "sha512-N2qzW6I8ONQf1risYTcEjoq3HoiMGPF4/J7I4jOkGDsgnbHzF2H/4MTX7gjSsaBeOKPtMLyNz/iWLHBDQc4+/g==",
+      "binary_sha256": "08317f48713ad7538936628a9475744fe4d53ec541a38648b62f6d39a84aace7",
+      "code_directory_hash": "705a2a5e3ea8c1353d74b8b12328b44e2c58d0c9"
+    },
+    {
+      "platform": "linux-x64",
+      "version": "0.15.2",
+      "package_integrity": "sha512-m79iU/2qzPCI/07l5MEvrSDS44pTP4RhZ4MoEmWzxBOZX0Xrisen7xyg2ahlWgWQCGJq79l79Ctp9f8Hqf+IeQ==",
+      "binary_sha256": "c37270e3059156e4244e0d4311e500a698bc0340e7b158b5f768ea98d6bbbc97"
+    },
+    {
+      "platform": "darwin-arm64",
+      "version": "0.15.3",
+      "package_integrity": "sha512-B/A54jOvYsiXn6v5BPdaP8hKPrzHOOO/yoJqICNp009Bs30ILa+DdbHEZhPX81rCPbYqGJJ5XbyqcrNCSxYYKw==",
+      "binary_sha256": "43d02548601db8d1990226d1e7e53bde8a3b5bab42cfa3785d556b8c2645665d",
+      "code_directory_hash": "e7c3eeed1084aa0366c6500c4efdcc7b5f3c24f9"
+    },
+    {
+      "platform": "linux-x64",
+      "version": "0.15.3",
+      "package_integrity": "sha512-n+0ggaRWpsc1AmYkkNnvzAQRd3w5bR8HDTiuxv4DtRO3FicGURXm70V0JLwwSlXDhCidUfVBkncjJcO94d4eUg==",
+      "binary_sha256": "2e2ec384ffbbd29eb21f010f7aad58d67e20112a373dd80e8f799d102559f8a5"
     }
   ]
 }

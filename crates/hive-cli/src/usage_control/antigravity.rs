@@ -13,7 +13,8 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const VERSION: &str = "1.1.18";
+const MIN_VERSION: (u64, u64, u64) = (1, 1, 18);
+const MAX_VERSION: (u64, u64, u64) = (2, 0, 0);
 const POOLS: [&str; 2] = ["gemini-weekly", "3p-weekly"];
 const MAX_AGE: u64 = 120;
 
@@ -56,7 +57,7 @@ struct StoredBucket {
 }
 
 fn normalize(input: &Input, now: u64, millis: u128) -> Result<Capture, SensorError> {
-    if input.version != VERSION {
+    if !supported_version(&input.version) {
         return Err(SensorError::UnsupportedVersion);
     }
     if input.conversation_id.is_empty()
@@ -119,6 +120,11 @@ fn normalize(input: &Input, now: u64, millis: u128) -> Result<Capture, SensorErr
         expires_at,
         pools,
     })
+}
+
+fn supported_version(value: &str) -> bool {
+    crate::user_install::parse_three_part_version(value)
+        .is_ok_and(|version| (MIN_VERSION..MAX_VERSION).contains(&version))
 }
 
 fn path(session_digest: &str) -> Result<PathBuf, AdapterError> {
@@ -230,7 +236,7 @@ fn snapshot(
     account: Option<&str>,
     now: u64,
 ) -> Result<NormalizedSnapshot, SensorError> {
-    if c.schema_version != 1 || c.sensor_version != VERSION {
+    if c.schema_version != 1 || !supported_version(&c.sensor_version) {
         return Err(SensorError::UnsupportedVersion);
     }
     if c.session_digest != binding.session_digest || binding.host_scope != "antigravity" {
@@ -349,11 +355,22 @@ mod tests {
         );
         assert!(normalize(&i, 100, 100_000).is_err());
         let mut i = input();
-        i.version = "1.1.19".to_owned();
+        i.version = "1.1.17".to_owned();
         assert!(matches!(
             normalize(&i, 100, 100_000),
             Err(SensorError::UnsupportedVersion)
         ));
+        for version in ["1.1.18", "1.2.17", "1.99.0"] {
+            i.version = version.to_owned();
+            assert!(normalize(&i, 100, 100_000).is_ok(), "{version}");
+        }
+        for version in ["2.0.0", "1.1", "1.2.0-preview"] {
+            i.version = version.to_owned();
+            assert!(matches!(
+                normalize(&i, 100, 100_000),
+                Err(SensorError::UnsupportedVersion)
+            ));
+        }
         let mut i = input();
         i.quota.get_mut("gemini-weekly").unwrap().remaining_fraction = 1.01;
         assert!(normalize(&i, 100, 100_000).is_err());

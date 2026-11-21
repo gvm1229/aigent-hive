@@ -91,14 +91,12 @@ jobs:
           [[ "$stable_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$(npm view aigent-hive 'dist-tags.latest')" = "$stable_version"
       - name: Qualify original public update, removal, and reinstall
-        if: inputs.product_version == '0.14.0'
         shell: bash
         run: |
-          for previous in 0.13.1 0.13.2-test.2; do
-            python tests/fixtures/interactive-cli/public-update-ci.py \
-              --fixture "tests/work/public-update-npm-$previous" \
-              --package-version "$PACKAGE_VERSION" --previous-version "$previous" --owner npm
-          done
+          previous=$(jq -r .stable_version docs/public-stable-release.json)
+          python tests/fixtures/interactive-cli/public-update-ci.py \
+            --fixture "tests/work/public-update-npm-$previous" \
+            --package-version "$PACKAGE_VERSION" --previous-version "$previous" --owner npm
           python tests/fixtures/interactive-cli/public-update-ci.py \
             --fixture tests/work/public-update-direct-0.13.1 \
             --package-version "$PACKAGE_VERSION" --previous-version 0.13.1 --owner direct
@@ -119,6 +117,7 @@ jobs:
           test -f "$binary"
           printf 'HIVE_BIN=%s\n' "$binary" >>"$GITHUB_ENV"
       - name: Qualify interactive setup using the exact public binary
+        # version-pin-allowed: terminal scenarios target the 0.14 setup protocol.
         if: startsWith(inputs.product_version, '0.14.')
         shell: bash
         run: |
@@ -143,6 +142,7 @@ jobs:
             tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_project_choices_remain_a_real_cli_regression_gate \
             tests.conformance.contracts.test_setup_summary.SetupSummaryConformance.test_recorded_model_user_choices_remain_a_real_cli_regression_gate
       - name: Qualify public removal with real Codex and active idle monitor
+        # version-pin-allowed: the native monitor fixture targets the 0.14 removal protocol.
         if: startsWith(inputs.product_version, '0.14.') && runner.os == 'Windows'
         env:
           HIVE_PUBLIC_PACKAGE_VERSION: ${{ inputs.package_version }}
@@ -163,6 +163,7 @@ jobs:
             tests.conformance.contracts.test_directive_context \
             tests.conformance.contracts.test_native_policy_hooks
       - name: Qualify inert roster, gods, and reference envelope with the public binary
+        # version-pin-allowed: this fixture qualifies the 0.15.0 roster introduction.
         if: inputs.product_version == '0.15.0'
         shell: bash
         run: |
@@ -171,6 +172,7 @@ jobs:
             tests.conformance.contracts.test_roster_gods \
             tests.conformance.contracts.test_host_reference
       - name: Qualify signed Prepare through the exact public CLI
+        # version-pin-allowed: signed Prepare was introduced in 0.15.0.
         if: inputs.product_version == '0.15.0'
         shell: bash
         env:

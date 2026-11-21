@@ -79,6 +79,8 @@ const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
     "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
 const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
     "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
+const VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS: &[&str] =
+    &["0.15.0", "0.15.1", "0.15.2", "0.15.3"];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
 const PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST: &str =
@@ -327,7 +329,7 @@ struct UserCommandArguments {
 }
 
 #[derive(Debug)]
-enum InstallError {
+pub(crate) enum InstallError {
     Input(String),
     Conflict(String),
     Unsupported(String),
@@ -3879,9 +3881,12 @@ fn render_codex_marketplace() -> Vec<u8> {
 }
 
 fn render_claude_marketplace() -> Vec<u8> {
+    render_claude_marketplace_for(env!("CARGO_PKG_VERSION"))
+}
+
+fn render_claude_marketplace_for(version: &str) -> Vec<u8> {
     format!(
-        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
-        env!("CARGO_PKG_VERSION")
+        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{version}\"\n    }}\n  ]\n}}\n"
     )
     .into_bytes()
 }
@@ -4641,6 +4646,11 @@ fn historical_09x_user_inventory(
     let expected_range = match host {
         UserHost::Codex => ">=0.145.0 <1.0.0",
         UserHost::Claude => ">=2.1.0 <3.0.0",
+        UserHost::Antigravity
+            if parse_three_part_version(request.product_version).ok()? >= (0, 15, 2) =>
+        {
+            ">=1.1.7 <2.0.0"
+        }
         UserHost::Antigravity => ">=1.1.7 <1.2.0",
     };
     if request.installed_host_version_range != expected_range
@@ -4676,12 +4686,21 @@ fn historical_09x_user_inventory(
                 let (path, digest) = match host {
                     UserHost::Codex => (
                         ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
-                        USER_070_CODEX_MARKETPLACE_DIGEST,
+                        USER_070_CODEX_MARKETPLACE_DIGEST.to_owned(),
                     ),
-                    UserHost::Claude => (
-                        ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
-                        USER_070_CLAUDE_MARKETPLACE_DIGEST,
-                    ),
+                    UserHost::Claude => {
+                        let digest = if VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS
+                            .contains(&request.product_version)
+                        {
+                            sha256_digest(&render_claude_marketplace_for(request.product_version))
+                        } else {
+                            USER_070_CLAUDE_MARKETPLACE_DIGEST.to_owned()
+                        };
+                        (
+                            ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                            digest,
+                        )
+                    }
                     UserHost::Antigravity => return None,
                 };
                 if entry.path != path
@@ -6466,7 +6485,7 @@ fn probe_supported_host_version(
     Ok(version.to_owned())
 }
 
-fn parse_three_part_version(value: &str) -> Result<(u64, u64, u64), InstallError> {
+pub(crate) fn parse_three_part_version(value: &str) -> Result<(u64, u64, u64), InstallError> {
     let mut parts = value.split('.');
     let parse = |part: Option<&str>| {
         let part = part.ok_or_else(|| {
@@ -10463,6 +10482,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn every_09_stable_user_inventory_authenticates_for_every_host() {
         for &(version, files) in HISTORICAL_USER_PLUGIN_RELEASES {
             for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
@@ -10489,17 +10509,21 @@ mod tests {
                     let (path, digest) = match host {
                         UserHost::Codex => (
                             ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
-                            USER_070_CODEX_MARKETPLACE_DIGEST,
+                            USER_070_CODEX_MARKETPLACE_DIGEST.to_owned(),
                         ),
                         UserHost::Claude => (
                             ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
-                            USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                            if VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS.contains(&version) {
+                                sha256_digest(&render_claude_marketplace_for(version))
+                            } else {
+                                USER_070_CLAUDE_MARKETPLACE_DIGEST.to_owned()
+                            },
                         ),
                         UserHost::Antigravity => unreachable!(),
                     };
                     entries.push(UserOwnershipEntry {
                         path: path.to_owned(),
-                        digest: digest.to_owned(),
+                        digest: digest.clone(),
                         executable: false,
                         unix_mode: installed_unix_mode(false),
                         ownership: "host-adapter-metadata".to_owned(),
@@ -10527,6 +10551,12 @@ mod tests {
                     installed_host_version_range: match host {
                         UserHost::Codex => ">=0.145.0 <1.0.0",
                         UserHost::Claude => ">=2.1.0 <3.0.0",
+                        UserHost::Antigravity
+                            if parse_three_part_version(version).expect("stable version")
+                                >= (0, 15, 2) =>
+                        {
+                            ">=1.1.7 <2.0.0"
+                        }
                         UserHost::Antigravity => ">=1.1.7 <1.2.0",
                     },
                     source_release_digest: &source_release_digest,
@@ -10538,8 +10568,10 @@ mod tests {
                     current_entries: &[],
                     authenticated_prior: None,
                 };
-                let authenticated = authenticated_user_inventory(host, &request)
-                    .expect("stable user inventory must authenticate");
+                let authenticated =
+                    authenticated_user_inventory(host, &request).unwrap_or_else(|| {
+                        panic!("stable user inventory must authenticate: {version} {host:?}")
+                    });
                 assert_user_entries_equal(&authenticated.entries, &entries);
 
                 let mut tampered = entries.clone();
@@ -10647,6 +10679,76 @@ mod tests {
             &runner,
         )
         .expect("upgraded antigravity validates");
+    }
+
+    #[test]
+    fn prior_0_15_3_user_install_updates_without_reinstall() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude", "antigravity"]);
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            seed_historical_09x_user_install(temporary.path(), "0.15.3", host);
+        }
+
+        let manifest_path = temporary.path().join(".hive/install/claude.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("Claude manifest"))
+                .expect("Claude manifest JSON");
+        let marketplace_path = ".hive/marketplaces/claude/.claude-plugin/marketplace.json";
+        let marketplace = render_claude_marketplace_for("0.15.3");
+        fs::create_dir_all(
+            temporary
+                .path()
+                .join(marketplace_path)
+                .parent()
+                .expect("marketplace parent"),
+        )
+        .expect("marketplace parent");
+        fs::write(temporary.path().join(marketplace_path), &marketplace)
+            .expect("marketplace bytes");
+        manifest.entries.push(UserOwnershipEntry {
+            path: marketplace_path.to_owned(),
+            digest: sha256_digest(&marketplace),
+            executable: false,
+            unix_mode: installed_unix_mode(false),
+            ownership: "host-adapter-metadata".to_owned(),
+        });
+        manifest
+            .entries
+            .sort_by(|left, right| left.path.cmp(&right.path));
+        manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(
+            &manifest_path,
+            json_line(&manifest).expect("Claude manifest JSON"),
+        )
+        .expect("Claude manifest");
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path())
+            .expect("0.15.3 projections authenticate for update");
+        assert_eq!(hosts, ["codex", "claude", "antigravity"]);
+
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            execute(
+                UserOperation::Update,
+                &args(temporary.path(), host, UserMode::Apply),
+                &runner,
+            )
+            .expect("prior user projection updates without reinstall");
+        }
+        execute(
+            UserOperation::Update,
+            &args(temporary.path(), UserHost::Antigravity, UserMode::Apply),
+            &AntigravityRunner::new(temporary.path()),
+        )
+        .expect("prior Antigravity projection updates without reinstall");
     }
 
     #[test]
@@ -10899,6 +11001,11 @@ mod tests {
             host_version_range: match host {
                 UserHost::Codex => ">=0.145.0 <1.0.0",
                 UserHost::Claude => ">=2.1.0 <3.0.0",
+                UserHost::Antigravity
+                    if parse_three_part_version(version).expect("stable version") >= (0, 15, 2) =>
+                {
+                    ">=1.1.7 <2.0.0"
+                }
                 UserHost::Antigravity => ">=1.1.7 <1.2.0",
             }
             .to_owned(),

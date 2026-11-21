@@ -15,7 +15,7 @@ from pathlib import Path
 import struct
 import tarfile
 
-VERSIONS = ("0.13.1", "0.13.2-test.1", "0.13.2-test.2")
+VERSIONS = ("0.13.1", "0.13.2-test.1", "0.13.2-test.2", "0.15.0", "0.15.1", "0.15.2", "0.15.3")
 MAX_IMAGE = 128 * 1024 * 1024
 
 

@@ -54,13 +54,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
     parser.add_argument("--package-version", required=True)
-    parser.add_argument("--previous-version", choices=["0.13.1", "0.13.2-test.2"], required=True)
+    parser.add_argument("--previous-version", required=True)
     parser.add_argument("--owner", choices=["npm", "direct"], required=True)
     parser.add_argument("--redirected", action="store_true")
     args = parser.parse_args()
     if not (os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"):
         parser.error("public installation/update acceptance requires an isolated hosted OS")
-    assert re.fullmatch(r"0\.14\.0-test\.[1-9][0-9]*", args.package_version)
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-test\.[1-9][0-9]*", args.package_version)
     work = args.fixture.resolve()
     assert work.is_relative_to((ROOT / "tests/work").resolve()) and work != ROOT / "tests/work" and not work.exists()
     windows = os.name == "nt"
