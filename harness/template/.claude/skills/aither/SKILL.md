@@ -14,3 +14,4 @@ At entry, announce in the user-selected response language: English `Calling upon
 1. Read the project's AGENTS.md and preserve its scope, authority and usage boundaries.
 2. Open only the relevant owned Skill: [usage-guard](../usage-guard/SKILL.md). Follow its procedure; this entry grants no additional authority.
 3. Use usage-guard to inspect or adjust only the authorized usage scope; obey an installed halt without further work.
+4. For host thresholds, follow the sensor direction: Claude uses used percent; Codex and Antigravity use remaining percent.

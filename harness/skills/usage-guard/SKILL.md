@@ -36,6 +36,7 @@ Enforce or control only the installed Hive usage policy and the current host ses
 7. Before any explicitly requested threshold or session control, read the control sections. Never
    guess a percentage or infer bypass from a bare continue, resume, finish, urgency, or an active run.
 8. `status` is inspection only. Treat `session_override=absent` or `stale` as enabled.
+8.5. Host threshold input follows the same sensor table as status output: Claude uses used percent; Codex and Antigravity use remaining percent. Use the host-specific `--window` command in the control reference.
 9. Report saved and active thresholds, window, session state, changed path, and exact CLI code.
    Discord receives only run title and checklist count, never raw prompts or credentials.
 

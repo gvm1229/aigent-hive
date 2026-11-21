@@ -3766,6 +3766,155 @@ pub(crate) fn set_operational_usage_threshold(
     })
 }
 
+#[derive(Debug)]
+pub(crate) struct HostUsageThresholdUpdate {
+    pub(crate) previous: u8,
+    pub(crate) current: u8,
+    pub(crate) changed_paths: Vec<String>,
+    pub(crate) config_bytes: Vec<u8>,
+}
+
+/// Change one selected host window while preserving the global preference and projection.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn set_operational_host_usage_threshold(
+    user_root: &Path,
+    host: &str,
+    window: &str,
+    remaining_percent: u8,
+) -> Result<HostUsageThresholdUpdate, String> {
+    let (_canonical_root, root) =
+        super::user_install::open_canonical_user_root_for_setup(user_root)?;
+    let prior_bytes = super::user_install::read_user_setup_file(
+        &root,
+        Path::new(USER_SETUP_RELATIVE),
+        MAX_USER_SETUP_BYTES,
+    )?
+    .ok_or_else(|| {
+        "global Hive setup is required before changing its usage threshold".to_owned()
+    })?;
+    let mut config = parse_and_validate_installed_config(&prior_bytes)
+        .map_err(|error| error.message().to_owned())?;
+    let selected = match host {
+        "codex" => SelectedHost::Codex,
+        "claude" => SelectedHost::Claude,
+        "antigravity" => SelectedHost::Antigravity,
+        _ => return Err("unknown usage host".to_owned()),
+    };
+    let legacy_threshold = config.usage_guard.stop_remaining_percent;
+    let windows = config.usage_guard.host_windows.get_mut(&selected).ok_or_else(|| {
+        format!("no per-window usage settings exist for {host}; run hive setup --scope user --section usage first")
+    })?;
+    let five_hour_guarded = windows.five_hour_guarded();
+    let weekly_guarded = windows.weekly_guarded();
+    let mut targets = Vec::new();
+    if window == "all" || window == "five-hour" {
+        if five_hour_guarded {
+            targets.push(&mut windows.five_hour_stop_remaining_percent);
+        } else if window == "five-hour" {
+            return Err(format!("{host} has no guarded five-hour window; run hive setup --scope user --section usage"));
+        }
+    }
+    if window == "all" || window == "weekly" {
+        if weekly_guarded {
+            targets.push(&mut windows.weekly_stop_remaining_percent);
+        } else if window == "weekly" {
+            return Err(format!(
+                "{host} has no guarded weekly window; run hive setup --scope user --section usage"
+            ));
+        }
+    }
+    if targets.is_empty() {
+        return Err(format!(
+            "{host} has no guarded window to update; run hive setup --scope user --section usage"
+        ));
+    }
+    let previous = (*targets[0]).unwrap_or(legacy_threshold);
+    if targets
+        .iter()
+        .all(|target| **target == Some(remaining_percent))
+    {
+        return Ok(HostUsageThresholdUpdate {
+            previous,
+            current: remaining_percent,
+            changed_paths: Vec::new(),
+            config_bytes: prior_bytes,
+        });
+    }
+    for target in targets {
+        *target = Some(remaining_percent);
+    }
+    let declarations = serde_json::to_value(&config)
+        .map_err(|error| format!("cannot inspect setup declarations: {error}"))?;
+    hive_core::preferences::reconcile_decisions(
+        &declarations,
+        &mut config.preference_decisions,
+        hive_core::preferences::PreferenceScope::User,
+    )?;
+    validate_config_semantics(&config).map_err(|error| error.message().to_owned())?;
+    let catalog = parse_and_validate_catalog().map_err(|error| error.message().to_owned())?;
+    let resolved_skills =
+        resolve_skills(&config, &catalog).map_err(|error| error.message().to_owned())?;
+    let desired = canonical_config(&config).map_err(|error| error.message().to_owned())?;
+    let preview = plan_user_projection(&root, &config, &resolved_skills, &desired)
+        .map_err(|error| error.message().to_owned())?;
+    if preview
+        .changes
+        .iter()
+        .any(|change| change.after.is_none() && change.path.starts_with(".agents/skills/"))
+    {
+        super::user_install::validated_codex_plugin_files(user_root)?;
+    }
+    let projection = apply_user_projection(&root, &config, &resolved_skills, &desired)
+        .map_err(|error| error.message().to_owned())?;
+    if let Err(primary) = super::user_install::replace_user_setup_file(
+        &root,
+        Path::new(USER_SETUP_RELATIVE),
+        Some(&prior_bytes),
+        Some(&desired),
+    ) {
+        let rollback = rollback_user_projection(&root, &projection);
+        return Err(match rollback { Ok(()) => format!("host threshold activation failed: {primary}"), Err(rollback) => format!("host threshold activation failed ({primary}); projection rollback failed ({rollback})") });
+    }
+    let validation = load_operational_config(&root)
+        .map_err(|error| error.message().to_owned())?
+        .ok_or_else(|| "global Hive setup disappeared after host threshold activation".to_owned())
+        .and_then(|installed| {
+            if installed == config {
+                validate_user_projection(&root, &config, &resolved_skills, &desired)
+                    .map_err(|error| error.message().to_owned())
+            } else {
+                Err("global Hive setup changed after host threshold activation".to_owned())
+            }
+        });
+    if let Err(primary) = validation {
+        let config_rollback = super::user_install::replace_user_setup_file(
+            &root,
+            Path::new(USER_SETUP_RELATIVE),
+            Some(&desired),
+            Some(&prior_bytes),
+        );
+        let projection_rollback = rollback_user_projection(&root, &projection);
+        return Err(match (config_rollback, projection_rollback) {
+            (Ok(()), Ok(())) => primary,
+            (config, projection) => format!(
+                "host threshold validation failed ({primary}); rollback failed (config: {}; projection: {})",
+                config.err().unwrap_or_else(|| "ok".to_owned()),
+                projection.err().unwrap_or_else(|| "ok".to_owned())
+            ),
+        });
+    }
+    let mut changed_paths = projection.changed_paths;
+    changed_paths.push(USER_SETUP_RELATIVE.to_owned());
+    changed_paths.sort();
+    changed_paths.dedup();
+    Ok(HostUsageThresholdUpdate {
+        previous,
+        current: remaining_percent,
+        changed_paths,
+        config_bytes: desired,
+    })
+}
+
 pub(crate) fn resolved_operational_skills(
     root: &Dir,
 ) -> Result<Option<(UserSetupConfig, Vec<String>)>, SetupError> {

@@ -319,6 +319,22 @@ mod tests {
             "quota":{"gemini-weekly":{"remaining_fraction":0.8,"reset_time":"2030-01-01T00:00:00Z"},
             "3p-weekly":{"remaining_fraction":0.01,"reset_time":"2030-01-01T00:00:00Z"}}})).unwrap()
     }
+    #[test]
+    fn accepts_supported_version_range() {
+        assert!(supported_version("1.1.18"));
+        assert!(supported_version("1.2.17"));
+        assert!(!supported_version("1.1.17"));
+        assert!(!supported_version("2.0.0"));
+        assert!(!supported_version("1.2"));
+        assert!(!supported_version("01.2.17"));
+    }
+    #[test]
+    #[ignore = "needs local 1.2.17 fixture"]
+    fn antigravity_accepts_real_1_2_17_callback() {
+        let mut callback = input();
+        callback.version = "1.2.17".to_owned();
+        normalize(&callback, 1_700_000_000, 1_700_000_000_000).expect("supported callback");
+    }
     fn binding() -> SessionBinding {
         bind_session(
             &ParsedBinding {
