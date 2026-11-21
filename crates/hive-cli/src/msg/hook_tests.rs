@@ -93,6 +93,17 @@ impl Fixture {
         items.extend(["--confirm", &digest]);
         let applied = self.run(&items);
         assert_eq!(applied["code"], "hive.msg-hooks-configured", "{applied}");
+        let next = applied["next_action"].as_str().expect("host guidance");
+        assert!(next.contains("hive msg hooks status --host"));
+        match host {
+            "codex" => assert!(next.contains("Trust this project in Codex")),
+            "claude" => {
+                assert!(next.contains("Bash(hive msg:*)"));
+                assert!(next.contains("Bash(codex exec:*)"));
+                assert!(next.contains(".claude/settings.json"));
+            }
+            _ => unreachable!(),
+        }
         preview["data"]["preview"]["binding_digest"]
             .as_str()
             .unwrap()

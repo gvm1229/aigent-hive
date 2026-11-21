@@ -353,6 +353,7 @@ const MSG_OPTIONS: &[&str] = &[
     "--result",
     "--return",
     "--reviewer",
+    "--reviewer-provider",
     "--role",
     "--state",
     "--target",

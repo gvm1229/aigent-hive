@@ -25,6 +25,20 @@ existing command receives the same input and its output stays the status line.
 `revert` restores the previous value. A rejected capture never changes the status
 line; `hive usage status` and the enforce warning show its reason.
 
+## Message hook setup
+
+`hive msg hooks apply` changes only the current project's hook file after the preview digest is
+confirmed. For Codex, trust the project when Codex shows its trust prompt. For Claude Code automatic
+mode, add project-level permission rules for `Bash(hive msg:*)` and `Bash(codex exec:*)` to
+`.claude/settings.json` according to your own permission choices. Check the recorded hook state
+with the `hive msg hooks status` command shown after apply; that status does not prove the host
+loaded or ran the hook.
+
+## Compatibility
+
+Claude Code resolves `/plugin:skill` commands itself. Hive cannot redirect an old slash-command
+name; use the current Skill name shown by the old-name guidance.
+
 Limit: status-line execution in the Claude desktop app Code tab is not verified.
 If no measurement arrives there, use Claude Code in a terminal. Work continues with a
 missing-measurement warning.

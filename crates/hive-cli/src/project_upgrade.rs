@@ -2554,6 +2554,16 @@ fn write_new(target: &Dir, relative: &Path, bytes: &[u8]) -> Result<(), UpdateEr
 }
 
 fn open_target_capability(target: &Path) -> Result<Dir, UpdateError> {
+    let absolute = if target.is_absolute() {
+        target.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| {
+                UpdateError::Input(format!("cannot resolve current directory: {error}"))
+            })?
+            .join(target)
+    };
+    let target = hive_core::normalize_platform_root(&absolute);
     let parent = target
         .parent()
         .ok_or_else(|| UpdateError::Input("project target has no parent directory".to_owned()))?;
@@ -2993,6 +3003,11 @@ fn io_error(error: impl std::fmt::Display) -> UpdateError {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn dot_target_opens_as_the_current_directory() {
+        open_target_capability(Path::new(".")).expect("dot target resolves");
+    }
 
     fn digest(byte: char) -> String {
         format!("sha256:{}", byte.to_string().repeat(64))

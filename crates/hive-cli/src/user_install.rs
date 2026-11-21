@@ -1979,11 +1979,16 @@ fn authenticate_current_projection_host(
 }
 
 fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
-    if !root.is_absolute() {
-        return Err(InstallError::Input(
-            "--user-root must be an absolute directory".to_owned(),
-        ));
-    }
+    let absolute = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| {
+                InstallError::Input(format!("cannot resolve current directory: {error}"))
+            })?
+            .join(root)
+    };
+    let root = hive_core::normalize_platform_root(&absolute);
     let parent = root
         .parent()
         .ok_or_else(|| InstallError::Input("user root has no parent directory".to_owned()))?;
@@ -7681,6 +7686,11 @@ fn unix_seconds() -> Result<u64, InstallError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relative_dot_user_root_is_accepted() {
+        open_user_root(Path::new(".")).expect("relative user root resolves");
+    }
 
     #[cfg(unix)]
     #[test]

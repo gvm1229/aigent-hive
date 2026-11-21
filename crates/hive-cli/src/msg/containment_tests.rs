@@ -18,7 +18,13 @@ fn fixture() -> Fixture {
     let home = root.path().join("home");
     std::fs::create_dir_all(target.join(".hive/config")).unwrap();
     std::fs::create_dir_all(home.join(".hive")).unwrap();
+    std::fs::create_dir_all(home.join(".hive/config")).unwrap();
     std::fs::write(home.join(".hive/roster.toml"), ROSTER).unwrap();
+    std::fs::write(
+        home.join(".hive/config/user-setup.yml"),
+        "schema_version: 1\ninterface_language: en\nwiki:\n  enabled: true\n  language: both\nprofile:\n  id: web-developer\npersona:\n  id: balanced\nselected_hosts:\n  - codex\n  - claude\nskills:\n  mode: individual\n  selected:\n    - user-setup\nusage_guard:\n  enabled: false\n  stop_remaining_percent: 20\n  codexbar_fallback_enabled: false\n",
+    )
+    .unwrap();
     std::fs::write(root.path().join("brief.md"), "Implement and summarize.").unwrap();
     Fixture { root, target, home }
 }
