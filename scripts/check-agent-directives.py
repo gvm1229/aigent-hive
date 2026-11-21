@@ -82,7 +82,7 @@ def check_read_budgets(root: Path) -> tuple[dict[str, object], list[dict[str, ob
             if (not isinstance(files, list) or not 1 <= len(files) <= 64
                     or len(set(files)) != len(files) or "AGENTS.md" not in files
                     or type(baseline) is not int or type(maximum) is not int
-                    or not 0 < maximum <= baseline):
+                    or not 0 < baseline <= maximum <= baseline * 1.10 + 1):
                 raise ValueError("invalid budget bounds")
             required = {"AGENTS.md", ROUTER_TARGETS[1], ROUTER_TARGETS[7]}
             if name != "startup":

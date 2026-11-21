@@ -54,6 +54,9 @@ jobs:
             --product-version "$PRODUCT_VERSION" \
             --release-date "$PACKAGE_RELEASE_DATE" \
             --output json
+      - name: Reject reopened plan criteria for stable releases
+        if: ${{ inputs.channel == 'stable' }}
+        run: python3 scripts/check-plan-state.py --release
 
   test-release-gate:
     name: Automatic numbered-test product gate

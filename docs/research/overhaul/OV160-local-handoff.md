@@ -1,5 +1,14 @@
 # 0.16.0 local 인계 — local 세션 시작점
 
+## 판정 규칙
+
+- 실패는 기본 `product-defect` 판정 입력
+- `host-limit`은 실행 전 이 문서에 한계가 기록됐거나, Hive 없이도 재현되는 근거(호스트 문서 또는 재현 기록)가 있을 때만 선택
+- 이전 안정판에서 통과한 확인의 실패는 항상 `product-defect`
+- `host-limit`마다 출시 COMPAT 항목 필수, 모순되는 출시 안내 주장은 제거
+- 새 종류의 `host-limit`은 `docs/decisions/`에 기록하고 출시 안내에 명시
+- `python3 scripts/check-plan-state.py --release` 통과 뒤 안정판 준비 계속
+
 - **2026-11-21 test.3 local 결과: 실패**([OV160-012](OV160-012.md)). cloud가 R1–R6 수정과 test.4 게시 뒤 이 문서 대상 갱신. 그 전에는 실행 금지
 - 작성: 2026-11-20 cloud 세션. cloud 범위 작업 전부 완료 뒤의 유일한 local 진입 문서
 - 대상 시험판: `aigent-hive@0.16.0-test.3`(후보 [44838848659](https://github.com/gvm1229/aigent-hive/actions/runs/44838848659), develop `73d21b87`, 세 OS 수용 [44842442665](https://github.com/gvm1229/aigent-hive/actions/runs/44842442665)). 근거 [시험 기록](OV160-013-test2.md). test.2는 Windows 수용 실패로 설치 금지. test.1 기록은 [OV160-009](OV160-009.md)
@@ -105,5 +114,5 @@ hive msg flow status --flow <flow-id> --target . --user-root $HOME
 2. develop→main PR(일반 병합). 이 PR이 구독자 안내 승인
 3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.3`, `acceptance_run_id=44842442665`
 4. `release-publish.yml`: `channel=stable`, 3의 후보 run ID, `send_subscriber_update=true`. npm 전파 지연(종료 6)이면 같은 입력에 `recover_published_packages=true`
-5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인
+5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인, `python3 scripts/check-plan-state.py --release` 확인
 6. 근거 `OV160-011.md`, 계획 OV160-011·012 `complete`, 단계 브랜치 `feature/overhaul-6-0.16.0-mediation` 원격·로컬 삭제, 단계 7 시작은 [재정비 순서](../../plans/overhaul/README.md)
