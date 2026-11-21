@@ -1167,6 +1167,16 @@ fn claude_capture_path_for(binding: &SessionBinding) -> Result<PathBuf, AdapterE
 /// Disk case is used when available; bindings retain an existing as-given runtime scope.
 fn target_scope_digest(path: &Path) -> String {
     let resolved = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    // Windows `canonicalize` adds a verbatim prefix; drop it so the disk-case path and the
+    // same as-given path share one identity.
+    let text = resolved.to_string_lossy().into_owned();
+    let resolved = if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{rest}"))
+    } else if let Some(rest) = text.strip_prefix(r"\\?\") {
+        PathBuf::from(rest)
+    } else {
+        resolved
+    };
     let normalized = resolved.components().collect::<PathBuf>();
     sha256_digest(normalized.to_string_lossy().as_bytes())
 }
@@ -1608,7 +1618,10 @@ fn bind_runtime_session(
                 let capture_exists = runtime
                     .read_optional(&claude_capture_path_for(&legacy)?, MAX_CAPTURE_BYTES)?
                     .is_some();
-                if control_exists || capture_exists {
+                let halt_exists = runtime
+                    .read_optional(&halt_path(&legacy), MAX_CONTROL_BYTES)?
+                    .is_some();
+                if control_exists || capture_exists || halt_exists {
                     binding.runtime_scope = legacy.runtime_scope;
                 }
             }
