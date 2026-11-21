@@ -45,6 +45,11 @@ def original_identity(platform_name, version):
     windows = platform_name == "win32-x64"
     registry = ROOT / "harness/setup" / ("legacy-update-images.json" if windows else "legacy-update-posix-images.json")
     entries = json.loads(registry.read_text(encoding="utf-8"))["images"]
+    # Stable releases after the legacy bridge set live in a test-only file so the bridge
+    # registry (embedded in the Windows helper with a size bound) stays unchanged.
+    extra = json.loads((ROOT / "tests/fixtures/interactive-cli/public-update-identities.json")
+                       .read_text(encoding="utf-8"))
+    entries = entries + extra["windows" if windows else "posix"]
     entry = next(row for row in entries if row["version"] == version
                  and (windows or row["platform"] == platform_name))
     return entry["binary_sha256"], entry["package_integrity"]

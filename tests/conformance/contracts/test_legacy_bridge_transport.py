@@ -53,7 +53,7 @@ class LegacyBridgeTransportTests(unittest.TestCase):
         script = prefix + "\n" + binding + "\nReply @{versions=@($registry.images.version)}\n"
         result = run_fixed_script(script, {})
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"versions":["0.13.1","0.13.2-test.1","0.13.2-test.2","0.15.0","0.15.1","0.15.2","0.15.3"]})
+        self.assertEqual(json.loads(result.stdout), {"versions":["0.13.1","0.13.2-test.1","0.13.2-test.2"]})
         self.assertIn('"schema_version":1', script)
         changed = run_fixed_script(script.replace('"schema_version":1', '"schema_version":9', 1), {})
         self.assertNotEqual(changed.returncode, 0)
