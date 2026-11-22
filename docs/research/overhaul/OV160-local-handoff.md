@@ -1,6 +1,6 @@
 # 0.16.0 local 인계 — local 세션 시작점
 
-- **2026-11-21 19:50 KST 사용량 멈춤(Claude 주간 약 90% 사용, 유지관리자 세션 멈춤 요청). 재개 순서: (1) 브랜치 `fix/ov160-stage-review-fixes`(`549d6912`, Fable 단계 검토 APPROVE WITH FIXES의 1·4·5·6 수정, clippy 통과·시험 미실행)를 develop에 병합 전 `cargo test -p hive-cli msg::flow_tests user_install` 실행 (2) 남은 검토 지적: 2 Claude 마켓플레이스 0.15.x 지문 상수 고정, 3 Antigravity 1.2.x 미검증 기록, 7–10 사소 (3) `docs/test-release-intent.json`을 0.16.0-test.4로 갱신 후 번호 시험·세 OS 수용 (4) OV160-020 local 재확인(백업 먼저, Codex 확인은 한도 회복 전 비차단). Codex 위임은 호환성 확인만, Codex 한도 재설정 2026-12-15**
+- **2026-11-23 재개**: [재개 계획](OV160-resume.md)의 순서와 권한 사용. 백업은 `~/hive-backups/`처럼 `~/.hive` 밖에만 저장
 ## 판정 규칙
 
 - 실패는 기본 `product-defect` 판정 입력
