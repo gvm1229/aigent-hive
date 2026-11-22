@@ -21,6 +21,6 @@ This directive governs filesystem mutation, setup, update, releases, and externa
 - Project-local host configuration remains foreign-owned by default. The only exception is an exact Hive-namespaced data-integrity hook projection when the host-native hook surface is supported, no explicit external compatibility owner is active, the user has approved the displayed events/capabilities/paths/digest, and the ownership manifest authorizes a non-clobbering structured merge.
 - If external orchestration appears, Hive fallback hooks stay inert until a consented reconfigure removes only Hive-owned entries.
 
-Back up before deleting, overwriting or reinstalling user/project data: dated `~/.hive/backups/`
-copy, path reported. For install/update, removal, recursive moves, history erasure, release
+Back up before deleting, overwriting or reinstalling user/project data: verified copy in dated
+`~/hive-backups/`, never inside `~/.hive` (reinstall/uninstall deletes it); report the path. For install/update, removal, recursive moves, history erasure, release
 deletion or key rotation read [update/removal safety](references/update-and-removal.md).
