@@ -1464,6 +1464,36 @@
 | [running](runs/20261114T082307-9be32cda089c.md) | Python conformance: documentation, security, contract, integration, release | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261114T083216-f32651e099f3.md) | 개발 검증: uv.EXE | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261114T083333-b92dc9c75ec0.md) | 개발 검증: uv.EXE | cc0ddef0ebd14b44ec0925d4b8f0b8b0dc71a140 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T083714-2966d1bd8f16.md) | 개발 검증: cargo.EXE | 661d8fb6abc0585fe1620eeb0a6eb05aaf931eb6 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T083748-649e011c7631.md) | 개발 검증: cargo.EXE | 661d8fb6abc0585fe1620eeb0a6eb05aaf931eb6 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084450-727073715623.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084522-6034128b6730.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T084606-761a52e01a17.md) | 개발 검증: cargo.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T085425-84c56e614dba.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T085428-b2ffda000dea.md) | Python conformance: documentation, security, contract, integration, release | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092456-6738637ba09b.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092618-11db2cbe1e43.md) | 개발 검증: uv.EXE | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T092853-00aee2765bfb.md) | Python conformance: integration | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T094736-ce33fbe40ac7.md) | Python conformance: release | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T095142-0f826aef571e.md) | Python conformance: documentation | 9d1e4835f5329964cfce540a922d6258e37684d7 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261114T101913-d6e0b8d0b06e.md) | Python conformance: documentation | 7cb80963864f11e979e5663ea0a49ea05aff95c5 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T131345-45663a12d5c3.md) | Python conformance: documentation | a819c585766708ca7b1a53750f51c61f1d9eecec | Windows-11-10.0.26300-SP0 |
+| [running](runs/20261114T191809-a4cd20c4b9d3.md) | Python conformance: documentation | 68b5fd651b67b4bb7d9863c55e732fdfa7221f60 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261114T235259-1c696fe7e4bb.md) | Python conformance: documentation | 7467e3b5b1a0de9e6364ac52e4b0e936a2f4368d | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T062431-a0d1d769e33f.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T062918-6ccdbbc0e0ce.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T063149-d020b7e47f48.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T065552-d8f40903d890.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T072904-0bf4eb9ccbc3.md) | Python conformance: documentation | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T073020-034eff478e4a.md) | Python conformance: release | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T073300-767525e90497.md) | Python conformance: contract | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T075406-dc231e04de7a.md) | Python conformance: security | dc728806b80eea5c138d3c2f2265aa0387f4dfe3 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T083428-cafa91811588.md) | Python conformance: documentation | 2e3dfb9acdc878719132c5420f6cdf561b0eec36 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T083550-763dce5626db.md) | Python conformance: integration | 2e3dfb9acdc878719132c5420f6cdf561b0eec36 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T143249-b15ca502da74.md) | Python conformance: documentation | 77dd6c104fbfafd8b5f229c6553e597712d50664 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261115T150545-1bccfa97cdd8.md) | Python conformance: release | 9b01a015bef027be464ab6d08139409419343815 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T164236-3f3d283d6fcd.md) | Python conformance: documentation | eb159bfdd6b0b32bec8282d673c2c357563b08f4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261115T173832-d9fe5e356e88.md) | Python conformance: documentation | 7730d74b258c6a5b79c6a23c5ff78cfd8f9bc500 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261115T175150-0c60ff9927ed.md) | Python conformance: release | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [failed](runs/20261115T175457-9b8f4816021c.md) | Python conformance: release | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
 | [failed](runs/20261115T175617-8b56decacd48.md) | Python conformance: documentation | deea54fc27cfe4ff1271197eba263cc3e4ecbb4c | Linux-6.18.44-fc-v470-x86_64-with-glibc2.39 |
@@ -1524,9 +1554,16 @@
 | [passed](runs/20261118T213116-5a0f45de4c15.md) | OV153-014 단계 검토 반영: 사용량·설정·Skill 계약 | 3e210fc01529bf59de6c6226b2aaac2757620ad3 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T214055-4757d9fd43a7.md) | OV153 단계 검토 반영 뒤 Rust 전체 단위 시험 | 50eee283a454bdc04448ed3641860a2000d27a88 | Windows-11-10.0.26300-SP0 |
 | [failed](runs/20261118T214729-6fab47922b07.md) | OV153 test.3 전 문서 lane | 1aef466de2852ab710d5baf6e46457cd1f5f28d4 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261118T214731-f8af93fc379a.md) | Python conformance: documentation | 1aef466de2852ab710d5baf6e46457cd1f5f28d4 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T214914-2a104ea0ab62.md) | OV153 test.3 전 문서 lane 재실행 | 0a26a502a721746b8c3752452cf2aad362a22eef | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T214916-64102e0251bd.md) | Python conformance: documentation | 0a26a502a721746b8c3752452cf2aad362a22eef | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261118T222522-7612db6756ce.md) | OV153 test.3 전 contract lane | 08c2cbbe83326a94eb29f7a84d7e0216957979ab | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261118T222523-015c83670448.md) | Python conformance: contract | 08c2cbbe83326a94eb29f7a84d7e0216957979ab | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261119T180451-aec0cc3f3312.md) | Python conformance: documentation | 66705a9977f6b09c893521b921861c878bd3210e | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261119T183154-5bf7fb24d51e.md) | Python conformance: documentation | 8a000ffea32c1eb75cb63046bf31c16945458958 | Windows-11-10.0.26300-SP0 |
+| [failed](runs/20261119T202016-56e82d8fd725.md) | Python conformance: documentation | 7fc260839bf96dae7817cb119a6cefb211ae2e29 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261119T202110-b133ab3da17c.md) | Python conformance: documentation | 8dbe1639a556f2e3080a676bf1293e8f386a8a69 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261119T203851-09b798e04b07.md) | Python conformance: release | 8dbe1639a556f2e3080a676bf1293e8f386a8a69 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261120T074909-e7a448de9c9a.md) | Python conformance: documentation | 8a278a8094be579503ff8cdff3a60a2064c45249 | Linux-6.18.44-fc-v726-x86_64-with-glibc2.39 |
 | [failed](runs/20261120T085649-d1085cce2e3b.md) | Python conformance: contract | 65380ce1c1ee7761ec604c24145511aee02444c9 | Linux-6.18.44-fc-v726-x86_64-with-glibc2.39 |
 | [failed](runs/20261120T195349-a4cd49fe4d23.md) | Python conformance: contract | 18fe034f9d184cd884ae951340c1a287e7cb2311 | Linux-6.18.44-fc-v726-x86_64-with-glibc2.39 |
@@ -1547,3 +1584,4 @@
 | [passed](runs/20261121T073717-90ff3b27101e.md) | OV160-014a 공개 갱신 CI 계약 최종 확인 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261121T073941-e057a306ce05.md) | OV160-014a CI 계약 및 Windows 레거시 지문 최종 회귀 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261121T074108-a6115b2a5758.md) | OV160-014a 최종 0.15.3 렌더 기반 회귀 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261122T203937-e93826e71316.md) | OV160-014 Claude 갱신 인증 회귀 | 9eebf8203f782f3a515c3bfb26ed90653e130068 | Windows-11-10.0.26300-SP0 |
