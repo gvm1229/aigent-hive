@@ -1,3 +1,4 @@
+pub(crate) mod backup;
 pub(crate) mod deactivation;
 mod host_state;
 mod index_removal;
@@ -735,7 +736,6 @@ fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, Insta
 const UNINSTALL_TREES: &[&str] = &[
     ".hive/install",
     ".hive/install-transactions",
-    ".hive/backups",
     ".hive/marketplaces",
     ".hive/plugins",
     ".hive/index",
@@ -2768,6 +2768,7 @@ fn preserving_reinstall_dry_run(
                 ".hive/history"
             ],
             "backup_transaction_planned": true,
+            "backup_location": "hive-backups",
         })),
     }
 }
@@ -2779,17 +2780,32 @@ fn execute_preserving_reinstall(
 ) -> Result<ActionResult, InstallError> {
     // Refuse before writing a backup, so a refused attempt leaves no extra copy.
     refuse_enabled_usage_monitor(&arguments.root_cap)?;
-    // Backup first (OV160-016): copy user data, host guidance and every ownership manifest
-    // before anything is removed, and report where the copy is.
-    let mut backup_paths = transaction_backup_paths(arguments.host);
+    // Backup first: everything the removal can delete, copied outside `.hive` (OV160-023).
+    let mut affected: Vec<PathBuf> = REINSTALL_REMOVABLE_FILES
+        .iter()
+        .map(PathBuf::from)
+        .collect();
     for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
-        backup_paths.push(PathBuf::from(format!(
-            ".hive/install/{}.json",
-            host.as_str()
-        )));
+        let relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+        if let Some(manifest) = read_installed_manifest(&arguments.root_cap, &relative, host)? {
+            affected.extend(
+                manifest
+                    .entries
+                    .into_iter()
+                    .map(|entry| PathBuf::from(entry.path)),
+            );
+        }
     }
-    backup_paths.push(PathBuf::from(".hive/install/user-projection.json"));
-    let backup_relative = save_preflight_backup(arguments, &backup_paths)?;
+    affected.extend(
+        crate::user_setup::uninstall_projection_paths(&arguments.root_cap)
+            .map_err(|error| InstallError::Conflict(error.message().to_owned()))?,
+    );
+    let backup_relative =
+        backup::create(&arguments.root_cap, "reinstall", affected)?.ok_or_else(|| {
+            InstallError::Verification(
+                "a reinstall found nothing to back up; nothing was changed".to_owned(),
+            )
+        })?;
     let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
     let removed = execute_uninstall(
         &UserUninstallArguments {
@@ -2842,6 +2858,18 @@ fn execute_apply(
     validate_codex_prestate(arguments, codex_before.as_ref())?;
     validate_claude_prestate(arguments, claude_before.as_ref())?;
     validate_antigravity_prestate(arguments, plan, antigravity_before.as_ref())?;
+    let recovery_backup = if plan.changed_paths.is_empty() {
+        None
+    } else {
+        backup::create(
+            &arguments.root_cap,
+            "install",
+            plan.changed_paths
+                .iter()
+                .map(PathBuf::from)
+                .chain(plan.retired_files.keys().cloned()),
+        )?
+    };
     let claude_before = remove_dangling_claude_marketplace(
         arguments,
         claude_before,
@@ -2987,6 +3015,7 @@ fn execute_apply(
     );
     if let Some(data) = result.data.as_mut() {
         data["user_projection"] = json!({"paths": projection.reports});
+        data["recovery_backup"] = json!(recovery_backup.as_deref().map(portable));
     }
     if index_rebuild_deferred {
         let path = arguments.user_root.to_string_lossy();
@@ -5891,97 +5920,6 @@ fn new_backup_relative(host: UserHost) -> Result<PathBuf, InstallError> {
         unix_seconds()?,
         std::process::id()
     )))
-}
-
-fn save_preflight_backup(
-    arguments: &UserArguments,
-    paths: &[PathBuf],
-) -> Result<PathBuf, InstallError> {
-    let backup_relative = new_backup_relative(arguments.host)?;
-    let mut entries = Vec::new();
-    let mut total_bytes = 0_u64;
-    for relative in paths {
-        let existing = read_optional_regular(&arguments.root_cap, relative, MAX_USER_FILE_BYTES)?;
-        let permissions = if existing.is_some() {
-            file_permissions(&arguments.root_cap, relative)?
-        } else {
-            FilePermissions {
-                executable: false,
-                unix_mode: installed_unix_mode(false),
-            }
-        };
-        if let Some(bytes) = existing.as_deref() {
-            total_bytes = total_bytes.saturating_add(bytes.len() as u64);
-            if total_bytes > 512 * 1024 * 1024 {
-                return Err(InstallError::Conflict(
-                    "transaction backup would exceed 512 MiB; nothing was changed".into(),
-                ));
-            }
-            write_atomic_with_permissions(
-                &arguments.root_cap,
-                &backup_relative.join("files").join(relative),
-                bytes,
-                permissions,
-                None,
-                None,
-            )?;
-        }
-        entries.push(UserBackupEntry {
-            path: portable(relative),
-            existed: existing.is_some(),
-            digest: existing.as_deref().map(sha256_digest),
-            installed_digest: existing.as_deref().map(sha256_digest),
-            installed_executable: existing.as_ref().map(|_| permissions.executable),
-            installed_unix_mode: existing.as_ref().and(permissions.unix_mode),
-            executable: permissions.executable,
-            unix_mode: permissions.unix_mode,
-        });
-    }
-    let plan_digest = sha256_digest(
-        &serde_json::to_vec(&entries).map_err(|error| InstallError::Internal(error.to_string()))?,
-    );
-    let backup = UserBackupManifest {
-        schema_version: 2,
-        host: arguments.host,
-        plan_digest,
-        host_mutations: Vec::new(),
-        index_existed: root_index_exists(&arguments.root_cap)?,
-        index_removal: None,
-        codex_state_before: None,
-        claude_state_before: None,
-        antigravity_state_before: None,
-        host_owned_state: None,
-        pending_host_transition: None,
-        codex_plugin_was_latent_before_marketplace_add: false,
-        entries,
-    };
-    persist_backup(arguments, &backup_relative, &backup)?;
-    Ok(backup_relative)
-}
-
-fn transaction_backup_paths(host: UserHost) -> Vec<PathBuf> {
-    let mut paths = [
-        ".hive/config/projects.yml",
-        ".hive/config/collections.yml",
-        ".hive/config/user-setup.yml",
-        ".hive/config/user-feature-answers.yml",
-        ".hive/config/user-preferences.json",
-        ".hive/config/rag-trust.json",
-        ".hive/roster.toml",
-        ".hive/runtime/usage-monitor/config.json",
-        ".hive/runtime/usage-monitor/disable.json",
-        ".claude/settings.json",
-        ".claude/CLAUDE.md",
-        ".codex/AGENTS.md",
-        ".gemini/GEMINI.md",
-    ]
-    .into_iter()
-    .map(PathBuf::from)
-    .collect::<Vec<_>>();
-    paths.retain(|path| {
-        !matches!(path.to_str(), Some(".claude/settings.json")) || host == UserHost::Claude
-    });
-    paths
 }
 
 fn read_transaction_journal(
@@ -9133,6 +9071,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn authenticated_release_mismatch_automatically_preserves_and_reinstalls_user_scope() {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex"]);
@@ -9201,6 +9140,20 @@ mod tests {
             fs::write(&path, relative.as_bytes()).unwrap();
             sentinels.push(path);
         }
+        let backups = temporary.path().join("hive-backups");
+        let set_aside = temporary.path().join("hive-backups-set-aside");
+        if backups.exists() {
+            fs::rename(&backups, &set_aside).unwrap();
+        }
+        fs::write(&backups, b"not a folder").unwrap();
+        let manifest_before = fs::read(&manifest_path).unwrap();
+        assert!(execute(UserOperation::Install, &install, &runner).is_err());
+        assert_eq!(fs::read(&manifest_path).unwrap(), manifest_before);
+        assert_eq!(fs::read(&projects).unwrap(), projects_bytes);
+        fs::remove_file(&backups).unwrap();
+        if set_aside.exists() {
+            fs::rename(&set_aside, &backups).unwrap();
+        }
         let repaired = execute(UserOperation::Install, &install, &runner)
             .expect("automatic preserving reinstall");
         assert_eq!(
@@ -9216,6 +9169,7 @@ mod tests {
             .as_str()
             .expect("backup location reported")
             .to_owned();
+        assert!(backup.starts_with("hive-backups/"), "{backup}");
         assert_eq!(
             fs::read(
                 temporary

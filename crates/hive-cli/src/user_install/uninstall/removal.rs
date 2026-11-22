@@ -1,6 +1,6 @@
 //! A confirmed removal retains its exact inventory outside all deletion targets.
 use super::super::{
-    deactivation, emit_action_result, failure, file_permissions, inspect_setup_write_claim,
+    backup, deactivation, emit_action_result, failure, file_permissions, inspect_setup_write_claim,
     lock_user_setup, parse_uninstall, portable, prune_empty_owned_ancestors, read_optional_regular,
     recover_user_setup_file, remove_hive_guidance_marker, remove_owned_empty_dir,
     remove_regular_if_exists, replace_user_setup_file, valid_sha256, validate_relative,
@@ -205,6 +205,16 @@ pub(super) fn start(
         },
         last_error: None,
     };
+    let affected = receipt
+        .plan
+        .entries
+        .iter()
+        .filter(|(_, entry)| matches!(entry.kind.as_str(), "file" | "marker"))
+        .map(|(name, _)| PathBuf::from(name))
+        .collect::<Vec<_>>();
+    if let Some(saved) = backup::create(&target.root_cap, "uninstall", affected)? {
+        receipt.changed_paths.push(portable(&saved));
+    }
     save(target, &receipt)?;
     interrupt("approved");
     finish(target, &mut receipt)
@@ -704,7 +714,12 @@ mod tests {
     fn approved_removal_preserves_knowledge_and_stays_pending_for_unknown_program_owner() {
         let root = tempfile::tempdir().unwrap();
         let user_root = root.path().canonicalize().unwrap();
-        for dir in [".hive/index", ".hive/knowledge", ".hive/config"] {
+        for dir in [
+            ".hive/index",
+            ".hive/knowledge",
+            ".hive/config",
+            ".hive/backups",
+        ] {
             fs::create_dir_all(user_root.join(dir)).unwrap();
         }
         fs::write(user_root.join(".hive/index/derived.db"), b"derived").unwrap();
@@ -718,6 +733,11 @@ mod tests {
             root_cap: open_user_root(&user_root).unwrap(),
             user_root,
         };
+        fs::write(
+            target.user_root.join(".hive/backups/keep.txt"),
+            b"older backup",
+        )
+        .unwrap();
         let plan = preview(&target, &env::current_exe().unwrap()).unwrap();
         let result = start(&target, plan, true).unwrap();
         assert_eq!(
@@ -728,6 +748,19 @@ mod tests {
         );
         assert_eq!(result.code, "hive.user-uninstall-pending");
         assert!(!target.user_root.join(".hive/index/derived.db").exists());
+        assert_eq!(
+            fs::read(target.user_root.join(".hive/backups/keep.txt")).unwrap(),
+            b"older backup"
+        );
+        let saved = fs::read_dir(target.user_root.join("hive-backups"))
+            .unwrap()
+            .next()
+            .expect("backup outside .hive")
+            .unwrap();
+        assert_eq!(
+            fs::read(saved.path().join("files/.hive/config/projects.yml")).unwrap(),
+            b"registered projects"
+        );
         assert_eq!(
             fs::read(target.user_root.join(".hive/knowledge/fact.md")).unwrap(),
             b"user knowledge"

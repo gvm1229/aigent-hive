@@ -194,6 +194,18 @@ PruneStorage
 ko: 정리 대상 처리 완료.
 en: Success. Storage cleanup processed.
 
+ListHiveBackups
+ko: 백업 목록 확인 완료.
+en: Success. Recovery backups listed.
+
+RestoreHiveBackup
+ko: 백업 복원 처리 완료.
+en: Success. Backup restore processed.
+
+ManageHiveBackups
+ko: 백업 명령 처리 완료.
+en: Success. Backup command processed.
+
 CoordinateSession
 ko: 파일 수정 예약 처리 완료.
 en: Success. File edit reservation processed.
