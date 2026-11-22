@@ -669,7 +669,9 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
             if same_provider.is_none() {
                 // The roster already puts the reviewer on another provider: keep test.3 behavior.
                 None
-            } else if others.len() == 1 {
+            } else if others.len() == 1
+                && resolve_profile(&context, reviewer_name, "--reviewer", Some(&others[0])).is_ok()
+            {
                 Some(others[0].clone())
             } else {
                 let reason = same_provider.unwrap_or_default();

@@ -113,6 +113,8 @@ USAGE:
     hive usage probe-native --host codex|claude|antigravity [--output json]
     hive usage monitor preview|enable|disable|status --user-root <dir> [--output json]
     hive storage [--user-root <dir>] [--output json]
+    hive storage backup list [--user-root <dir>] [--output json]
+    hive storage backup restore --id <backup> [--path <file>] [--confirm <sha256>] [--user-root <dir>] [--output json]
     hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]

@@ -2800,6 +2800,10 @@ fn execute_preserving_reinstall(
         crate::user_setup::uninstall_projection_paths(&arguments.root_cap)
             .map_err(|error| InstallError::Conflict(error.message().to_owned()))?,
     );
+    // Files that no manifest lists are removed with these trees too.
+    for tree in [".hive/guides", ".hive/install"] {
+        affected.extend(backup::tree_files(&arguments.root_cap, Path::new(tree))?);
+    }
     let backup_relative =
         backup::create(&arguments.root_cap, "reinstall", affected)?.ok_or_else(|| {
             InstallError::Verification(
@@ -2807,14 +2811,17 @@ fn execute_preserving_reinstall(
             )
         })?;
     let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let saved_at = format!("; recovery copy: {}", portable(&backup_relative));
     let removed = execute_uninstall(
         &UserUninstallArguments {
             user_root,
             root_cap,
         },
         runner,
-    )?;
-    let mut reinstalled = execute(operation, arguments, runner)?;
+    )
+    .map_err(|error| error.with_suffix(&saved_at))?;
+    let mut reinstalled =
+        execute(operation, arguments, runner).map_err(|error| error.with_suffix(&saved_at))?;
     reinstalled.code = match operation {
         UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
         UserOperation::Update => "hive.user-update-complete-after-preserving-reinstall",

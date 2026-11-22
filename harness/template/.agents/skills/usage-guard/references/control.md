@@ -178,6 +178,10 @@ policy. Never report an AI child as stopped based only on its parent turn stoppi
 ## Threshold and current-session controls
 
 7. Perform at most the explicitly requested control mutation:
+   - Percentages that a Claude user names are used percent, as on Claude's screen. Convert them:
+     "stop at 96%" is `--remaining-percent 4`, or `--host claude --window all --stop-used-percent 96`.
+     Never pass a used number as `--remaining-percent`. Codex and Antigravity numbers are already
+     remaining. Tell the user both numbers.
    - A global threshold requires explicit global intent and an integer from 0 through 99:
 
      ```text

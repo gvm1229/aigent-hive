@@ -272,7 +272,7 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
         ));
         text.push_str(&choose(
             language,
-            "\n기준 보호가 켜져 있을 때 전역과 프로젝트 중 더 높은 기준을 적용합니다.",
+            "\n기준 보호가 켜져 있을 때 전역과 프로젝트 중 더 높은 남은 사용량 기준을 적용합니다.",
             "\nWhen threshold protection is enabled, it uses the higher of the global and project thresholds.",
         ));
     }
@@ -320,6 +320,7 @@ mod usage_direction_tests {
             "hive.usage-reset",
             "hive.usage-session-halted",
             "hive.usage-unknown",
+            "hive.usage-observation-unavailable",
         ] {
             let value = json!({"action":"CheckUsage","status":"blocked","exit_code":3,
                 "code":code,"message":"usage stop","next_action":null});
@@ -378,7 +379,7 @@ fn usage_next_step(code: &str, language: InterfaceLanguage) -> Option<String> {
             "새 요청에서 사용량 사전 확인을 다시 실행하세요. 같은 조회를 반복해도 중단은 풀리지 않습니다.",
             "Run the usage preflight again in a new request. Repeating this check does not clear the stop.",
         ),
-        "hive.usage-unknown" => (
+        "hive.usage-unknown" | "hive.usage-observation-unavailable" => (
             "사용량 측정을 먼저 복구하세요. 측정 없이 같은 요청을 반복하면 다시 멈춥니다.",
             "Restore the usage measurement first. Repeating the request without one stops again.",
         ),
@@ -640,6 +641,7 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
             "Used percentage that stops work (%)",
         ),
         "used_percent" => ("사용한 양(%)", "Used (%)"),
+        "backup" | "recovery_backup" | "preinstall_backup" => ("백업 위치", "Backup location"),
         "current_version" => ("현재 버전", "Current version"),
         "latest_version" => ("최신 버전", "Latest version"),
         "update_available" => ("업데이트 가능", "Update available"),

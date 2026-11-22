@@ -9,7 +9,7 @@ summary: "Discord notifications remain supported; the Notion canonical backend p
 tags: [discord, integration, notion]
 aliases: ["Host integration priority"]
 sources:
-  - "repo:crates/hive-cli/src/discord.rs#sha256:1176cda4fab177cc37d395c7b182c1b854a94f99b8141b07d09898a48199e4ae"
+  - "repo:crates/hive-cli/src/discord.rs#sha256:069e81e74cb1ff8c3437cb4ffa1c008e8b791d12a7b8160af820ab34d0737d0d"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:33b0a59a13b659d8b98b583e682316b8df27964f7efc798af34967c8411cfe9e"
   - "repo:docs/archive/plans/foundations/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"

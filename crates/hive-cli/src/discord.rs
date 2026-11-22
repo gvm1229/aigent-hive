@@ -648,6 +648,9 @@ fn notification_field_line(
                 format!("Usage could not be read; this is not a reached limit. Restore the measurement before you repeat the request: `{fix}`")
             }
         }
+        "resume" if crate::usage_control::native_usage_direction(halt.host_scope) == "used" => {
+            used_direction_resume(halt, korean)
+        }
         // Asking to continue before usage recovers only repeats the same stop, so the advice
         // names the recovery condition first.
         "resume" if korean => halt.run_id.map_or_else(
@@ -688,6 +691,16 @@ fn notification_field_line(
         ),
         _ => return None,
     })
+}
+
+/// A used number counts up, so recovery means falling below the stop point.
+fn used_direction_resume(halt: &UsageHaltNotification<'_>, korean: bool) -> String {
+    match (korean, halt.run_id) {
+                (true, None) => "사용량이 초기화되어 사용한 양이 멈춤 기준 아래로 내려간 뒤 이 프로젝트의 Hive 대화에서 새 요청을 보내세요. 새 요청마다 사용량을 다시 확인합니다.".to_owned(),
+                (true, Some(run_id)) => format!("사용량이 초기화되어 사용한 양이 멈춤 기준 아래로 내려간 뒤 이 프로젝트의 Hive 대화에서 run `{run_id}` 이어 하기를 요청하세요."),
+                (false, None) => "After usage resets below the stop point, send a new request in this project's Hive conversation. Each new request rechecks usage.".to_owned(),
+                (false, Some(run_id)) => format!("After usage resets below the stop point, ask this project's Hive conversation to continue run `{run_id}`."),
+            }
 }
 
 fn display_usage_percent(percent: Option<f64>, korean: bool) -> String {
@@ -812,7 +825,8 @@ mod tests {
         assert!(payload.contains("호스트: Claude Code · 세션(5시간)"));
         assert!(payload.contains("요청: 실행 계획 없음"));
         assert!(payload.contains("진행 상태: 실행 계획 없음"));
-        assert!(payload.contains("사용량이 기준 위로 회복된 뒤"));
+        assert!(payload.contains("멈춤 기준 아래로 내려간 뒤"));
+        assert!(!payload.contains("기준 위로"));
         assert!(!payload.contains("작업을 계속 진행해 주세요"));
         assert!(!payload.contains("unknown"));
     }

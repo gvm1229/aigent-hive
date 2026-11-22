@@ -53,11 +53,15 @@ const PROJECTION_ROOTS: &[&str] = &[
     ".claude/skills",
     ".codex/skills",
 ];
-/// Records that must match the installed bytes; a default restore leaves them alone.
-const INSTALL_BOUND: &[&str] = &[
-    ".hive/install",
-    ".hive/config/rag-trust.json",
-    ".hive/config/user-active-skills.yml",
+/// A default restore returns only what a person owns. Guides, runtime state, claims, knowledge
+/// and install records can disagree with the installed version, so they need `--path`.
+const DEFAULT_RESTORE: &[&str] = &[
+    ".hive/config/projects.yml",
+    ".hive/config/collections.yml",
+    ".hive/config/user-setup.yml",
+    ".hive/config/user-feature-answers.yml",
+    ".hive/config/user-preferences.json",
+    ".hive/roster.toml",
 ];
 
 #[derive(Deserialize, Serialize)]
@@ -137,6 +141,47 @@ fn standard_paths(root: &Dir) -> Result<BTreeSet<PathBuf>, InstallError> {
         }
     }
     Ok(paths)
+}
+
+/// Every regular file below `tree`, without following links.
+pub(super) fn tree_files(root: &Dir, tree: &Path) -> Result<Vec<PathBuf>, InstallError> {
+    let mut found = Vec::new();
+    let mut pending = vec![tree.to_path_buf()];
+    while let Some(relative) = pending.pop() {
+        let mut directory = root
+            .try_clone()
+            .map_err(|error| io_internal("pin", &relative, error))?;
+        let mut missing = false;
+        for component in relative.components() {
+            match directory.open_dir_nofollow(component.as_os_str()) {
+                Ok(next) => directory = next,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    missing = true;
+                    break;
+                }
+                Err(error) => return Err(io_internal("open", &relative, error)),
+            }
+        }
+        if missing {
+            continue;
+        }
+        for entry in directory
+            .entries()
+            .map_err(|error| io_internal("list", &relative, error))?
+        {
+            let entry = entry.map_err(|error| io_internal("list", &relative, error))?;
+            let kind = entry
+                .file_type()
+                .map_err(|error| io_internal("inspect", &relative, error))?;
+            let path = relative.join(entry.file_name());
+            if kind.is_dir() {
+                pending.push(path);
+            } else if kind.is_file() {
+                found.push(path);
+            }
+        }
+    }
+    Ok(found)
 }
 
 /// Copy what an operation may lose. Any failure is returned before the caller changes a byte.
@@ -349,10 +394,7 @@ fn planned_changes(root: &Dir, id: &str, only: Option<&str>) -> Result<Vec<Chang
     for entry in manifest.entries {
         let path = PathBuf::from(&entry.path);
         let selected = only.map_or_else(
-            || {
-                path.starts_with(".hive")
-                    && !INSTALL_BOUND.iter().any(|bound| path.starts_with(bound))
-            },
+            || DEFAULT_RESTORE.contains(&entry.path.as_str()),
             |only| entry.path == only,
         );
         if !selected {
@@ -460,7 +502,14 @@ fn restore(
             permissions,
             change.current.as_deref(),
             existing,
-        )?;
+        )
+        .map_err(|error| match &saved {
+            Some(saved) => error.with_suffix(&format!(
+                "; the files before this restore were saved at {}",
+                portable(saved)
+            )),
+            None => error,
+        })?;
         result.changed_paths.push(portable(&change.path));
     }
     result.data = Some(json!({"backup": saved.as_deref().map(portable)}));
@@ -575,6 +624,39 @@ mod tests {
             assert!(restore(&user, &id, None, None).is_err(), "{path}");
         }
         assert!(restore(&user, "../x", None, None).is_err());
+    }
+
+    #[test]
+    fn a_default_restore_leaves_state_and_product_files_alone() {
+        let (_temporary, user, root) = seeded();
+        let stale = [
+            ".hive/runtime/usage-guard/halt.json",
+            ".hive/claims/old.json",
+            ".hive/guides/guide.md",
+        ];
+        for relative in stale {
+            let path = user.join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"old\n").unwrap();
+        }
+        let saved = create(&root, "uninstall", stale.map(PathBuf::from))
+            .unwrap()
+            .unwrap();
+        for relative in stale {
+            fs::write(user.join(relative), b"current\n").unwrap();
+        }
+        let id = id_of(&saved);
+        let preview = restore(&user, &id, None, None).unwrap().data.unwrap();
+        assert_eq!(preview["items"], json!([]));
+        let named = restore(&user, &id, Some(stale[2]), None)
+            .unwrap()
+            .data
+            .unwrap();
+        assert_eq!(named["items"][0]["path"], stale[2]);
+        assert_eq!(
+            tree_files(&root, Path::new(".hive/guides")).unwrap(),
+            [Path::new(".hive/guides").join("guide.md")]
+        );
     }
 
     #[test]
