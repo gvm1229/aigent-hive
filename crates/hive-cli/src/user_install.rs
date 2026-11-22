@@ -4948,7 +4948,8 @@ fn historical_user_artifact_matches(
 
 fn historical_user_artifact_required(host: UserHost, relative: &str) -> bool {
     if relative.starts_with("skills/") {
-        return true;
+        // The projection writes Codex metadata for Codex and Antigravity, never for Claude.
+        return host != UserHost::Claude || !relative.ends_with("/agents/openai.yaml");
     }
     match host {
         UserHost::Codex | UserHost::Claude => matches!(
@@ -10659,6 +10660,50 @@ mod tests {
         .is_none());
     }
 
+    /// The fixture's own statement of the files a published installer wrote. It must not call
+    /// the completeness rule under test, or a wrong rule would also write its own fixture.
+    fn published_install_contains(host: UserHost, relative: &str) -> bool {
+        if relative.starts_with("skills/") {
+            return host != UserHost::Claude || !relative.ends_with("/agents/openai.yaml");
+        }
+        match host {
+            UserHost::Codex | UserHost::Claude => [
+                ".codex-plugin/plugin.json",
+                ".claude-plugin/plugin.json",
+                "bin/hive-claude-usage-capture",
+            ]
+            .contains(&relative),
+            UserHost::Antigravity => relative == "plugin.json",
+        }
+    }
+
+    #[test]
+    fn completeness_requires_codex_metadata_only_where_the_installer_writes_it() {
+        let relative = "skills/user-setup/agents/openai.yaml";
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let projection = compile_user_projection_localized(
+                host.projection_host(),
+                &["user-setup".to_owned()],
+                &[],
+                DescriptorLanguage::En,
+            )
+            .expect("user projection");
+            let installed = projection
+                .files
+                .keys()
+                .any(|path| path.ends_with("/user-setup/agents/openai.yaml"));
+            assert_eq!(published_install_contains(host, relative), installed);
+            assert_eq!(historical_user_artifact_required(host, relative), installed);
+            // A selected Skill still needs its instructions and references on every host.
+            for needed in [
+                "skills/user-setup/SKILL.md",
+                "skills/user-setup/references/workflow.md",
+            ] {
+                assert!(historical_user_artifact_required(host, needed));
+            }
+        }
+    }
+
     #[test]
     #[allow(clippy::too_many_lines)]
     fn every_09_stable_user_inventory_authenticates_for_every_host() {
@@ -10671,7 +10716,7 @@ mod tests {
                 };
                 let mut entries = files
                     .iter()
-                    .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+                    .filter(|(relative, _)| published_install_contains(host, relative))
                     .map(|(relative, digest)| {
                         let executable = relative.starts_with("bin/");
                         UserOwnershipEntry {
@@ -11129,7 +11174,7 @@ mod tests {
         let mut entries = Vec::new();
         for (relative, digest) in files
             .iter()
-            .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+            .filter(|(relative, _)| published_install_contains(host, relative))
         {
             let path = format!("{prefix}{relative}");
             let target = root.join(&path);
