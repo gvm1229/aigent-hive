@@ -8,7 +8,7 @@
 - [단계 6 검토](../research/overhaul/stage-6-review.md): Fable 5.2 1차 REQUEST CHANGES(B1·B2) → 수정 → 2차 REQUEST CHANGES(N1) → 수정 → 3차 APPROVE WITH FIXES, N4′ 수정 완료
 - 계획 조정(2026-11-20, 상시 위임의 권고안): split 항목의 local 부분을 새 OV160-012로 모음([실행 장소](../plans/overhaul/venue.md) 제안 채택). 계획 검사가 local 대기 항목에 의존하는 cloud 항목 완료를 막기 때문. test.1은 develop 전용 워크플로라 병합(010) 뒤로 순서 정정
 - 실행 장소: 2026-11-21 local 세션(이 PC, 0.16.0-test.3 설치, 07 사전 확인 실행). 다음 수정은 cloud
-- **다음 시작점**: [재개 계획](../research/overhaul/OV160-resume.md)의 검증과 출시 순서. test.4 차단은 OV160-023 바깥 백업·복원, OV160-024 사용량 표시, 검토 수정 브랜치 `fix/ov160-stage-review-fixes`
+- **다음 시작점**: OV160-020 — 0.16.0-test.4 게시·세 OS 수용 뒤 이 PC 인계 1–4단계. [재개 계획](../research/overhaul/OV160-resume.md)의 5–7단계, 설치 전 `~/.hive` 밖 백업
 - 고정 입력: [판별 기준선](../research/overhaul/OVX-001.md)·[검색 기준선](../research/overhaul/OVX-002.md)
 - 비추적 조사 2026-11-11.md·2026-11-12.md 편집·커밋·삭제 제외
 - [0.15.3 종료 상태](../archive/state/0.15.3-closeout.md)·[0.15.3 단계 검토](../research/overhaul/stage-5-review.md)·[단계 5·0.15.2 근거 색인](../research/overhaul/stage-5-closeout.md) 보존
@@ -17,9 +17,9 @@
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.16.0`
-- 현재 등록 항목: 13/25 완료
+- 현재 등록 항목: 16/22 완료
 
-- `agent-owned`: `OV160-021`, `OV160-017`, `OV160-020`, `OV160-022`, `OV160-023`, `OV160-024`, `OV160-025`
+- `agent-owned`: `OV160-020`
 - `awaiting-user-authority`: `OV160-011`
 - `awaiting-external-evidence`: `OV160-012`
 - `blocked`: 없음
