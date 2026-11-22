@@ -41,7 +41,7 @@ def public_image_hash(platform_name, version):
     return hashlib.sha256(image).hexdigest(), metadata["dist"]["integrity"]
 
 
-def original_identity(platform_name, version):
+def identity_row(platform_name, version):
     windows = platform_name == "win32-x64"
     registry = ROOT / "harness/setup" / ("legacy-update-images.json" if windows else "legacy-update-posix-images.json")
     entries = json.loads(registry.read_text(encoding="utf-8"))["images"]
@@ -50,8 +50,12 @@ def original_identity(platform_name, version):
     extra = json.loads((ROOT / "tests/fixtures/interactive-cli/public-update-identities.json")
                        .read_text(encoding="utf-8"))
     entries = entries + extra["windows" if windows else "posix"]
-    entry = next(row for row in entries if row["version"] == version
-                 and (windows or row["platform"] == platform_name))
+    return next(row for row in entries if row["version"] == version
+                and (windows or row["platform"] == platform_name))
+
+
+def original_identity(platform_name, version):
+    entry = identity_row(platform_name, version)
     return entry["binary_sha256"], entry["package_integrity"]
 
 
@@ -211,9 +215,12 @@ runpy.run_path(STUB,run_name='__main__')
             probe = work / "mac-parent-probe"
             invoke(["/usr/bin/swiftc", "-module-cache-path", work / "swift-cache",
                 ROOT / "tests/fixtures/interactive-cli/macos-parent-probe.swift", "-o", probe])
-            registry = json.loads((ROOT / "harness/setup/legacy-update-posix-images.json").read_text(encoding="utf-8"))
-            original = next(row for row in registry["images"] if row["platform"] == platform_name and row["version"] == args.previous_version)
+            original = identity_row(platform_name, args.previous_version)
             details["terminal_trace"] = {"mac_probe": str(probe), "original_cdhash": original["code_directory_hash"], "probe_sha256": sha(probe)}
+        installed = yaml.safe_load((user / ".hive/config/user-setup.yml").read_text(encoding="utf-8"))
+        # Only schema 1 (0.13.x) is asked the usage-protection questions during an update.
+        migrating = installed["schema_version"] == 1
+        details["settings_migration_expected"] = migrating
         update = [*entry, "update", "--channel", "test", "--user-root", user]
         if args.redirected:
             update.append("--confirm")
@@ -235,12 +242,16 @@ runpy.run_path(STUB,run_name='__main__')
                     creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup)
                 assert process.returncode == 0, (process.returncode, process.stderr[-3000:])
                 outcome = json.loads(result.read_text())
-                assert outcome["confirmed"] and outcome["questions"] >= 2 and outcome["exit_code"] == 0, outcome
+                assert outcome["exit_code"] == 0, outcome
+                if migrating:
+                    assert outcome["confirmed"] and outcome["questions"] >= 2, outcome
+                else:
+                    assert outcome["questions"] == 0, outcome
                 events.append({"command": list(map(str, update)), "terminal": "private Windows console", **outcome})
             else:
                 outcome = terminal.posix_terminal(Path(entry[0]), list(map(str, update[1:])), env, user,
                     preserve_legacy=True, timeout_seconds=610, language="en", trace=details.setdefault("terminal_trace", {}))
-                assert any(s["step"] == "usage-enforcement" for s in outcome["steps"]), outcome
+                assert any(s["step"] == "usage-enforcement" for s in outcome["steps"]) == migrating, outcome
                 events.append({"command": list(map(str, update)), **outcome})
         current = old
         assert current.is_file() and sha(current) == wanted_hash
@@ -254,12 +265,16 @@ runpy.run_path(STUB,run_name='__main__')
             assert settings[key] == choices[key], key
         guard = settings["usage_guard"]
         assert guard["stop_remaining_percent"] == 20 and not guard["codexbar_fallback_enabled"]
-        if settings["schema_version"] == 2:
+        if not migrating:
+            saved = yaml.safe_load((user / ".hive/config/user-setup.yml").read_text(encoding="utf-8"))
+            assert settings["schema_version"] == installed["schema_version"]
+            assert saved["usage_guard"] == installed["usage_guard"], "update changed saved usage protection"
+        elif settings["schema_version"] == 2:
             assert guard["preflight"]["zero_quota_enabled"] and not guard["preflight"]["threshold_enabled"]
             assert not guard["preflight"]["reset_enabled"] and not guard["midway"]["enabled"]
         else:
             assert args.redirected and not guard["enabled"]
-        if not args.redirected:
+        if migrating and not args.redirected:
             progress = yaml.safe_load((user / ".hive/config/setup-progress/user.yml").read_text(encoding="utf-8"))
             assert progress["phase"] == "complete"
         assert {p.relative_to(project).as_posix(): sha(p) for p in project.rglob("*") if p.is_file()} == project_before
