@@ -10,8 +10,8 @@ tags: [migration, project-upgrade, usage, v0-10-1]
 aliases: ["0.10.1 upgrade repair"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:b9439680a397b8459548cffabf6ebd0ff74f5e5ca4977ec8adda5e9676f92a0b"
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:f9c9ac485204ada707f82e2cfb79c49f9b39ed45b705b72c776df695c1211cee"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:3a45f65d21038c488be8a8321f8c4df95b4e85d1e6170c98567d47bb0f14300b"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:412578c5555c660f88806d3902109d71c4ba90e986e4cf277ac91131088da0dc"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:bda8059012ca2e28ee67a08f5cf77dc54220622ac844424fe325bb9cec68d8ac"
   - "repo:crates/hive-projection/src/lib.rs#sha256:9561647510a75cdc259d93a93f032e09d620f41adab550291f1c93ef3b564ed4"
   - "repo:crates/hive-render/src/lib.rs#sha256:3a7521d803fb1db33e44d0b24c33453e17c0cc0f9f674aba814b7649cac4c323"
   - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"

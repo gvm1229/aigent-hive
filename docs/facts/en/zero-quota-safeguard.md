@@ -9,7 +9,7 @@ summary: "Legacy exhaustion protection is preserved by migration; new 0.14.0 v2 
 tags: [exhaustion, session, usage, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:f9c9ac485204ada707f82e2cfb79c49f9b39ed45b705b72c776df695c1211cee"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:412578c5555c660f88806d3902109d71c4ba90e986e4cf277ac91131088da0dc"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
   - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"

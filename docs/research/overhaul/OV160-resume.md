@@ -31,11 +31,12 @@
 
 - 의존: 없음. 소유: Claude 조율 세션
 - 불변: 저장·비교는 남은 % 유지. Codex·Antigravity 표시는 남은 %
-- D1 `discord.rs` `notification_field_line`: Claude 측정값은 "사용한 양: N%", 그 밖 호스트는 "남은 사용량: N%" 표시. `usage_monitor/notice.ps1`의 Claude 표시에도 같은 방향 적용
+- D1 `discord.rs` `notification_field_line`: Claude 측정값은 "사용한 양: N%", 그 밖 호스트는 "남은 사용량: N%" 표시. `usage_monitor/notice.ps1`은 Codex 전용 안내라 변경 없음
 - D2 `discord.rs` `resume`: `remaining_percent`가 없으면 사용량 회복 안내 대신 측정 확인 안내와 `hive usage status`. 측정값이 있으면 기존 회복 안내
 - D3 `usage_control.rs`: 멈춤 기준 자료의 키를 `native_threshold`로 변경. `notices/quota.rs`의 현재 측정값은 `native_value` 유지. 한 키의 두 의미 제거
 - D4 `human_output.rs` `threshold_message`: "사용량 보호를 멈추도록" 문구를 "사용한 양이 N%에 이르면 작업 중단"으로 교체. 영어도 작업 중단 의미
 - D5 `human_output/families.rs`: 설정 요약은 `primary_host`와 저장된 남은 기준으로 방향·값 계산. 기록된 적 없는 `native_value` 읽기 제거
+- D7 중단 화면의 다음 단계: 한도·소진·초기화·측정 없음에 "입력을 고친 뒤 재실행" 안내 제거. 실제 실행 출력에서 추가 발견
 - D6 출시 노트 COMPAT: 0.15.x로 내리기 전 `--claude-statusline revert`와 `~/.hive` 밖 백업 필요
 - 시험: 상태 표시줄 입력 3% 사용 → 남은 값 97 저장·작업 허용·표시 3% 사용, 97% 사용 → 남은 값 3 저장·중단·Discord 전체 문구 97% 사용, 남은 기준 4 → "96% 사용에서 작업 중단", 측정 없음 → 회복 안내 부재, 설정 요약의 세 호스트 방향
 - 완료 판정: 값 계산 시험만으로 완료 금지. 실제 출력 문자열 시험과 이 PC 명령 출력 확인 필수
@@ -48,7 +49,7 @@
 - B2 시점: 설치·갱신 적용 전, 보존 재설치 제거 전, 사용자 제거의 첫 변경 전. 백업 실패 시 변경 0건
 - B3 대상: 바뀌거나 지워질 파일 + `.hive/config`의 설정 파일 + 설치 기록 + `roster.toml` + 상태 표시줄 되돌리기 기록 + 네 호스트 안내·설정 파일. 재생성 가능한 색인·플러그인 사본 제외
 - B4 `user_install/uninstall.rs`·`removal.rs`: `.hive/backups` 삭제 금지, 보존 목록에 표시
-- B5 `hive backup list|restore`: `--user-root`, 복원은 `--id`, 변경 목록과 지문 미리보기, 같은 지문 확인 뒤 적용. 덮어쓰기 전 현재 파일 재백업. 백업에 없는 현재 파일은 삭제 금지
+- B5 `hive storage backup list|restore`(기존 Hades 소유 명령 아래, 새 최상위 명령 없음): `--user-root`, 복원은 `--id`, 변경 목록과 지문 미리보기, 같은 지문 확인 뒤 적용. 덮어쓰기 전 현재 파일 재백업. 백업에 없는 현재 파일은 삭제 금지
 - 시험: 백업 실패 시 변경 없음, 제거·재설치 뒤 바깥 사본과 `.hive/backups` 생존, 내용 변조 거부, 경로 탈출 거부, 확인 뒤 바이트 복원, 확인 뒤 바뀐 파일 거부
 - 남은 범위 OV160-025: 채택 흐름, 등록 목록 재구성 명령. OV160-021과 함께 0.17.0 후보
 
