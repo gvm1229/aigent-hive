@@ -79,8 +79,26 @@ const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
     "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
 const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
     "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
-const VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS: &[&str] =
-    &["0.15.0", "0.15.1", "0.15.2", "0.15.3"];
+/// Frozen bytes of published releases. Never derive these from the live template: editing the
+/// template would then break update authentication for every one of these installations.
+const PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS: &[(&str, &str)] = &[
+    (
+        "0.15.0",
+        "sha256:9d039c1a88f693436c143a31435619c12722812bbe4c1c8e8e789f434dbdccbf",
+    ),
+    (
+        "0.15.1",
+        "sha256:d6cf535e085c3b4e0054f67bc848fa6b4772358747c4625efe755edf62a7a553",
+    ),
+    (
+        "0.15.2",
+        "sha256:d8ade24e87c05f8d527e75098a9e4ed3ffe3fc8ba328aaf0c2ba19308ca2d1ea",
+    ),
+    (
+        "0.15.3",
+        "sha256:1d6d0940307f9d379a25a12d1ff8f7e94e8e10563044cc0b0dadd471552b7d69",
+    ),
+];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
 const PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST: &str =
@@ -3946,6 +3964,13 @@ fn render_claude_marketplace() -> Vec<u8> {
     render_claude_marketplace_for(env!("CARGO_PKG_VERSION"))
 }
 
+fn published_claude_marketplace_digest(version: &str) -> &'static str {
+    PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS
+        .iter()
+        .find(|(published, _)| *published == version)
+        .map_or(USER_070_CLAUDE_MARKETPLACE_DIGEST, |(_, digest)| *digest)
+}
+
 fn render_claude_marketplace_for(version: &str) -> Vec<u8> {
     format!(
         "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{version}\"\n    }}\n  ]\n}}\n"
@@ -4751,13 +4776,8 @@ fn historical_09x_user_inventory(
                         USER_070_CODEX_MARKETPLACE_DIGEST.to_owned(),
                     ),
                     UserHost::Claude => {
-                        let digest = if VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS
-                            .contains(&request.product_version)
-                        {
-                            sha256_digest(&render_claude_marketplace_for(request.product_version))
-                        } else {
-                            USER_070_CLAUDE_MARKETPLACE_DIGEST.to_owned()
-                        };
+                        let digest =
+                            published_claude_marketplace_digest(request.product_version).to_owned();
                         (
                             ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
                             digest,
@@ -10710,11 +10730,7 @@ mod tests {
                         ),
                         UserHost::Claude => (
                             ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
-                            if VERIFIED_CLAUDE_MARKETPLACE_TEMPLATE_VERSIONS.contains(&version) {
-                                sha256_digest(&render_claude_marketplace_for(version))
-                            } else {
-                                USER_070_CLAUDE_MARKETPLACE_DIGEST.to_owned()
-                            },
+                            published_claude_marketplace_digest(version).to_owned(),
                         ),
                         UserHost::Antigravity => unreachable!(),
                     };
@@ -10892,6 +10908,11 @@ mod tests {
                 .expect("Claude manifest JSON");
         let marketplace_path = ".hive/marketplaces/claude/.claude-plugin/marketplace.json";
         let marketplace = render_claude_marketplace_for("0.15.3");
+        assert_eq!(
+            sha256_digest(&marketplace),
+            published_claude_marketplace_digest("0.15.3"),
+            "the seed must be the published 0.15.3 bytes"
+        );
         fs::create_dir_all(
             temporary
                 .path()
