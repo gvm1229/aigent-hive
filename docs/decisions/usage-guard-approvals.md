@@ -24,3 +24,9 @@
 - 유지관리자 결정: 주간 87% 사용 시점에 멈춤 기준을 96% 사용(남은 4%)으로 변경 후 작업 계속
 - 적용: `hive usage threshold --user-root <home> --remaining-percent 4`(전역, 이전 10). 현재 기준 값은 남은 비율 하나라 Codex에도 남은 4%로 적용
 - 후속: 호스트별 지표 방향(Claude 사용 비율, Codex 남은 비율) 구분은 새 0.16.0 계획에서 처리
+
+## 2026-11-23 현재 세션 보호 끄기
+
+- 유지관리자 원문: "Disable the usage guard for this session only while proceeding. You are authorized to do so if needed."
+- 적용: 조율 중인 Claude 세션 연결 하나에 `hive usage session --action disable --confirm-session-disable`. 전역 남은 4% 기준과 0% 보호 유지
+- 한계: 다음 세션·다른 프로젝트에 전파 없음
