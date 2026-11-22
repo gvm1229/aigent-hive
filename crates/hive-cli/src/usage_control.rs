@@ -1749,7 +1749,7 @@ fn status(arguments: &StatusArguments) -> Result<ActionResult, AdapterError> {
         data: Some(json!({
             "threshold_remaining_percent": config.threshold,
             "native_direction": native_usage_direction(&config.primary_host),
-            "native_value": native_usage_value(&config.primary_host, config.threshold),
+            "native_threshold": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
@@ -1867,7 +1867,7 @@ fn enforce_captured(
                 "process_id": binding.process_id,
                 "threshold_remaining_percent": config.threshold,
                 "native_direction": native_usage_direction(&config.primary_host),
-                "native_value": native_usage_value(&config.primary_host, config.threshold),
+                "native_threshold": native_usage_value(&config.primary_host, config.threshold),
                 "global_threshold_remaining_percent": config.global_threshold,
                 "project_threshold_remaining_percent": config.project_threshold,
                 "scope": "automatic-dispatch-preflight",
@@ -2348,6 +2348,27 @@ fn read_run_notification_context(
     })
 }
 
+fn halt_notification<'a>(
+    config: &'a InstalledUsageConfig,
+    marker: &'a HaltMarker,
+) -> crate::discord::UsageHaltNotification<'a> {
+    crate::discord::UsageHaltNotification {
+        project_name: &config.project_name,
+        host_scope: &marker.host_scope,
+        selected_window: &marker.selected_window,
+        decision: &marker.decision,
+        remaining_percent: marker.remaining_percent,
+        measured_at: marker.measured_at,
+        evidence_digest: &marker.evidence_digest,
+        run_id: marker.run_id.as_deref(),
+        request_summary: marker.request_summary.as_deref(),
+        progress: marker.progress.as_deref(),
+        request_privacy: &config.discord_request_privacy,
+        interface_language: &config.interface_language,
+        message_fields: &config.discord_message_fields,
+    }
+}
+
 fn record_discord_notification(
     result: &mut ActionResult,
     config: &InstalledUsageConfig,
@@ -2356,20 +2377,7 @@ fn record_discord_notification(
     let outcome = crate::discord::notify_usage_halt(
         config.discord_guard_enabled,
         config.discord_webhook_url_env.as_deref(),
-        &crate::discord::UsageHaltNotification {
-            project_name: &config.project_name,
-            host_scope: &marker.host_scope,
-            selected_window: &marker.selected_window,
-            remaining_percent: marker.remaining_percent,
-            measured_at: marker.measured_at,
-            evidence_digest: &marker.evidence_digest,
-            run_id: marker.run_id.as_deref(),
-            request_summary: marker.request_summary.as_deref(),
-            progress: marker.progress.as_deref(),
-            request_privacy: &config.discord_request_privacy,
-            interface_language: &config.interface_language,
-            message_fields: &config.discord_message_fields,
-        },
+        &halt_notification(config, marker),
     );
     if let Some(data) = result
         .data
@@ -2817,7 +2825,7 @@ fn allowed_result(
             "selected_window": observation.selected_window,
             "threshold_remaining_percent": config.threshold,
             "native_direction": native_usage_direction(&config.primary_host),
-            "native_value": native_usage_value(&config.primary_host, config.threshold),
+            "native_threshold": native_usage_value(&config.primary_host, config.threshold),
             "guarded_windows": config.guarded_windows.as_deref().map(guarded_windows_json),
             "measured_at": observation.measured_at,
             "scope": "automatic-dispatch-preflight",
@@ -2871,7 +2879,7 @@ fn session_disabled_result(
             "process_id": binding.process_id,
             "threshold_remaining_percent": config.threshold,
             "native_direction": native_usage_direction(&config.primary_host),
-            "native_value": native_usage_value(&config.primary_host, config.threshold),
+            "native_threshold": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "scope": "automatic-dispatch-preflight",
@@ -2936,7 +2944,7 @@ fn policy_changed_result(binding: &SessionBinding, config: &InstalledUsageConfig
             "process_id": binding.process_id,
             "threshold_remaining_percent": config.threshold,
             "native_direction": native_usage_direction(&config.primary_host),
-            "native_value": native_usage_value(&config.primary_host, config.threshold),
+            "native_threshold": native_usage_value(&config.primary_host, config.threshold),
             "global_threshold_remaining_percent": config.global_threshold,
             "project_threshold_remaining_percent": config.project_threshold,
             "session_recheck_required": true,
@@ -2968,10 +2976,15 @@ fn halted_result(binding: &SessionBinding, halt: &LoadedHalt, changed: bool) -> 
         message: if marker.decision == "quota-exhausted" {
             "subscription quota is exhausted; automatic work remains blocked until quota recovers or zero-quota protection is explicitly opted out".to_owned()
         } else if marker.decision == "halted" {
-            format!(
-                "subscription usage is at or below the {}% remaining threshold",
-                marker.threshold_remaining_percent
-            )
+            let floor = marker.threshold_remaining_percent;
+            if native_usage_direction(&binding.host_scope) == "used" {
+                format!(
+                    "subscription usage reached the stop point of {}% used ({floor}% remaining)",
+                    100_u8.saturating_sub(floor)
+                )
+            } else {
+                format!("subscription usage is at or below the {floor}% remaining threshold")
+            }
         } else if marker.decision == "usage-reset" {
             "subscription usage increased after the quota reset guard baseline; explicit user continuation is required".to_owned()
         } else {
@@ -3051,7 +3064,7 @@ fn set_host_threshold(
             "scope":"host", "host":host, "window":arguments.window,
             "previous_remaining_percent":update.previous,
             "threshold_remaining_percent":update.current,
-            "native_direction":direction, "native_value":native_value,
+            "native_direction":direction, "native_threshold":native_value,
             "session_recheck_required":changed
         })),
     })
@@ -6272,6 +6285,62 @@ usage_guard:
             host: Some("claude".into()),
             run_id: None,
         }
+    }
+
+    /// OV160-024: status-line input through to the exact words a person reads.
+    #[test]
+    fn claude_used_percent_reaches_the_screen_and_discord_in_the_same_direction() {
+        use crate::user_setup::InterfaceLanguage;
+        let user = claude_user_root();
+        let source = temporary_target();
+        fs::write(source.path().join("hive-source.json"), b"{}\n").unwrap();
+
+        // 3% used is 97% remaining: work continues and the screen says 3% used.
+        let recorded = capture_from(
+            user.path(),
+            &status_line_input("direction", source.path(), Some((3.0, 3.0))),
+        )
+        .unwrap();
+        let stored: serde_json::Value = serde_json::from_slice(
+            &fs::read(user.path().join(&recorded.changed_paths[0])).unwrap(),
+        )
+        .unwrap();
+        for window in stored["windows"].as_array().unwrap() {
+            assert!((window["remaining_percent"].as_f64().unwrap() - 97.0).abs() < 1e-9);
+        }
+        let allowed = enforce(&source_enforce(source.path(), user.path(), "direction")).unwrap();
+        assert_eq!(allowed.code, "hive.usage-allowed", "{:?}", allowed.data);
+        let screen = crate::human_output::render(
+            &json!({"action":"ShowUsageStatus","status":"success","exit_code":0,
+                "code":"hive.usage-observed","message":"observed",
+                "data":{"host":"claude","snapshot":{"windows":stored["windows"]}}}),
+            InterfaceLanguage::Ko,
+            "usage",
+        );
+        assert!(screen.contains("사용한 양(%): 3"), "{screen}");
+        assert!(!screen.contains("남은 사용량"), "{screen}");
+
+        // 97% used is 3% remaining: work stops and Discord says 97% used.
+        capture_from(
+            user.path(),
+            &status_line_input("direction", source.path(), Some((97.0, 97.0))),
+        )
+        .unwrap();
+        let limited = enforce(&source_enforce(source.path(), user.path(), "direction")).unwrap();
+        assert_eq!(limited.code, "hive.usage-limited");
+        assert!(limited.message.contains("80% used"), "{}", limited.message);
+        let path = limited
+            .changed_paths
+            .iter()
+            .find(|path| path.ends_with("halt.json"))
+            .expect("halt record");
+        let marker: super::HaltMarker =
+            serde_json::from_slice(&fs::read(user.path().join(path)).unwrap()).unwrap();
+        let mut config = parse_installed_config(installed_config("claude", true, false)).unwrap();
+        config.interface_language = "ko".to_owned();
+        let notice = crate::discord::halt_content(&super::halt_notification(&config, &marker));
+        assert!(notice.contains("사용한 양: 97.00%"), "{notice}");
+        assert!(!notice.contains("남은 사용량"), "{notice}");
     }
 
     #[test]

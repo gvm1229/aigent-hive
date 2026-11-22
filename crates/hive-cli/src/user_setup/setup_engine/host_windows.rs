@@ -70,8 +70,8 @@ fn instantiate(template: &Question, host: &str) -> Option<Question> {
             Some(hive_core::preferences::UsageDirection::Used)
         ) && [FIVE_HOUR_THRESHOLD, WEEKLY_THRESHOLD].contains(&template.id.as_str())
         {
-            question.help.ko.push_str(" 입력값은 저장할 잔여량 기준. 사용한 비율 입력은 hive usage threshold --help 참고.");
-            question.help.en.push_str(" This setup field stores a remaining-quota floor. For a used percentage, see hive usage threshold --help.");
+            question.help.ko.push_str(" 입력값은 저장할 잔여량 기준(96% 사용에서 멈추려면 4 입력). 사용한 비율 입력은 hive usage threshold --help 참고.");
+            question.help.en.push_str(" This setup field stores a remaining-quota floor (enter 4 to stop at 96% used). For a used percentage, see hive usage threshold --help.");
         }
     }
     Some(question)

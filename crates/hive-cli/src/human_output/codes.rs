@@ -15,7 +15,7 @@ pub(super) const CODES: &[(&str, &str, &str)] = &[
     ("hive.release-verified", "배포 파일이 손상되지 않았음을 확인했습니다.", "The release files are intact."),
     // Usage protection.
     ("hive.usage-allowed", "사용량이 충분해 작업을 계속할 수 있습니다.", "Enough usage remains to continue."),
-    ("hive.usage-limited", "남은 사용량이 보호 기준보다 적어 작업을 멈춰야 합니다.", "Remaining usage is below the protection threshold, so work must stop."),
+    ("hive.usage-limited", "사용량이 보호 기준에 도달해 작업을 멈춰야 합니다.", "Usage reached the protection threshold, so work must stop."),
     ("hive.usage-quota-exhausted", "사용량을 모두 써서 작업을 멈춰야 합니다.", "Usage is used up, so work must stop."),
     ("hive.usage-reset", "사용량이 초기화되는 중이라 작업을 멈춰야 합니다.", "Usage is resetting, so work must stop."),
     ("hive.usage-unknown", "사용량을 확인하지 못해 안전을 위해 작업을 멈춰야 합니다.", "Usage could not be read, so work must stop for safety."),

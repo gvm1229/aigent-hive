@@ -107,6 +107,11 @@ fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut S
     };
     let text = |key: &str| settings[key].as_str().unwrap_or("-").to_owned();
     let skills = settings["selected_project_skills"].as_array().map_or(0, Vec::len);
+    let counts_used = crate::usage_control::native_usage_direction(
+        settings["primary_host"].as_str().unwrap_or(""),
+    ) == "used";
+    let floor = settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0);
+    let stop_at = if counts_used { 100_u64.saturating_sub(floor) } else { floor };
     let rows = [
         (label_for(ko, "설정 출처", "Settings source"), source.to_owned()),
         (label_for(ko, "화면 언어", "Interface language"), text("interface_language")),
@@ -120,12 +125,12 @@ fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut S
             format!(
                 "{} ({} {}%)",
                 on_off(&settings["usage_guard_enabled"]),
-                if settings["native_direction"] == "used" {
+                if counts_used {
                     label_for(ko, "사용한 양 기준", "stop at used")
                 } else {
                     label_for(ko, "남은 사용량 기준", "stop below")
                 },
-                settings["native_value"].as_u64().unwrap_or_else(|| settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0))
+                stop_at
             ),
         ),
         (label_for(ko, "선택한 Skill", "Selected Skills"), skills.to_string()),
@@ -469,4 +474,27 @@ fn report_item(item: &str, ko: bool) -> String {
         _ => return item.to_owned(),
     };
     plain.to_owned()
+}
+
+#[cfg(test)]
+mod settings_direction_tests {
+    use super::{effective_settings, InterfaceLanguage};
+    use serde_json::json;
+
+    #[test]
+    fn settings_summary_follows_each_host_screen() {
+        for (host, expected) in [
+            ("claude", "사용한 양 기준 96%"),
+            ("codex", "남은 사용량 기준 4%"),
+            ("antigravity", "남은 사용량 기준 4%"),
+        ] {
+            let mut out = String::new();
+            effective_settings(
+                &json!({"primary_host":host,"usage_stop_remaining_percent":4}),
+                InterfaceLanguage::Ko,
+                &mut out,
+            );
+            assert!(out.contains(expected), "{host}: {out}");
+        }
+    }
 }

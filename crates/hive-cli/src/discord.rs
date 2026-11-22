@@ -31,6 +31,8 @@ pub(crate) struct UsageHaltNotification<'a> {
     pub(crate) project_name: &'a str,
     pub(crate) host_scope: &'a str,
     pub(crate) selected_window: &'a str,
+    /// Why the halt was recorded: it selects the recovery advice.
+    pub(crate) decision: &'a str,
     pub(crate) remaining_percent: Option<f64>,
     pub(crate) measured_at: u64,
     pub(crate) evidence_digest: &'a str,
@@ -288,6 +290,7 @@ fn test_result(arguments: &TestArguments) -> ActionResult {
                     project_name: "example-project",
                     host_scope: "codex",
                     selected_window: "session",
+                    decision: "halted",
                     remaining_percent: Some(20.0),
                     measured_at: 0,
                     evidence_digest: "sha256:test-notification",
@@ -406,6 +409,12 @@ struct DiscordPayload {
 #[derive(Serialize)]
 struct AllowedMentions {
     parse: Vec<String>,
+}
+
+/// The exact text a halt notice would send.
+#[cfg(test)]
+pub(crate) fn halt_content(halt: &UsageHaltNotification<'_>) -> String {
+    payload_for(halt, false).content
 }
 
 /// Deliver one fresh halt notification if the optional integration is enabled.
@@ -578,15 +587,20 @@ fn notification_field_line(
     korean: bool,
 ) -> Option<String> {
     Some(match field {
-        "remaining-usage" => format!(
-            "{}: {}",
-            if korean {
-                "남은 사용량"
-            } else {
-                "remaining usage"
-            },
-            display_remaining_usage(halt.remaining_percent, korean)
-        ),
+        // Claude's own screen counts up (used); Codex and Antigravity count down (remaining).
+        "remaining-usage" => {
+            let used = crate::usage_control::native_usage_direction(halt.host_scope) == "used";
+            let label = match (used, korean) {
+                (true, true) => "사용한 양",
+                (true, false) => "used",
+                (false, true) => "남은 사용량",
+                (false, false) => "remaining usage",
+            };
+            let shown = halt
+                .remaining_percent
+                .map(|remaining| if used { 100.0 - remaining } else { remaining });
+            format!("{label}: {}", display_usage_percent(shown, korean))
+        }
         "project" => format!(
             "{}: {}",
             if korean { "프로젝트" } else { "project" },
@@ -619,6 +633,21 @@ fn notification_field_line(
             host_display(halt.host_scope),
             window_display(halt.selected_window, korean)
         ),
+        "resume" if halt.decision == "usage-reset" => if korean {
+            "사용량 초기화를 감지해 새 할당량을 지키려고 멈췄습니다. 계속하려면 이 프로젝트의 Hive 대화에서 새 요청을 보내세요."
+        } else {
+            "Hive stopped to protect the quota after a detected reset. To continue, send a new request in this project's Hive conversation."
+        }
+        .to_owned(),
+        // Without a measurement there is nothing to recover above the threshold.
+        "resume" if halt.remaining_percent.is_none() => {
+            let fix = observation_fix_command(halt.host_scope);
+            if korean {
+                format!("한도 초과가 아니라 사용량을 읽지 못해 멈췄습니다. 같은 요청을 반복하기 전에 측정을 복구하세요: `{fix}`")
+            } else {
+                format!("Usage could not be read; this is not a reached limit. Restore the measurement before you repeat the request: `{fix}`")
+            }
+        }
         // Asking to continue before usage recovers only repeats the same stop, so the advice
         // names the recovery condition first.
         "resume" if korean => halt.run_id.map_or_else(
@@ -661,8 +690,8 @@ fn notification_field_line(
     })
 }
 
-fn display_remaining_usage(remaining_percent: Option<f64>, korean: bool) -> String {
-    remaining_percent
+fn display_usage_percent(percent: Option<f64>, korean: bool) -> String {
+    percent
         .filter(|value| value.is_finite() && (0.0..=100.0).contains(value))
         .map_or_else(
             || {
@@ -739,6 +768,7 @@ mod tests {
             project_name: "aigent-hive",
             host_scope: "codex",
             selected_window: "weekly",
+            decision: "halted",
             remaining_percent: Some(18.5),
             measured_at: 1_700_000_000,
             evidence_digest: "sha256:allowed-evidence",
@@ -785,6 +815,32 @@ mod tests {
         assert!(payload.contains("사용량이 기준 위로 회복된 뒤"));
         assert!(!payload.contains("작업을 계속 진행해 주세요"));
         assert!(!payload.contains("unknown"));
+    }
+
+    #[test]
+    fn claude_halts_show_used_and_unreadable_usage_never_promises_recovery() {
+        let fields = default_message_fields();
+        let mut notification = notification(&fields);
+        notification.interface_language = "ko";
+        notification.host_scope = "claude";
+        notification.remaining_percent = Some(3.0);
+        let limited = payload_for(&notification, false).content;
+        assert!(limited.contains("사용한 양: 97.00%"), "{limited}");
+        assert!(!limited.contains("남은 사용량"), "{limited}");
+
+        notification.decision = "usage-unknown";
+        notification.remaining_percent = None;
+        let unknown = payload_for(&notification, false).content;
+        assert!(unknown.contains("사용한 양: 알 수 없음"), "{unknown}");
+        assert!(unknown.contains("한도 초과가 아니라"), "{unknown}");
+        assert!(unknown.contains("--claude-statusline preview"), "{unknown}");
+        assert!(!unknown.contains("회복된 뒤"), "{unknown}");
+
+        notification.decision = "usage-reset";
+        notification.remaining_percent = Some(100.0);
+        let reset = payload_for(&notification, false).content;
+        assert!(reset.contains("초기화를 감지해"), "{reset}");
+        assert!(!reset.contains("회복된 뒤"), "{reset}");
     }
 
     #[test]

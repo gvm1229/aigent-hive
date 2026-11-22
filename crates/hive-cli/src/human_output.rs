@@ -165,7 +165,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
     }
     match family_details(action, value, data, language) {
         Some(text) => output.push_str(&text),
-        None => details(data, language, &mut output, 0),
+        None => details(&in_host_direction(data, false), language, &mut output, 0),
     }
     if let Some(next) = value["next_action"]
         .as_str()
@@ -204,7 +204,7 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
     let after = data["threshold_remaining_percent"].as_u64()?;
     if let (Some(direction), Some(value), Some(host)) = (
         data["native_direction"].as_str(),
-        data["native_value"].as_u64(),
+        data["native_threshold"].as_u64(),
         data["host"].as_str(),
     ) {
         let unit = if direction == "used" {
@@ -219,14 +219,22 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
         };
         return Some(choose(
             language,
-            &format!("{host}의 {unit} {value}%에서 사용량 보호를 멈추도록 설정했습니다."),
-            &format!("Set {host} to stop usage protection at {value}% {english_unit} usage."),
+            &if direction == "used" {
+                format!("{host}: {unit}이 {value}% 이상이면 작업을 중단하도록 설정했습니다.")
+            } else {
+                format!("{host}: {unit}이 {value}% 이하이면 작업을 중단하도록 설정했습니다.")
+            },
+            &if direction == "used" {
+                format!("Set {host} to stop work at {value}% {english_unit} or more.")
+            } else {
+                format!("Set {host} to stop work at {value}% {english_unit} or less.")
+            },
         ));
     }
     let mut text = if before == after {
         choose(
             language,
-            &format!("확인 완료. 사용량 보호 기준은 이미 {after}%입니다. 변경한 설정이 없습니다."),
+            &format!("확인 완료. 남은 사용량 기준은 이미 {after}%입니다. 변경한 설정이 없습니다."),
             &format!(
                 "Success. Hive usage guard threshold is already {after}%. No settings changed."
             ),
@@ -235,10 +243,19 @@ fn threshold_message(data: &Value, language: InterfaceLanguage) -> Option<String
         let direction = if before > after { "lowered" } else { "raised" };
         choose(
             language,
-            &format!("변경 완료. 사용량 보호 기준을 {before}%에서 {after}%로 바꿨습니다."),
+            &format!("변경 완료. 남은 사용량 기준을 {before}%에서 {after}%로 바꿨습니다."),
             &format!("Success. Hive usage guard threshold {direction} from {before}% to {after}%."),
         )
     };
+    // The stored number counts down; say what it means on Claude's screen, which counts up.
+    let claude_stop = 100_u64.saturating_sub(after);
+    text.push_str(&choose(
+        language,
+        &format!("\nClaude 화면 기준: {claude_stop}% 사용에서 작업 중단"),
+        &format!(
+            "\nThat is {after}% remaining; on Claude's screen, work stops at {claude_stop}% used."
+        ),
+    ));
     if let Some(scope) = data["scope"]
         .as_str()
         .filter(|scope| matches!(*scope, "global" | "project"))
@@ -277,12 +294,55 @@ mod usage_direction_tests {
     #[test]
     fn host_threshold_output_uses_native_direction_and_value() {
         let message = threshold_message(
-            &json!({"host":"claude","native_direction":"used","native_value":70,
-                "previous_remaining_percent":20,"threshold_remaining_percent":30}),
+            &json!({"host":"claude","native_direction":"used","native_threshold":96,
+                "previous_remaining_percent":10,"threshold_remaining_percent":4}),
             InterfaceLanguage::Ko,
         )
         .unwrap();
-        assert!(message.contains("사용한 양 70%"));
+        assert_eq!(
+            message,
+            "claude: 사용한 양이 96% 이상이면 작업을 중단하도록 설정했습니다."
+        );
+        let codex = threshold_message(
+            &json!({"host":"codex","native_direction":"remaining","native_threshold":4,
+                "previous_remaining_percent":10,"threshold_remaining_percent":4}),
+            InterfaceLanguage::En,
+        )
+        .unwrap();
+        assert_eq!(codex, "Set codex to stop work at 4% remaining or less.");
+    }
+
+    #[test]
+    fn usage_stops_never_advise_fixing_the_input() {
+        for code in [
+            "hive.usage-limited",
+            "hive.usage-quota-exhausted",
+            "hive.usage-reset",
+            "hive.usage-session-halted",
+            "hive.usage-unknown",
+        ] {
+            let value = json!({"action":"CheckUsage","status":"blocked","exit_code":3,
+                "code":code,"message":"usage stop","next_action":null});
+            for language in [InterfaceLanguage::Ko, InterfaceLanguage::En] {
+                let screen = super::render(&value, language, "usage");
+                assert!(!screen.contains("--help"), "{code}: {screen}");
+                assert!(!screen.contains("입력을 고친"), "{code}: {screen}");
+            }
+        }
+    }
+
+    #[test]
+    fn global_threshold_names_both_directions() {
+        let message = threshold_message(
+            &json!({"scope":"global","previous_remaining_percent":10,"threshold_remaining_percent":4}),
+            InterfaceLanguage::Ko,
+        )
+        .unwrap();
+        assert!(
+            message.contains("남은 사용량 기준을 10%에서 4%"),
+            "{message}"
+        );
+        assert!(message.contains("96% 사용에서 작업 중단"), "{message}");
     }
 }
 
@@ -303,6 +363,30 @@ fn sentence(message: &str) -> String {
     text
 }
 
+/// A usage stop is not an input error, so it never advises fixing the input (OV160-024).
+fn usage_next_step(code: &str, language: InterfaceLanguage) -> Option<String> {
+    let (ko, en) = match code {
+        "hive.usage-limited" | "hive.usage-quota-exhausted" => (
+            "사용량이 초기화되거나 기준 안으로 돌아온 뒤 새 요청을 보내세요.",
+            "Send a new request after usage resets or returns within the threshold.",
+        ),
+        "hive.usage-reset" => (
+            "사용량 초기화를 감지해 멈췄습니다. 계속하려면 새 요청을 보내세요.",
+            "Work stopped after a detected usage reset. Send a new request to continue.",
+        ),
+        "hive.usage-session-halted" => (
+            "새 요청에서 사용량 사전 확인을 다시 실행하세요. 같은 조회를 반복해도 중단은 풀리지 않습니다.",
+            "Run the usage preflight again in a new request. Repeating this check does not clear the stop.",
+        ),
+        "hive.usage-unknown" => (
+            "사용량 측정을 먼저 복구하세요. 측정 없이 같은 요청을 반복하면 다시 멈춥니다.",
+            "Restore the usage measurement first. Repeating the request without one stops again.",
+        ),
+        _ => return None,
+    };
+    Some(choose(language, ko, en))
+}
+
 fn failure(value: &Value, language: InterfaceLanguage, ko: &str, family: &str) -> String {
     let original = value["message"]
         .as_str()
@@ -318,6 +402,7 @@ fn failure(value: &Value, language: InterfaceLanguage, ko: &str, family: &str) -
         .as_str()
         .filter(|next| !next.is_empty())
         .map(str::to_owned)
+        .or_else(|| usage_next_step(value["code"].as_str().unwrap_or(""), language))
         .or_else(|| exact_next_step(original));
     if let Some(option) =
         option.filter(|_| !next.as_deref().is_some_and(|n| n.starts_with("hive ")))
@@ -550,8 +635,10 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
         "count" => ("항목 수", "Items"),
         "remaining_percent" => ("남은 사용량(%)", "Remaining usage (%)"),
         "threshold_remaining_percent" => ("남은 사용량 기준(%)", "Remaining usage threshold (%)"),
-        "native_direction" => ("호스트 사용량 기준 방향", "Host-native usage direction"),
-        "native_value" => ("호스트 표시 기준(%)", "Host-native threshold (%)"),
+        "threshold_used_percent" => (
+            "작업을 멈추는 사용한 양(%)",
+            "Used percentage that stops work (%)",
+        ),
         "used_percent" => ("사용한 양(%)", "Used (%)"),
         "current_version" => ("현재 버전", "Current version"),
         "latest_version" => ("최신 버전", "Latest version"),
@@ -599,6 +686,40 @@ fn label(key: &str, language: InterfaceLanguage) -> Option<String> {
         _ => return None,
     };
     Some(choose(language, ko, en))
+}
+
+/// Show percentages the way the host's own screen does. Stored and JSON values stay remaining.
+fn in_host_direction(value: &Value, inherited_used: bool) -> Value {
+    match value {
+        Value::Object(fields) => {
+            let used = ["host", "host_scope", "provider"]
+                .iter()
+                .find_map(|key| fields.get(*key).and_then(Value::as_str))
+                .map_or(inherited_used, |host| {
+                    crate::usage_control::native_usage_direction(host) == "used"
+                });
+            fields
+                .iter()
+                .map(|(key, field)| match (used, key.as_str(), field.as_f64()) {
+                    (true, "remaining_percent", Some(remaining)) => (
+                        "used_percent".to_owned(),
+                        Value::from(((100.0 - remaining) * 100.0).round() / 100.0),
+                    ),
+                    (true, "threshold_remaining_percent", Some(_)) => (
+                        "threshold_used_percent".to_owned(),
+                        Value::from(100_u64.saturating_sub(field.as_u64().unwrap_or_default())),
+                    ),
+                    _ => (key.clone(), in_host_direction(field, used)),
+                })
+                .collect::<serde_json::Map<_, _>>()
+                .into()
+        }
+        Value::Array(items) => items
+            .iter()
+            .map(|item| in_host_direction(item, inherited_used))
+            .collect(),
+        _ => value.clone(),
+    }
 }
 
 fn details(value: &Value, language: InterfaceLanguage, output: &mut String, depth: usize) {
