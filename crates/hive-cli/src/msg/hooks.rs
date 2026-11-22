@@ -436,7 +436,7 @@ fn applied_next_action(host: HookHost, options: &[(&str, &str)]) -> Result<Strin
             "Trust this project in Codex when prompted, then verify the project hooks with: {status}"
         ),
         HookHost::Claude => format!(
-            "If using Claude automatic mode, add project-specific permission rules for `Bash(hive msg:*)` and `Bash(codex exec:*)` in `.claude/settings.json`, using your chosen permission policy. Then verify the hook record with: {status}"
+            "If using Claude automatic mode, add a project permission rule for `Bash(hive msg:*)` in `.claude/settings.json`. A `Bash(codex exec:*)` rule would remove prompts for every Codex run, including unsafe flags; prefer approving each run. Then verify the hook record with: {status}"
         ),
         HookHost::Gemini => format!(
             "Gemini hooks remain preview-only until their event support is verified. Check the recorded status with: {status}"

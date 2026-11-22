@@ -6,6 +6,13 @@ use std::path::PathBuf;
 /// Athena reviews on Claude Fable 5.2 (high); Hephaistos builds on the default Codex profile.
 const ROSTER: &str = "[gods]\nathena = 'hive-independent-judge'\n\n[roles.hive-independent-judge]\nprovider = 'claude'\nmodel = 'claude-fable-5-2'\neffort = 'high'\n";
 
+/// The same roster without a reviewer provider, so selection falls to the selected hosts.
+fn roster_without_reviewer_provider() -> String {
+    let roster = ROSTER.replace("provider = 'claude'\nmodel = 'claude-fable-5-2'\n", "");
+    assert_ne!(roster, ROSTER);
+    roster
+}
+
 struct Fixture {
     _root: tempfile::TempDir,
     target: PathBuf,
@@ -250,7 +257,8 @@ fn reviewer_provider_uses_the_single_other_selected_host_and_keeps_it_for_later_
     std::fs::write(
         f.home.join(".hive/roster.toml"),
         format!(
-            "{ROSTER}\n[providers.gemini.roles.hive-independent-judge]\nmodel = 'gemini-review'\neffort = 'high'\n"
+            "{}\n[providers.gemini.roles.hive-independent-judge]\nmodel = 'gemini-review'\neffort = 'high'\n",
+            roster_without_reviewer_provider()
         ),
     )
     .unwrap();
@@ -278,12 +286,35 @@ fn ambiguous_reviewer_provider_returns_explicit_next_action() {
         .unwrap()
         .replace("- claude", "- claude\n  - antigravity");
     std::fs::write(path, config).unwrap();
+    std::fs::write(
+        f.home.join(".hive/roster.toml"),
+        roster_without_reviewer_provider(),
+    )
+    .unwrap();
     let result = f.start(&[]);
     assert_eq!(result["code"], "hive.msg-flow-same-provider");
     assert_eq!(result["exit_code"], 3);
     let next = result["next_action"].as_str().unwrap();
     assert!(next.contains("--reviewer-provider claude"));
     assert!(next.contains("--reviewer-provider gemini"));
+}
+
+#[test]
+fn explicit_cross_provider_roster_wins_over_selected_host_defaults() {
+    for hosts in [
+        "- claude\n  - antigravity", // ambiguous selection
+        "- antigravity",             // one other host, different from the roster
+    ] {
+        let f = fixture();
+        let path = f.home.join(".hive/config/user-setup.yml");
+        let config = std::fs::read_to_string(&path)
+            .unwrap()
+            .replace("- claude", hosts);
+        std::fs::write(path, config).unwrap();
+        let started = f.start(&[]);
+        assert_eq!(started["code"], "hive.msg-flow-started", "{started}");
+        assert_eq!(step(&started, 1)["provider"], "claude", "{started}");
+    }
 }
 
 #[test]
