@@ -5,7 +5,7 @@
 > Product version: `0.16.0`
 > 공개 Stable: `0.15.3`
 > 현재 단계: 단계 6 cloud 부분 완료, OV160-012 이 PC 확인 대기
-> 공개 시험: `0.16.0-test.4` 게시·세 OS 수용 완료, local Claude 갱신 인증 실패로 승격 금지([근거](../research/overhaul/OV160-resume.md#test4-local-실패와-test5)), test.5 예정
+> 공개 시험: `0.16.0-test.5` 세 OS 수용·이 PC 확인 통과([근거](../research/overhaul/OV160-020.md)), test.4는 local Claude 갱신 인증 실패
 > 작업 브랜치: `develop`(단계 브랜치 병합 완료, 정식 뒤 삭제)
 
 ## 목표와 결정
@@ -19,9 +19,9 @@
 <!-- HIVE:PLAN-STATE:START -->
 | 범위 | 완료 | 미완료 | 진행률 |
 | --- | ---: | ---: | ---: |
-| 메시지·작업 중재 | 8 | 5 | 61.5% |
-| local 실패 수정과 개선판 | 8 | 1 | 88.9% |
-| **현재 범위 합계** | **16** | **6** | **72.7%** |
+| 메시지·작업 중재 | 12 | 1 | 92.3% |
+| local 실패 수정과 개선판 | 9 | 0 | 100.0% |
+| **현재 범위 합계** | **21** | **1** | **95.5%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
