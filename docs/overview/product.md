@@ -1,6 +1,6 @@
 # 제품 개요
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.0 release-date=2026-11-23 -->
 
 ## 목적
 
@@ -65,7 +65,7 @@ provider-neutral 로컬 agent harness.
 | 실행 중 중단·알림 | 선택형 Windows 11 x64·Codex26.1013.4894.0·26.1016.6573.0의 하한·실제 초기화·60초 조회 공백 중단, 앱 유지·직접 재개·이유 안내 | [0.13.1 안내](../releases/0.13.1.md) |
 | Judge quorum | Clean-context package와 detached Ed25519 verification | [Judge boundary](../architecture/judge-trust-boundary.md) |
 | Release·update | Attestation·local integrity, version gate, backup·journal·recovery | [Release boundary](../architecture/release-update-trust-boundary.md) |
-| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.15.3` release](../releases/0.15.3.md) |
+| Direct install | npm과 digest-pinned curl·PowerShell·CMD channel | [`0.16.0` release](../releases/0.16.0.md) |
 
 ## Artifact 흐름
 
@@ -83,7 +83,8 @@ flowchart LR
 
 ## Version·release 상태
 
-- Current public stable version: `0.15.3` (released 2026-11-20)
+- Current public stable version: `0.16.0` (released 2026-11-23)
+- `0.16.0`: 0.15.x 갱신 인증·자료 보존 수정, 바꾸기 전 자동 백업, 호스트 방향의 사용량 표시, 실험 단계 역할 간 메시지, Skill 이름 통합. Codex 중재 실제 동작 미검증
 - `0.15.3`: AI에게 맡기는 프로젝트 설정(빈 폴더 질문·기존 프로젝트 탐색 뒤 제안), 능력 파일 없는 에이전트 미리보기·적용·검증, 대기 결과의 에이전트 경로, 설정 화면 가독성, 새 프로젝트 갱신 검증 수정, 한 턴의 여러 기억 묶음 기록·주제별 회수, 짧은 한국어 검색 개선
 - `0.15.2`: Codex·Claude Code·Antigravity 동시 설치 안내, Claude 남은 등록 정리, Antigravity CLI 1.2.x 지원, 갱신·설치 실패 복구
 - `0.15.1`: 쉬운 한국어·영어 명령 결과, 로컬 프로젝트 감지·한 번 확인, Hive 지식 기록 규칙, Skill 설명의 하는 일 표시

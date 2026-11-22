@@ -6,20 +6,20 @@
 
 > A provider-neutral local harness for Codex, Claude Code (unverified), and Gemini Antigravity.
 
-[![Version](https://img.shields.io/badge/version-0.15.3-4C1)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.16.0-4C1)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 [English](./README.md) · [한국어](./docs/readme/README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.0 release-date=2026-11-23 -->
 
 Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
 project knowledge, durable role/run state, usage safeguards, and safe update contracts.
 It never asks for model-provider API keys, calls model-provider APIs, or replaces the
 host's own model runtime.
 
-Stable `0.15.3` is the current public release.
+Stable `0.16.0` is the current public release.
 
 ## Roles and named feature entries
 
@@ -29,7 +29,7 @@ this release has no enablement path. See [feature ownership and role migration](
 
 ## Install the current stable release
 
-`0.15.3` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
+`0.16.0` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
 
 ```console
 npm install -g aigent-hive
@@ -38,7 +38,7 @@ npm install -g aigent-hive
 Or pin the exact version:
 
 ```console
-npm install -g aigent-hive@0.15.3
+npm install -g aigent-hive@0.16.0
 ```
 
 The npm installer requires Node.js and npm. The installed `hive` runtime is a native
@@ -47,26 +47,26 @@ Rust binary and does not require Node.js.
 Expected stable version label:
 
 ```text
-AIgent Hive v0.15.3 (released 2026-11-20)
+AIgent Hive v0.16.0 (released 2026-11-23)
 ```
 
 ### macOS and Linux with curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.15.3/install.sh | sh
+  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.15.3/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex
 ```
 
 ### Windows Command Prompt
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.3/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd
 ```
 
 The direct installers fetch the same native package bytes from npm, verify the
@@ -82,7 +82,7 @@ installation, paste the following prompt instead of following the manual steps b
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.15.3. The stable install guidance is
+Install the current stable release 0.16.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -100,7 +100,22 @@ an optional third-party Skill.
 
 This option installs only the current stable release.
 
-## What changed in 0.15.3
+## What changed in 0.16.0
+
+- `hive update` recognises Claude Code and Antigravity installs from public 0.15.x. If a reinstall is needed, the project list, runtime state, backups and claims stay. User answers, knowledge and project files are kept.
+- Install, update and uninstall first copy settings, the project list and files they change to `~/hive-backups`, including `~/.claude/settings.json`. `hive storage backup list` shows the copies and `hive storage backup restore --id <id>` previews a restore. Copies are never deleted automatically. Unchanged knowledge, history and `hive setup` edits are outside this backup.
+- Claude usage is shown and entered as percent used; Codex and Antigravity use percent remaining. For example, `hive usage threshold --user-root <user-root> --host claude --window weekly --stop-used-percent 96` stops at 96% used.
+- When usage cannot be read, work continues with a warning that names the missing limit, cause and fix. Discord no longer promises recovery for an unreadable measurement.
+- `hive setup --scope user --section usage --claude-statusline preview` shows the Claude Code status-line connection before you approve it. An existing status line keeps working and the change can be reverted. The desktop app Code tab is not confirmed; use Claude Code in a terminal if usage does not appear there.
+- Experimental `hive msg` carries work and receipts between builder, reviewer and advisor roles through a project file inbox, with project hooks, a decision queue and a status view. `--reviewer-provider` selects the reviewer provider. Hive does not launch workers. Hook status does not prove that a host loaded the hook.
+- Codex hook, worker and cross-review behaviour on this version is not verified. Codex asks you to trust project hooks after apply. Claude automatic mode can block `hive msg`; a project permission rule is your choice. Gemini hooks are preview only.
+- `hive stop` stops new messages. Worker limits use `max_workers`; an old `max_panes` value moves to it, and conflicting values stop the change. `hive route` and `hive prompt` moved under `hive advanced`.
+- Built-in Skills merged into `knowledge-manage`, `run` and `judge`. Descriptions list old names, but Claude Code does not run an old `/aigent-hive:...` name. Files you changed stay.
+- `--target .` works on Windows.
+- Antigravity usage callbacks from 1.1.18 up to 2.0 are accepted only with the same data shape. Version 1.2 is not verified on a real host.
+- Before a downgrade to 0.15.x, revert the status line. A 0.15.x reinstall deletes `~/.hive/backups` and the project list.
+
+## Earlier changes in 0.15.3
 
 - Ask your AI agent to set up Hive for a project. Calling the project-setup Skill makes the agent run setup: in an empty folder it asks about the project one question at a time, and in an existing project it scans the files first, then shows one proposal before applying.
 - Agents preview, apply and validate project setup without a capability file. `hive setup --answers` uses the same saved or detected host capabilities as terminal setup; detected capabilities stay unverified and never enable hooks.
@@ -173,7 +188,7 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 
 ## Supported targets
 
-| Platform | Native target | 0.15.3 evidence |
+| Platform | Native target | 0.16.0 evidence |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
@@ -181,10 +196,12 @@ Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.m
 | Linux arm64 | `aarch64-unknown-linux-musl` | Native candidate qualification |
 | Windows x86_64 | `x86_64-pc-windows-msvc` | Public numbered-test acceptance |
 
-The accepted public test covers setup, cancellation, recovery, updates, removal and
-reinstallation on Windows x64, Linux x64 and macOS arm64. Windows also covers actual Codex
-CLI registration and an idle monitor. This does not prove live desktop-model or quota sensing
-on every host. Claude Code subscription-backed sessions remain unverified. Stable `0.15.3` uses explicit macOS ad-hoc signing and publishes Windows as
+The accepted public test covers updates from public 0.15.3 and 0.13.1, removal and
+reinstallation on Windows x64, Linux x64 and macOS arm64, with a substitute Antigravity host.
+The update of real Codex, Claude Code and Antigravity installs was checked on one Windows 11 PC.
+This does not prove live desktop-model or quota sensing on every host, or real host updates on
+macOS and Linux. Claude Code usage capture was checked in a Windows terminal session; other
+Claude Code subscription behaviour remains unverified. Stable `0.16.0` uses explicit macOS ad-hoc signing and publishes Windows as
 unsigned unless free SignPath Foundation signing is approved. See the
 [code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
 
