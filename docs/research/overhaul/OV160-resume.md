@@ -72,3 +72,14 @@
 - 확인(Windows): `cargo clippy`·`cargo test --workspace --all-features` 통과, Rust 주 시험 1,060개
 - Python 전체 1,235개(수정 전 `0ce94aa7`): 실패 1(동작 목록, 수정), 오류 9(`copier` 실행 경로 환경, 경로 지정 재실행 23개 통과), 건너뜀 45
 - 미검증: macOS·Linux 실제 설치·갱신, 실제 Discord 전송. 전자는 test.4 수용 대상
+
+## test.4 local 실패와 test.5
+
+- 공개·수용: test.4 세 OS 수용 45065124070 통과. 시험 범위는 가짜 Antigravity 호스트만, 실제 Claude 설치 기록 밖
+- 실패(Windows 11, 2026-11-23): 이 PC의 정상 0.15.3 Claude 설치에 `hive install --dry-run`이 보존 재설치 계획. Codex·Antigravity는 정상 인증
+- 상태: 전역 CLI만 test.4, 사용자 설치·설정·자료는 0.15.3 그대로. 바깥 백업 파일 2,184개 대조 뒤 변경 0건
+- 원인: `UI` `historical_user_artifact_required`가 Claude에도 `skills/*/agents/openai.yaml` 요구. 투영 생성기는 Codex·Antigravity에만 이 파일 생성
+- 시험 공백: 고정물이 검사 대상 함수로 파일 목록을 생성해 같은 잘못을 재현
+- 수정: Claude의 완전성 검사에서만 이 파일 제외. 존재하는 파일의 바이트 인증과 다른 필수 파일은 유지
+- 시험: 고정물 목록을 투영 생성기로 대조, 선택 Skill의 파일 누락 거부 유지, 이 PC 0.15.3 사본의 적용·검증 재현
+- 순서: 시험 → test.5 게시·세 OS 수용 → 이 PC 인계 1–4단계 → 정식판. test.4는 정식 승격 금지
