@@ -9,7 +9,7 @@ summary: "One host sensor table sets accepted percentage direction, guarded wind
 tags: [guard, sensor, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:412578c5555c660f88806d3902109d71c4ba90e986e4cf277ac91131088da0dc"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:crates/hive-cli/src/usage_control/antigravity.rs#sha256:ead5c18719be74afaaebb8fca8fd580e9aff48d018fc4bab4df1d51032aef909"
   - "repo:crates/hive-cli/src/user_setup/setup_engine/host_windows.rs#sha256:41c24ecb384dbc3102eb8836946b37bf9ad33a463ffdb16abd8170eb591e45c2"
   - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"

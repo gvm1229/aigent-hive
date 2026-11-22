@@ -4185,22 +4185,25 @@ fn failure_result(action: &'static str, error: &AdapterError) -> ActionResult {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    use super::{bind_runtime_session, claude_capture_path_for};
     use super::{
-        bind_runtime_session, bind_session, capture_and_settle, claude_capture_path,
-        claude_capture_path_for, control_path, control_session, effective_enabled, enforce,
-        halt_path, native_then_consented_fallback, native_usage_direction, native_usage_value,
-        parse_installed_config, parse_threshold, read_claude_capture_snapshot,
-        read_effective_config, set_threshold, status, ActionResult, AdapterError, CaptureArguments,
-        EnforceArguments, FileSnapshot, LoadedControl, OverrideState, ParsedBinding, SessionAction,
-        SessionArguments, SessionBinding, SessionControl, StatusArguments, ThresholdArguments,
-        MAX_CONTROL_BYTES,
+        bind_session, capture_and_settle, claude_capture_path, control_path, control_session,
+        effective_enabled, enforce, halt_path, native_then_consented_fallback,
+        native_usage_direction, native_usage_value, parse_installed_config, parse_threshold,
+        read_claude_capture_snapshot, read_effective_config, set_threshold, status, ActionResult,
+        AdapterError, CaptureArguments, EnforceArguments, FileSnapshot, LoadedControl,
+        OverrideState, ParsedBinding, SessionAction, SessionArguments, SessionBinding,
+        SessionControl, StatusArguments, ThresholdArguments, MAX_CONTROL_BYTES,
     };
     use crate::run::PinnedTarget;
     use crate::usage::{native_then_fallback, NormalizedSnapshot, SensorError, UsageHost};
     use serde_json::{json, Value};
     use std::cell::Cell;
     use std::fs;
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
+    #[cfg(windows)]
+    use std::path::PathBuf;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     const NOW: u64 = 1_000;
