@@ -10,7 +10,7 @@ tags: [release, security, verification]
 aliases: ["Release integrity"]
 sources:
   - "repo:.agents/directives/references/documentation-verification.md#sha256:310146e429ce94f0c091b4514d9bf2d900779205d52831dc10bc03d1ed72b281"
-  - "repo:.agents/directives/references/release-qualification.md#sha256:36968bb8a9bc012cfb7b72343ae9f8551cc0c0536232283f2794b822853d856e"
+  - "repo:.agents/directives/references/release-qualification.md#sha256:c82453bc0a081bcea8d5c1e4245fbf8073e7210b3068787e5343f02ca71034a6"
   - "repo:docs/decisions/ADR-0008-release-integrity.md#sha256:bace760d9be892a1e4f1f0554d2d55bbbaae85065125e9fae19a994f60f27410"
   - "repo:docs/research/stable-release-0.14.0.md#sha256:d884c2febbfed86f6f7bf437965149f1380e299c2952b97e0f60acb5015f8383"
 links: [judge-verification, update-transaction]
