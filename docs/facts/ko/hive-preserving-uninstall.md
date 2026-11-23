@@ -9,8 +9,8 @@ summary: "제거 확인·소유 감시 종료와 설정·지식·목록·이력 
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:ab0864020d51fb91bfd7784bde94d9f5501aae82d31a4b049f33f840368e3831"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:33b0a59a13b659d8b98b583e682316b8df27964f7efc798af34967c8411cfe9e"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:7223c43e1fae841724b16530c166d11255a3bde62ffc29568d75426154144408"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bae3e86f788d8720c04f151ac37ad8120e5e2e57623c5fe56041abe7c82c594"
   - "repo:docs/archive/plans/cli-uninstall-0.14.0.md#sha256:db50bb091eff11cd8ee1ee39667b992ac7a947a3ea7b0e7d3d74c020f41956d0"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"
   - "repo:docs/archive/plans/foundations/windows-global-setup-hardening.md#sha256:422649ef3ca475aca9e3a86a2ddd2bbbb3895221d7bc39fe4417010664dee47f"

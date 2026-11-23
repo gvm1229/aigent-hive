@@ -11,7 +11,7 @@ aliases: ["Host integration priority"]
 sources:
   - "repo:crates/hive-cli/src/discord.rs#sha256:069e81e74cb1ff8c3437cb4ffa1c008e8b791d12a7b8160af820ab34d0737d0d"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:33b0a59a13b659d8b98b583e682316b8df27964f7efc798af34967c8411cfe9e"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bae3e86f788d8720c04f151ac37ad8120e5e2e57623c5fe56041abe7c82c594"
   - "repo:docs/archive/plans/foundations/v0.10.0-notion-candidate.md#sha256:f863a6c59dde7c117e9b4b294cb0974e051ffca5970d830cfa75e50d9799dc4f"
   - "repo:docs/archive/plans/releases/0.9.0/discord-onboarding-v09.md#sha256:91a27ed57ddd259ac0a3270ee9242243f0a567bdae3fc756b90f76303c01c037"
   - "repo:docs/decisions/ADR-0018-notion-wiki-backend.md#sha256:160bc8bc434f1547e1fb3dad23902b740304323c800b92ece62ccda10a61114e"

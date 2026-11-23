@@ -106,6 +106,7 @@ an optional third-party Skill.
 - 이 버전의 Codex 훅·작업자·교차 검토는 미검증. 적용 뒤 Codex의 프로젝트 훅 신뢰 승인 필요. Claude 자동 모드의 `hive msg` 차단 가능성, 프로젝트 권한 규칙은 사용자 선택. Gemini 훅은 미리보기만
 - `hive stop`으로 새 메시지 중지. 작업자 한도는 `max_workers`, 옛 `max_panes` 값 이전, 값 충돌 시 변경 중지. `hive route`·`hive prompt`는 `hive advanced` 아래로 이동
 - 내장 Skill을 `knowledge-manage`·`run`·`judge`로 통합. 설명에 옛 이름 표기, Claude Code의 옛 `/aigent-hive:...` 명령 실행은 미지원. 사용자가 바꾼 파일 보존
+- Claude Code에서 플러그인 훅이 요청마다 Hive 지식을 찾아 상위 결과를 함께 전달. Agent가 조회를 빠뜨려도 저장된 선호가 전달되며, 아무것도 쓰지 않고 결과가 없으면 추가 없음. 사용자 지침의 조회 조건을 잡담 외 모든 작업으로 명확화, 읽기 전용 작업도 포함
 - Windows의 `--target .` 지원
 - Antigravity 사용량 콜백은 1.1.18 이상 2.0 미만의 같은 자료 구조만 수용. 1.2 실제 호스트 미검증
 - 0.15.x로 내리기 전 상태 표시줄 연결 되돌리기 필요. 0.15.x 재설치의 `~/.hive/backups`·프로젝트 목록 삭제
