@@ -6,23 +6,23 @@
 
 > Codex, Claude Code(검증 전), Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.15.3-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.16.0-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.0 release-date=2026-11-24 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.15.3`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.16.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.15.3|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.16.0|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.15.3
+npm install -g aigent-hive@0.16.0
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.15.3 (released 2026-11-20)
+AIgent Hive v0.16.0 (released 2026-11-24)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.15.3/install.sh | sh
+  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.15.3/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.15.3/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.15.3. The stable install guidance is
+Install the current stable release 0.16.0. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,23 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.15.3 주요 변경
+## 0.16.0 주요 변경
+
+- 공개 0.15.x의 Claude Code·Antigravity 설치를 `hive update`가 그대로 인식. 재설치가 필요해도 프로젝트 목록·실행 상태·백업·claims 보존. 사용자 답변·지식·프로젝트 파일 보존
+- 설치·갱신·제거 전에 설정·프로젝트 목록·바뀔 파일을 `~/hive-backups`에 복사(`~/.claude/settings.json` 포함). `hive storage backup list`로 확인, `hive storage backup restore --id <id>`로 복원 미리보기. 자동 삭제 없음. 바뀌지 않는 지식·기록과 `hive setup` 변경은 백업 범위 밖
+- Claude는 사용한 %, Codex·Antigravity는 남은 %로 표시와 입력. 예: `hive usage threshold --user-root <user-root> --host claude --window weekly --stop-used-percent 96`은 96% 사용에서 중단
+- 사용량을 읽지 못하면 빠진 한도·원인·해결 방법 경고 뒤 작업 계속. 측정 실패의 잘못된 Discord 회복 안내 제거
+- `hive setup --scope user --section usage --claude-statusline preview`로 Claude Code 상태 표시줄 연결을 미리 보고 승인. 기존 상태 표시줄 유지, 되돌리기 가능. 데스크톱 앱 Code 탭은 미확인, 사용량이 보이지 않으면 터미널의 Claude Code 사용
+- 실험 기능 `hive msg`: 프로젝트 파일 수신 상자로 작성·검토·자문 역할의 일과 확인증 전달, 프로젝트 훅·결정 대기열·상태 화면. Discord 알림에 작업·결과·역할·걸린 시간 표시, 알림마다 구분선. `--reviewer-provider`로 검토 공급자 선택. Hive의 작업자 실행 없음. 훅 상태와 호스트의 실제 실행 증거는 별개
+- 이 버전의 Codex 훅·작업자·교차 검토는 미검증. 적용 뒤 Codex의 프로젝트 훅 신뢰 승인 필요. Claude 자동 모드의 `hive msg` 차단 가능성, 프로젝트 권한 규칙은 사용자 선택. Gemini 훅은 미리보기만
+- `hive stop`으로 새 메시지 중지. 작업자 한도는 `max_workers`, 옛 `max_panes` 값 이전, 값 충돌 시 변경 중지. `hive route`·`hive prompt`는 `hive advanced` 아래로 이동
+- 내장 Skill을 `knowledge-manage`·`run`·`judge`로 통합. 설명에 옛 이름 표기, Claude Code의 옛 `/aigent-hive:...` 명령 실행은 미지원. 사용자가 바꾼 파일 보존
+- Claude Code에서 플러그인 훅이 요청마다 Hive 지식을 찾아 상위 결과를 함께 전달. Agent가 조회를 빠뜨려도 저장된 선호가 전달되며, 아무것도 쓰지 않고 결과가 없으면 추가 없음. 끄기: `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`. 사용자 지침의 조회 조건을 잡담 외 모든 작업으로 명확화, 읽기 전용 작업도 포함
+- Windows의 `--target .` 지원
+- Antigravity 사용량 콜백은 1.1.18 이상 2.0 미만의 같은 자료 구조만 수용. 1.2 실제 호스트 미검증
+- 0.15.x로 내리기 전 상태 표시줄 연결 되돌리기 필요. 0.15.x 재설치의 `~/.hive/backups`·프로젝트 목록 삭제
+
+## 이전 0.15.3 변경
 
 - AI에게 프로젝트의 Hive 설정을 맡기기 지원. project-setup Skill을 부르면 AI가 직접 설정: 빈 폴더는 프로젝트 내용을 한 번에 하나씩 질문, 기존 프로젝트는 파일을 먼저 살펴본 뒤 한 번의 제안 확인 후 적용
 - AI의 프로젝트 설정 미리보기·적용·검증에 능력 파일 불필요. `hive setup --answers`가 터미널 설정과 같은 저장·감지 능력 사용, 감지한 능력은 미검증 표시·Hook 미허용
@@ -168,7 +184,7 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.15.3 근거 |
+| Platform | Native target | 0.16.0 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -176,9 +192,10 @@ an optional third-party Skill.
 | Linux arm64 | `aarch64-unknown-linux-musl` | native 후보 검증 |
 | Windows x86_64 | `x86_64-pc-windows-msvc` | 공개 번호 시험판 수용 |
 
-공개 시험의 Windows x64·Linux x64·macOS arm64 설정·취소·복구·갱신·제거·재설치 수용.
-Windows의 실제 Codex CLI 등록·대기 감시 포함, 모든 호스트의 실제 데스크톱 모델·할당량 조회 증명 제외.
-Claude Code의 실제 구독 세션 미검증. Stable `0.15.3`: macOS ad-hoc signing,
+공개 시험의 Windows x64·Linux x64·macOS arm64에서 0.15.3·0.13.1 갱신, 제거, 재설치 수용(대역 Antigravity 호스트).
+실제 Codex·Claude Code·Antigravity 설치 갱신은 Windows 11 PC 1대에서 확인. macOS·Linux 실제 호스트 갱신과
+모든 호스트의 데스크톱 모델·할당량 조회 증명 제외. Claude Code 사용량 기록은 Windows 터미널 세션에서 확인,
+그 밖 구독 세션 동작 미검증. Stable `0.16.0`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 

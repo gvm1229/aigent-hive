@@ -1,5 +1,6 @@
 # 0.16.0 local 인계 — local 세션 시작점
 
+- **2026-11-24 결과: test.7 통과**([OV160-028](OV160-028.md#test7-공개와-이-pc-확인2026-11-24)). 정식 승격 대상 `0.16.0-test.7`, 수용 [45240722216](https://github.com/gvm1229/aigent-hive/actions/runs/45240722216)
 - **2026-11-24 결과: test.6 통과**([OV160-020](OV160-020.md#test6-재확인2026-11-24-통과)). 정식 승격 대상 `0.16.0-test.6`, 수용 [45194298312](https://github.com/gvm1229/aigent-hive/actions/runs/45194298312)
 - **2026-11-23 결과: test.5 통과**([OV160-020](OV160-020.md)). 정식 승격 대상 `0.16.0-test.5`, 수용 [45072375289](https://github.com/gvm1229/aigent-hive/actions/runs/45072375289)
 - **2026-11-23 재개**: [재개 계획](OV160-resume.md)의 순서와 권한 사용. 백업은 `~/hive-backups/`처럼 `~/.hive` 밖에만 저장
@@ -115,7 +116,7 @@ hive msg flow status --flow <flow-id> --target . --user-root $HOME
 
 1. 정식 공개 문서 준비(README·설치 안내·출시 목록·`docs/public-stable-release.json`)와 구독자 안내 `docs/releases/0.16.0.subscriber.ko.md` 작성, `python scripts/check-public-stable-docs.py` 통과
 2. develop→main PR(일반 병합). 이 PR이 구독자 안내 승인
-3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.6`, `acceptance_run_id=45194298312`
+3. `release.yml`을 `main`에서: `product_version=0.16.0`, `package_version=0.16.0`, `channel=stable`, `release_date=<출시일>`, `promoted_test_version=0.16.0-test.7`, `acceptance_run_id=45240722216`
 4. `release-publish.yml`: `channel=stable`, 3의 후보 run ID, `send_subscriber_update=true`. npm 전파 지연(종료 6)이면 같은 입력에 `recover_published_packages=true`
 5. 이 PC: `npm install -g aigent-hive@0.16.0`, `hive update --user-root $HOME --non-interactive --confirm --output json`, 1단계 validate 재확인, `python3 scripts/check-plan-state.py --release` 확인
 6. 근거 `OV160-011.md`, 계획 OV160-011·012 `complete`, 단계 브랜치 `feature/overhaul-6-0.16.0-mediation` 원격·로컬 삭제, 단계 7 시작은 [재정비 순서](../../plans/overhaul/README.md)
