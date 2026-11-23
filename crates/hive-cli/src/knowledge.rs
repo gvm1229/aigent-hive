@@ -5817,7 +5817,7 @@ mod tests {
         let index_path = user.path().join(SHARED_INDEX_RELATIVE);
         let before_index = fs::read(&index_path).expect("index");
         let event = serde_json::json!({
-            "hook_event_name": "UserPromptSubmit",
+            "hook_event_name": prompt_context::HOOK_EVENT,
             "prompt": "write concise commit guidance",
             "cwd": user.path().join("unregistered").to_string_lossy(),
         })
@@ -5827,7 +5827,7 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&output).expect("hook JSON");
         assert_eq!(
             value["hookSpecificOutput"]["hookEventName"],
-            "UserPromptSubmit"
+            prompt_context::HOOK_EVENT
         );
         let context = value["hookSpecificOutput"]["additionalContext"]
             .as_str()

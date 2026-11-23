@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from collections import Counter
@@ -660,6 +661,22 @@ class V09RuntimeBoundaryContract(unittest.TestCase):
         self.assertEqual(scan_runtime_text(Path("SKILL.md"), selection), [])
         self.assertEqual(scan_runtime_text(Path("scan.rs"), protected_names), [])
         self.assertEqual(scan_runtime_text(Path("directive.md"), pinned_owner), [])
+
+    def test_knowledge_context_hook_is_the_only_read_only_prompt_hook(self) -> None:
+        # Documented exception (docs/architecture/hook-consent.md): one bounded, read-only
+        # knowledge-context answer. It must never block, rewrite, ingest, or activate.
+        hook = REPOSITORY_ROOT / "crates/hive-cli/src/knowledge/prompt_context.rs"
+        text = hook.read_text(encoding="utf-8")
+        self.assertEqual(text.count('"UserPromptSubmit"'), 1)
+        self.assertIn('"additionalContext"', text)
+        for forbidden in ('"decision"', '"updatedInput"', '"block"', "ingest", "remember"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
+        manifest = REPOSITORY_ROOT / "harness/plugins/aigent-hive/.claude-plugin/plugin.json"
+        self.assertEqual(
+            list(json.loads(manifest.read_text(encoding="utf-8"))["hooks"]),
+            ["UserPromptSubmit"],
+        )
 
     def test_scanner_detects_executable_and_activation_dependencies(self) -> None:
         hostile = "\n".join(

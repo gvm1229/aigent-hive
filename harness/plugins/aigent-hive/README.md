@@ -32,8 +32,9 @@ The Claude Code manifest registers one `UserPromptSubmit` hook:
 (top 5, 4 KiB) with the prompt text and the session folder, and adds the matches as
 context. It writes nothing, never stores the prompt, and never blocks the prompt: a
 disabled Global Wiki, a missing `hive` command, an error, or no match adds nothing.
-The hook comes with the plugin; it does not change `~/.claude/settings.json`. To stop
-it, disable the plugin. Codex and Antigravity do not have this hook.
+The hook comes with the plugin; it does not change `~/.claude/settings.json`. It is on
+by default. To stop it, set `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off` or disable the plugin.
+It runs next to other plugins' hooks; Hive does not ask you to remove other harnesses. Codex and Antigravity do not have this hook.
 
 ## Message hook setup
 

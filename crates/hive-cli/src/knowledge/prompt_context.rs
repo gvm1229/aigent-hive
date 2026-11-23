@@ -4,7 +4,8 @@
 //! The hook reads the host-owned JSON on stdin, runs one bounded retrieval with the prompt as
 //! the query, and prints the hits as `hookSpecificOutput.additionalContext`. It never blocks the
 //! prompt: every failure, a disabled Wiki, an empty prompt, or zero hits prints nothing and
-//! exits 0. Nothing is written, and the prompt is never persisted.
+//! exits 0. Nothing is written, and the prompt is never persisted. It never classifies or
+//! rewrites the prompt and never activates a Skill. `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off` turns it off.
 
 use super::{
     derive_optional_current_collection_authority, require_shared_wiki_enabled, Path, RagStore,
@@ -18,11 +19,18 @@ const MAX_STDIN_BYTES: u64 = 1024 * 1024;
 const MAX_QUERY_BYTES: usize = 2048;
 const TOP_K: usize = 5;
 const BYTE_BUDGET: usize = 4096;
+/// The only host event this read-only knowledge-context hook answers.
+pub(super) const HOOK_EVENT: &str = "UserPromptSubmit";
+/// Environment switch that turns the hook off.
+const OFF_SWITCH: &str = "HIVE_KNOWLEDGE_PROMPT_CONTEXT";
 
 pub(super) fn run_prompt_context(arguments: &[String]) -> ExitCode {
     if arguments != ["--stdin-json"] {
         eprintln!("usage: hive knowledge prompt-context --stdin-json");
         return ExitCode::from(2);
+    }
+    if switched_off(std::env::var(OFF_SWITCH).ok().as_deref()) {
+        return ExitCode::SUCCESS;
     }
     let mut input = String::new();
     if std::io::stdin()
@@ -87,12 +95,20 @@ pub(super) fn prompt_context(input: &str, user_root: &Path) -> Option<String> {
     Some(
         serde_json::json!({
             "hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
+                "hookEventName": HOOK_EVENT,
                 "additionalContext": text,
             }
         })
         .to_string(),
     )
+}
+
+fn switched_off(value: Option<&str>) -> bool {
+    value.is_some_and(|value| {
+        ["off", "0", "false", "no"]
+            .iter()
+            .any(|word| value.trim().eq_ignore_ascii_case(word))
+    })
 }
 
 fn bounded_query(prompt: &str) -> Option<String> {
@@ -109,7 +125,17 @@ fn bounded_query(prompt: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::bounded_query;
+    use super::{bounded_query, switched_off};
+
+    #[test]
+    fn off_switch_accepts_only_explicit_off_words() {
+        for value in ["off", "OFF", " 0 ", "false", "no"] {
+            assert!(switched_off(Some(value)), "{value}");
+        }
+        for value in [None, Some(""), Some("on"), Some("1")] {
+            assert!(!switched_off(value), "{value:?}");
+        }
+    }
 
     #[test]
     fn query_is_trimmed_bounded_and_char_safe() {
