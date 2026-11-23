@@ -1,6 +1,6 @@
 # Aigent Hive 전체 문서 색인
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.0 release-date=2026-11-23 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.15.3 release-date=2026-11-20 -->
 
 [문서 홈](00-home.md)에서 목적별 탐색 가능. 이 문서는 tracked `docs/` Markdown의
 current catalog.
@@ -91,7 +91,6 @@ current catalog.
 
 | 문서 | 설명 |
 | --- | --- |
-| [`0.16.0`](releases/0.16.0.md) | 갱신 자료 보존·자동 백업·사용량 표시·실험 단계 역할 간 메시지 |
 | [`0.15.3`](releases/0.15.3.md) | 에이전트 주도 프로젝트 설정·여러 사실 기록·주제별 기억 회수 |
 | [`0.15.2`](releases/0.15.2.md) | 여러 앱 동시 설치·Claude·Antigravity 설치 복구 |
 | [`0.15.1`](releases/0.15.1.md) | 쉬운 명령 결과·로컬 프로젝트 감지·Hive 지식 기록 규칙 |
