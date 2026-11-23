@@ -25,6 +25,16 @@ existing command receives the same input and its output stays the status line.
 `revert` restores the previous value. A rejected capture never changes the status
 line; `hive usage status` and the enforce warning show its reason.
 
+## Automatic knowledge lookup (Claude Code)
+
+The Claude Code manifest registers one `UserPromptSubmit` hook:
+`hive knowledge prompt-context --stdin-json`. For each prompt it runs one local lookup
+(top 5, 4 KiB) with the prompt text and the session folder, and adds the matches as
+context. It writes nothing, never stores the prompt, and never blocks the prompt: a
+disabled Global Wiki, a missing `hive` command, an error, or no match adds nothing.
+The hook comes with the plugin; it does not change `~/.claude/settings.json`. To stop
+it, disable the plugin. Codex and Antigravity do not have this hook.
+
 ## Message hook setup
 
 `hive msg hooks apply` changes only the current project's hook file after the preview digest is
