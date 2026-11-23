@@ -377,6 +377,50 @@ fn msg_lost_receipt_is_dispatch_uncertain_without_redispatch() {
 }
 
 #[test]
+fn msg_completion_notice_names_the_task_result_roles_and_duration() {
+    let f = fixture();
+    let sent = f.send(b"\n  Review the login page\nsecond line", &[]);
+    let id = sent["data"]["message"]["id"].as_str().unwrap().to_owned();
+    let result = f.body("result.txt", b"Approved with one note\nmore");
+    f.run(&["claim", "--id", &id, "--role", "artemis", "--now", "1002"]);
+    assert_eq!(f.ack(&id, &result, "1192")["code"], "hive.msg-acknowledged");
+    let target = f.target.to_str().unwrap();
+    let home = f.home.to_str().unwrap();
+    let context = Context::open(&[
+        ("--target", target),
+        ("--user-root", home),
+        ("--now", "1192"),
+    ])
+    .unwrap();
+    let detail = super::message_detail(&context, &id);
+    assert_eq!(detail.title.as_deref(), Some("Review the login page"));
+    assert_eq!(detail.outcome.as_deref(), Some("Approved with one note"));
+    assert_eq!(detail.elapsed_seconds, Some(192));
+    assert!(
+        detail.roles[0].starts_with("보낸 역할: athena ("),
+        "{:?}",
+        detail.roles
+    );
+    assert!(
+        detail.roles[1].starts_with("받은 역할: "),
+        "{:?}",
+        detail.roles
+    );
+    let notice = hive_core::decision::completion_notice_ko(
+        hive_core::decision::CompletionKind::MessageAcknowledged,
+        &id,
+        "결과와 확인증 기록",
+        "consumer",
+        &detail,
+    );
+    assert!(notice.contains("작업: Review the login page"));
+    assert!(notice.contains("걸린 시간: 3분 12초"));
+    assert!(notice.contains(&format!(
+        "hive msg status --id {id} --target . --user-root ~"
+    )));
+}
+
+#[test]
 fn msg_ack_binds_receipt_and_duplicate_request_returns_existing_result() {
     let f = fixture();
     let sent = f.send(b"please review", &["--key", "review-1"]);

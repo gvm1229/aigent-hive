@@ -1233,6 +1233,7 @@ fn notify_ack_completion(
                 hive_core::decision::CompletionKind::FlowCompleted,
                 &flow_id,
                 "작성·검토·자문 단계 완료",
+                &flow_detail(context, &flow_id, &view),
             )
         }
         Some(_) => return,
@@ -1243,10 +1244,99 @@ fn notify_ack_completion(
             context.now,
             hive_core::decision::CompletionKind::MessageAcknowledged,
             message_id,
-            "확인증 기록",
+            "결과와 확인증 기록",
+            &message_detail(context, message_id),
         ),
     };
     data["notification"] = notice;
+}
+
+fn text_first_line(bytes: &[u8]) -> Option<String> {
+    std::str::from_utf8(bytes)
+        .ok()
+        .and_then(hive_core::decision::first_line)
+}
+
+/// Request title, result line, roles, and duration of one acknowledged message. Any record that
+/// cannot be read safely leaves its field out; the notice is still sent.
+fn message_detail(context: &Context, message_id: &str) -> hive_core::decision::CompletionDetail {
+    let mut detail = hive_core::decision::CompletionDetail {
+        view_command: Some(format!(
+            "hive msg status --id {message_id} --target . --user-root ~"
+        )),
+        ..Default::default()
+    };
+    let Ok(loaded) = locate(context, message_id).and_then(|role| load(context, &role, message_id))
+    else {
+        return detail;
+    };
+    detail.title = loaded.body.as_deref().and_then(text_first_line);
+    detail.outcome = match &loaded.result {
+        Some(Ok(bytes)) => text_first_line(bytes),
+        _ => None,
+    };
+    if let Ok(envelope) = &loaded.verified {
+        let sender = &envelope.sender;
+        detail.roles = vec![
+            format!(
+                "보낸 역할: {} ({} {} · {})",
+                sender.god.as_deref().unwrap_or(&sender.role),
+                sender.provider,
+                sender.model,
+                sender.effort
+            ),
+            format!("받은 역할: {}", envelope.recipient_role),
+        ];
+        detail.elapsed_seconds = context.now.checked_sub(envelope.created_at);
+    }
+    detail
+}
+
+/// Brief title, final result line, step lines, and duration of one completed flow.
+fn flow_detail(
+    context: &Context,
+    flow_id: &str,
+    view: &Value,
+) -> hive_core::decision::CompletionDetail {
+    let steps = view["steps"].as_array().cloned().unwrap_or_default();
+    let message_of = |step: &Value| step["message_id"].as_str().map(str::to_owned);
+    let first = steps.first().and_then(message_of).and_then(|id| {
+        locate(context, &id)
+            .and_then(|role| load(context, &role, &id))
+            .ok()
+    });
+    let last = steps.last().and_then(message_of).and_then(|id| {
+        locate(context, &id)
+            .and_then(|role| load(context, &role, &id))
+            .ok()
+    });
+    hive_core::decision::CompletionDetail {
+        title: context
+            .target
+            .read_optional(
+                Path::new(&hive_core::flow::brief_path(flow_id)),
+                MAX_BODY_BYTES,
+            )
+            .ok()
+            .flatten()
+            .as_deref()
+            .and_then(text_first_line),
+        outcome: last.as_ref().and_then(|loaded| match &loaded.result {
+            Some(Ok(bytes)) => text_first_line(bytes),
+            _ => None,
+        }),
+        roles: steps
+            .iter()
+            .filter_map(|step| step["display"]["ko"].as_str().map(str::to_owned))
+            .collect(),
+        elapsed_seconds: first
+            .as_ref()
+            .and_then(|loaded| loaded.verified.as_ref().ok())
+            .and_then(|envelope| context.now.checked_sub(envelope.created_at)),
+        view_command: Some(format!(
+            "hive msg flow status --flow {flow_id} --target . --user-root ~"
+        )),
+    }
 }
 
 /// One linear script: state gate, result, receipt. Kept in one place on purpose.

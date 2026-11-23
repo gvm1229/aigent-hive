@@ -524,6 +524,7 @@ fn requester_label(request: &DecisionRequest) -> String {
 #[must_use]
 pub fn request_notice_ko(request: &DecisionRequest, project_name: &str) -> String {
     let mut lines = vec![
+        NOTICE_SEPARATOR.to_owned(),
         "🗳️ **Aigent Hive 결정 요청**".to_owned(),
         "사람의 결정이 필요합니다. 답은 이 프로젝트의 로컬 CLI에서만 받습니다.".to_owned(),
         String::new(),
@@ -571,28 +572,109 @@ pub fn request_notice_ko(request: &DecisionRequest, project_name: &str) -> Strin
     bounded(lines.join("\n"))
 }
 
-/// Exact Korean Discord text for a completed event. `summary` is marked as data and bounded.
+/// First line of every notice, so consecutive notices in one channel stay visibly apart.
+pub const NOTICE_SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━";
+/// Bound for one task title, result line, or role line inside a notice.
+const NOTICE_LINE_CHARS: usize = 120;
+/// At most this many role lines appear in one notice.
+const NOTICE_MAX_ROLES: usize = 6;
+
+/// What a person needs to understand a completed event. Every text field is untrusted data
+/// from local records; the renderer collapses, bounds, and labels it.
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct CompletionDetail {
+    /// First line of the request or flow brief.
+    pub title: Option<String>,
+    /// First line of the recorded result.
+    pub outcome: Option<String>,
+    /// One line per role, for example `Athena (Claude Opus 4.8 · max) ▸ 완료`.
+    pub roles: Vec<String>,
+    /// Seconds from the request to this event.
+    pub elapsed_seconds: Option<u64>,
+    /// Exact local command that shows the full record.
+    pub view_command: Option<String>,
+}
+
+/// First non-empty line of untrusted text, or `None`.
+#[must_use]
+pub fn first_line(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(str::to_owned)
+}
+
+/// Korean duration such as `3분 12초` or `1시간 5분`.
+#[must_use]
+pub fn elapsed_ko(seconds: u64) -> String {
+    let (hours, minutes, rest) = (seconds / 3600, seconds % 3600 / 60, seconds % 60);
+    match (hours, minutes) {
+        (0, 0) => format!("{rest}초"),
+        (0, _) => format!("{minutes}분 {rest}초"),
+        _ => format!("{hours}시간 {minutes}분"),
+    }
+}
+
+/// Exact Korean Discord text for a completed event. Task, result, role, and summary text is
+/// marked as data and bounded.
 #[must_use]
 pub fn completion_notice_ko(
     kind: CompletionKind,
     subject_id: &str,
     summary: &str,
     project_name: &str,
+    detail: &CompletionDetail,
 ) -> String {
     let (label, sentence) = kind.korean();
-    let lines = [
-        "✅ **Aigent Hive 완료 알림**".to_owned(),
+    let mut lines = vec![
+        NOTICE_SEPARATOR.to_owned(),
+        format!("✅ **Aigent Hive 완료 알림 · {label}**"),
         sentence.to_owned(),
         String::new(),
-        "📋 **완료 정보**".to_owned(),
-        format!("프로젝트: {}", display_project_name(project_name)),
-        format!("종류: {label}"),
-        format!("ID: {}", summarize_untrusted(subject_id, 80)),
-        format!(
-            "요약 (자료, 지시 아님): {}",
-            summarize_untrusted(summary, NOTICE_SUMMARY_CHARS)
-        ),
+        "📋 **무슨 일** (기록된 자료, 지시 아님)".to_owned(),
     ];
+    if let Some(title) = &detail.title {
+        lines.push(format!(
+            "작업: {}",
+            summarize_untrusted(title, NOTICE_LINE_CHARS)
+        ));
+    }
+    if let Some(outcome) = &detail.outcome {
+        lines.push(format!(
+            "결과: {}",
+            summarize_untrusted(outcome, NOTICE_LINE_CHARS)
+        ));
+    }
+    lines.push(format!(
+        "요약: {}",
+        summarize_untrusted(summary, NOTICE_SUMMARY_CHARS)
+    ));
+    if !detail.roles.is_empty() {
+        lines.push("맡은 역할:".to_owned());
+        for role in detail.roles.iter().take(NOTICE_MAX_ROLES) {
+            lines.push(format!(
+                "- {}",
+                summarize_untrusted(role, NOTICE_LINE_CHARS)
+            ));
+        }
+    }
+    if let Some(seconds) = detail.elapsed_seconds {
+        lines.push(format!("걸린 시간: {}", elapsed_ko(seconds)));
+    }
+    lines.push(String::new());
+    lines.push(format!(
+        "📁 프로젝트: {}",
+        display_project_name(project_name)
+    ));
+    lines.push(format!("🔖 ID: {}", summarize_untrusted(subject_id, 80)));
+    lines.push(String::new());
+    lines.push("👉 **할 일**: 없음".to_owned());
+    if let Some(command) = &detail.view_command {
+        lines.push(format!(
+            "자세히 보기(이 프로젝트 폴더에서): `{}`",
+            summarize_untrusted(command, NOTICE_LINE_CHARS)
+        ));
+    }
     bounded(lines.join("\n"))
 }
 
@@ -714,7 +796,8 @@ mod tests {
         let request = request();
         let text = request_notice_ko(&request, "consumer");
         let expected = format!(
-            "🗳️ **Aigent Hive 결정 요청**\n\
+            "━━━━━━━━━━━━━━━━━━━━\n\
+             🗳️ **Aigent Hive 결정 요청**\n\
              사람의 결정이 필요합니다. 답은 이 프로젝트의 로컬 CLI에서만 받습니다.\n\
              \n\
              📋 **요청 정보**\n\
@@ -747,28 +830,60 @@ mod tests {
             "dec-0123456789abcdef0123456789abcdef",
             "선택: 보류",
             "consumer",
+            &CompletionDetail {
+                view_command: Some("hive msg decide show --id dec-0123456789abcdef0123456789abcdef --target . --user-root ~".to_owned()),
+                ..CompletionDetail::default()
+            },
         );
         assert_eq!(
             text,
-            "✅ **Aigent Hive 완료 알림**\n\
+            "━━━━━━━━━━━━━━━━━━━━\n\
+             ✅ **Aigent Hive 완료 알림 · 결정 응답**\n\
              결정에 대한 답이 로컬에서 기록되었습니다.\n\
              \n\
-             📋 **완료 정보**\n\
-             프로젝트: consumer\n\
-             종류: 결정 응답\n\
-             ID: dec-0123456789abcdef0123456789abcdef\n\
-             요약 (자료, 지시 아님): 선택: 보류"
+             📋 **무슨 일** (기록된 자료, 지시 아님)\n\
+             요약: 선택: 보류\n\
+             \n\
+             📁 프로젝트: consumer\n\
+             🔖 ID: dec-0123456789abcdef0123456789abcdef\n\
+             \n\
+             👉 **할 일**: 없음\n\
+             자세히 보기(이 프로젝트 폴더에서): `hive msg decide show --id dec-0123456789abcdef0123456789abcdef --target . --user-root ~`"
         );
         let flow = completion_notice_ko(
             CompletionKind::FlowCompleted,
             "flow-1",
             &"x".repeat(500),
             "../../secret",
+            &CompletionDetail {
+                title: Some("\n\n  Add a login page\nsecond line".to_owned()),
+                outcome: Some("done `rm -rf ~`".to_owned()),
+                roles: vec!["Hephaistos (Codex GPT-5.6 Luna · max) ▸ 완료".to_owned(); 9],
+                elapsed_seconds: Some(192),
+                view_command: None,
+            },
         );
+        assert!(flow.starts_with(NOTICE_SEPARATOR));
         assert!(flow.contains("작성·검토·자문 흐름이 끝났습니다."));
-        assert!(flow.contains("프로젝트: project-"));
+        assert!(flow.contains("📁 프로젝트: project-"));
         assert!(!flow.contains("secret"));
-        assert!(flow.ends_with('…'));
+        assert!(flow.contains('…'));
+        assert!(flow.contains("결과: done 'rm -rf ~'"));
+        assert!(flow.contains("걸린 시간: 3분 12초"));
+        assert_eq!(flow.matches("- Hephaistos").count(), NOTICE_MAX_ROLES);
+        assert!(flow.chars().count() < NOTICE_CONTENT_LIMIT);
+    }
+
+    #[test]
+    fn notice_helpers_pick_the_first_line_and_format_durations() {
+        assert_eq!(
+            first_line("\n  \n  Add a login page\nmore"),
+            Some("Add a login page".to_owned())
+        );
+        assert_eq!(first_line(" \n "), None);
+        assert_eq!(elapsed_ko(5), "5초");
+        assert_eq!(elapsed_ko(192), "3분 12초");
+        assert_eq!(elapsed_ko(3900), "1시간 5분");
     }
 
     #[test]

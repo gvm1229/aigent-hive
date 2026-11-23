@@ -229,15 +229,15 @@ fn decide_queue_survives_restart_and_accepts_one_answer() {
         "local-cli"
     );
     assert_eq!(answered["data"]["notification"]["outcome"], "sent");
-    assert_eq!(
-        restarted.sent,
-        [completion_notice_ko(
-            CompletionKind::DecisionAnswered,
-            &id,
-            "선택: 보류",
-            "consumer"
-        )]
-    );
+    assert_eq!(restarted.sent.len(), 1);
+    let notice = &restarted.sent[0];
+    assert!(notice.starts_with(hive_core::decision::NOTICE_SEPARATOR));
+    assert!(notice.contains("완료 알림 · 결정 응답"));
+    assert!(notice.contains("요약: 선택: 보류"));
+    assert!(notice.contains("작업: "));
+    assert!(notice.contains(&format!(
+        "hive msg decide show --id {id} --target . --user-root ~"
+    )));
     // The note stays local: it is not in the completion notice.
     assert!(!restarted.sent[0].contains("배포 창"));
 
@@ -538,6 +538,7 @@ fn decide_completion_api_announces_each_event_once() {
         CompletionKind::MessageAcknowledged,
         "msg-0123",
         "결과와 확인증 기록",
+        &CompletionDetail::default(),
     );
     assert_eq!(first["outcome"], "sent");
     let second = notify_completion_with(
@@ -548,6 +549,7 @@ fn decide_completion_api_announces_each_event_once() {
         CompletionKind::MessageAcknowledged,
         "msg-0123",
         "결과와 확인증 기록",
+        &CompletionDetail::default(),
     );
     assert_eq!(second["attempted_now"], false);
     assert_eq!(fake.sent.len(), 1);
@@ -560,6 +562,7 @@ fn decide_completion_api_announces_each_event_once() {
         CompletionKind::FlowCompleted,
         "flow-1",
         "검토 통과",
+        &CompletionDetail::default(),
     );
     assert_eq!(skipped["outcome"], "skipped");
 }

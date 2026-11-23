@@ -17,9 +17,9 @@ use crate::run::{read_explicit_file, required, PinnedTarget};
 use crate::ActionResult;
 use hive_core::decision::{
     self, answer_command, completion_notice_ko, derive_decision_state, notice_claim_path,
-    notice_event_id, notice_outcome_path, request_notice_ko, CompletionKind, DecisionRequest,
-    DecisionResolution, DecisionState, NoticeClaim, NoticeKind, NoticeOutcome, ResolutionKind,
-    DECISION_SCHEMA_VERSION, LOCAL_CLI, MAX_DECISION_TTL_SECONDS, MAX_NOTE_BYTES,
+    notice_event_id, notice_outcome_path, request_notice_ko, CompletionDetail, CompletionKind,
+    DecisionRequest, DecisionResolution, DecisionState, NoticeClaim, NoticeKind, NoticeOutcome,
+    ResolutionKind, DECISION_SCHEMA_VERSION, LOCAL_CLI, MAX_DECISION_TTL_SECONDS, MAX_NOTE_BYTES,
     MAX_QUESTION_BYTES,
 };
 use hive_core::mediation::{self, UNTRUSTED_DATA};
@@ -104,6 +104,7 @@ pub(crate) fn notify_completion(
     kind: CompletionKind,
     subject_id: &str,
     summary: &str,
+    detail: &CompletionDetail,
 ) -> Value {
     notify_completion_with(
         target,
@@ -113,9 +114,11 @@ pub(crate) fn notify_completion(
         kind,
         subject_id,
         summary,
+        detail,
     )
 }
 
+#[allow(clippy::too_many_arguments)] // One notice: where, when, how, what, and its detail.
 fn notify_completion_with(
     target: &PinnedTarget,
     user_root: &Path,
@@ -124,8 +127,9 @@ fn notify_completion_with(
     kind: CompletionKind,
     subject_id: &str,
     summary: &str,
+    detail: &CompletionDetail,
 ) -> Value {
-    let content = completion_notice_ko(kind, subject_id, summary, &project_name(target));
+    let content = completion_notice_ko(kind, subject_id, summary, &project_name(target), detail);
     notify_once(
         target,
         user_root,
@@ -687,6 +691,15 @@ fn resolve(
         kind,
         &request.decision_id,
         summary,
+        &CompletionDetail {
+            title: decision::first_line(&request.question),
+            elapsed_seconds: context.now.checked_sub(request.created_at),
+            view_command: Some(format!(
+                "hive msg decide show --id {} --target . --user-root ~",
+                request.decision_id
+            )),
+            ..CompletionDetail::default()
+        },
     );
     let loaded = load_existing(&context.target, &request.decision_id)?;
     let decision = view(&context.target, &request.decision_id, &loaded, context.now);
