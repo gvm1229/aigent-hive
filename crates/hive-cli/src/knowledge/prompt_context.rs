@@ -10,6 +10,7 @@ use super::{
     derive_optional_current_collection_authority, require_shared_wiki_enabled, Path, RagStore,
     RetrievalRequest, RetrievalScope,
 };
+use std::fmt::Write as _;
 use std::io::Read;
 use std::process::ExitCode;
 
@@ -50,7 +51,9 @@ pub(super) fn prompt_context(input: &str, user_root: &Path) -> Option<String> {
     // An unregistered or source-workspace folder falls back to user-root and shared knowledge.
     let current_collection_id = event["cwd"]
         .as_str()
-        .and_then(|cwd| derive_optional_current_collection_authority(&registry, Path::new(cwd)).ok())
+        .and_then(|cwd| {
+            derive_optional_current_collection_authority(&registry, Path::new(cwd)).ok()
+        })
         .and_then(|(_, collection)| collection);
     let request = RetrievalRequest {
         scope: RetrievalScope::Auto,
@@ -79,7 +82,7 @@ pub(super) fn prompt_context(input: &str, user_root: &Path) -> Option<String> {
             .unwrap_or("item");
         let body = hit["text"].as_str().unwrap_or_default().replace('\n', " ");
         let locator = hit["locator"].as_str().unwrap_or_default();
-        text.push_str(&format!("- [{kind}] {} ({locator})\n", body.trim()));
+        let _ = writeln!(text, "- [{kind}] {} ({locator})", body.trim());
     }
     Some(
         serde_json::json!({

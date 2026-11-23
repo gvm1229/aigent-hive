@@ -5825,7 +5825,10 @@ mod tests {
 
         let output = prompt_context::prompt_context(&event, user.path()).expect("hook output");
         let value: serde_json::Value = serde_json::from_str(&output).expect("hook JSON");
-        assert_eq!(value["hookSpecificOutput"]["hookEventName"], "UserPromptSubmit");
+        assert_eq!(
+            value["hookSpecificOutput"]["hookEventName"],
+            "UserPromptSubmit"
+        );
         let context = value["hookSpecificOutput"]["additionalContext"]
             .as_str()
             .expect("context");
@@ -5839,7 +5842,11 @@ mod tests {
             r#"{"prompt":"   "}"#,
             r#"{"prompt":"zzqx unmatched vocabulary"}"#,
         ] {
-            assert_eq!(prompt_context::prompt_context(input, user.path()), None, "{input}");
+            assert_eq!(
+                prompt_context::prompt_context(input, user.path()),
+                None,
+                "{input}"
+            );
         }
         write_user_setup(user.path(), false);
         assert_eq!(prompt_context::prompt_context(&event, user.path()), None);
