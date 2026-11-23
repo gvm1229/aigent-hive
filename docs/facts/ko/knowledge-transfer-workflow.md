@@ -9,7 +9,7 @@ summary: "단일·여러 묶음의 입력·대상·검토 지문과 벡터 지�
 tags: [knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:cb4e53566ee902c209f8e0593929b05b8c5d22b87128736c638f4aa57d7b0f21"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:2972313e61138d862c92568c88b6fbd40c255ca25158bdcc051934b1c2a3a5a2"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
   - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:f2004da148a9e74f922c4911266f8835853044d52601d40f6d453bfa9add5848"
   - "repo:docs/guides/knowledge-transfer.md#sha256:f0f48767f5fcb83450853ddf95d0c9f3f573b3c2fb3e0b626adb5af5ed742bf1"
