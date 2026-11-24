@@ -365,6 +365,7 @@ const MSG_OPTIONS: &[&str] = &[
     "--to",
     "--ttl",
     "--user-root",
+    "--worker",
     "--worktree",
 ];
 const STOP_OPTIONS: &[&str] = &[

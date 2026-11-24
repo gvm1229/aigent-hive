@@ -29,7 +29,10 @@ re-sends anything on its own.
 5. Launch the worker yourself (see below) and wait for it in the host, not in Hive.
 6. Acknowledge: `hive msg ack --id <message-id> --claim <claim_token> --result <file>` before
    the lease ends. The same result again is `hive.msg-duplicate`; a different result is
-   quarantined.
+   quarantined. Add `--worker codex:<session-id>` (the `codex exec` session id) or
+   `--worker claude:<agent-id>` (the subagent's agent id) so Hive reads the model that really
+   ran from that host's own session log; the role table's model is only a suggestion. Without
+   `--worker` the completion notice says the model was not measured.
 7. Check: `hive msg status --id <message-id>`. Terminal states are `acknowledged`, `expired`,
    `quarantined` and `cancelled`.
 

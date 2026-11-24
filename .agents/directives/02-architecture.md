@@ -24,6 +24,8 @@ No consumer state in source, source directives in releases, or user data in rele
   multi-goal execution with provider-neutral state machines, Skills, and declarative envelopes.
 - New orchestration stays off until hosts prove envelope consumption, typed receipts, cancellation
   and safe reclaim. State unsupported/unverified capabilities; uncertain launch stays `dispatch-uncertain`.
+- Role-table models are suggestions. A notice that says which model ran shows only a host-reported
+  measurement, else "not measured".
 - Exactly-once dispatch claims require a qualified receipt and idempotency contract.
 - Bind mutation to exact target, event head, control epoch, request digest, and authenticated
   single-action authority. Ambient session pointers are selectors, never authority.

@@ -396,13 +396,11 @@ fn msg_completion_notice_names_the_task_result_roles_and_duration() {
     assert_eq!(detail.title.as_deref(), Some("Review the login page"));
     assert_eq!(detail.outcome.as_deref(), Some("Approved with one note"));
     assert_eq!(detail.elapsed_seconds, Some(192));
+    // The role table only suggests a model: without a measurement no model is named.
+    assert_eq!(detail.roles[0], "보낸 역할: athena", "{:?}", detail.roles);
     assert!(
-        detail.roles[0].starts_with("보낸 역할: athena ("),
-        "{:?}",
-        detail.roles
-    );
-    assert!(
-        detail.roles[1].starts_with("받은 역할: "),
+        detail.roles[1].starts_with("받은 역할: ")
+            && detail.roles[1].ends_with(" · 실행 모델: 측정 안 됨"),
         "{:?}",
         detail.roles
     );
@@ -418,6 +416,76 @@ fn msg_completion_notice_names_the_task_result_roles_and_duration() {
     assert!(notice.contains(&format!(
         "hive msg status --id {id} --target . --user-root ~"
     )));
+}
+
+#[test]
+fn msg_ack_worker_measures_the_real_model_from_the_host_session_log() {
+    let f = fixture();
+    let sent = f.send(b"Fix the header", &[]);
+    let id = sent["data"]["message"]["id"].as_str().unwrap().to_owned();
+    let result = f.body("result.txt", b"Done");
+    let sub = f.home.join(".claude/projects/p/s/subagents");
+    std::fs::create_dir_all(&sub).unwrap();
+    std::fs::write(
+        sub.join("agent-a1b2c3d4e5f6.jsonl"),
+        concat!(
+            "{\"type\":\"user\",\"message\":{\"content\":\"secret prompt\"}}
+",
+            "{\"type\":\"assistant\",\"effort\":\"high\",\"message\":{\"model\":\"claude-opus-5-5\",\"content\":\"secret answer\"}}
+",
+        ),
+    )
+    .unwrap();
+    let bad = f.run(&[
+        "ack",
+        "--id",
+        &id,
+        "--claim",
+        "x",
+        "--result",
+        &result,
+        "--worker",
+        "gemini:abcdef",
+    ]);
+    assert_eq!(bad["code"], "hive.msg-refused", "{bad}");
+    f.run(&["claim", "--id", &id, "--role", "artemis", "--now", "1002"]);
+    let token = super::test_claim_token(&f.target, &id);
+    let acked = f.run(&[
+        "ack",
+        "--id",
+        &id,
+        "--claim",
+        &token,
+        "--result",
+        &result,
+        "--worker",
+        "claude:a1b2c3d4e5f6",
+        "--now",
+        "1010",
+    ]);
+    assert_eq!(acked["code"], "hive.msg-acknowledged", "{acked}");
+    assert_eq!(acked["data"]["measurement"]["model"], "claude-opus-5-5");
+    let record = std::fs::read_to_string(
+        f.target
+            .join(format!(".hive/mediation/measurements/{id}.json")),
+    )
+    .unwrap();
+    assert!(
+        !record.contains("secret") && !record.contains("projects"),
+        "{record}"
+    );
+    let context = Context::open(&[
+        ("--target", f.target.to_str().unwrap()),
+        ("--user-root", f.home.to_str().unwrap()),
+        ("--now", "1010"),
+    ])
+    .unwrap();
+    let detail = super::message_detail(&context, &id);
+    assert!(
+        detail.roles[1].ends_with(" · 실행 모델: Claude Opus 5.5 · high"),
+        "{:?}",
+        detail.roles
+    );
 }
 
 #[test]

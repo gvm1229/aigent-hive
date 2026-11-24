@@ -50,7 +50,7 @@ USAGE:
     hive msg send --to <role|god> --file <body> --from <role|god> [--task <id>] [--key <idempotency-key>] [--provider <p>] [--model <m>] [--effort <e>] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg inbox [--role <role|god>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg claim --id <message-id> --role <role|god> [--lease <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
-    hive msg ack --id <message-id> --claim <claim-token|claim-digest> --result <file> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg ack --id <message-id> --claim <claim-token|claim-digest> --result <file> [--worker codex:<session-id>|claude:<agent-id>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg status --id <message-id|summon:<run>:<action>> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow start --builder <role|god> --reviewer <role|god> [--reviewer-provider codex|claude|gemini] [--advisor <role|god>] --task <id> --file <brief> [--kind review] [--from <role|god>] [--key <flow-key>] [--allow-same-provider] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow advance|status --flow <flow-id> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
@@ -1187,6 +1187,7 @@ fn ack(arguments: &[String]) -> Result<ActionResult, MsgError> {
             "--id",
             "--claim",
             "--result",
+            "--worker",
             "--now",
             "--target",
             "--user-root",
@@ -1195,9 +1196,22 @@ fn ack(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let context = Context::open(&options)?;
     let message_id = checked_id(required(&options, "--id")?, "--id")?;
     let presented = required(&options, "--claim")?;
+    let worker = option(&options, "--worker")
+        .map(measure::parse_worker)
+        .transpose()?;
     let result_bytes =
         read_explicit_file(Path::new(required(&options, "--result")?), MAX_RESULT_BYTES)?;
     let mut result = ack_message(&context, &message_id, presented, &result_bytes)?;
+    if let (Some((host, id)), "hive.msg-acknowledged") = (&worker, result.code) {
+        record_measurement(
+            &context,
+            Path::new(required(&options, "--user-root")?),
+            *host,
+            id,
+            &message_id,
+            &mut result,
+        );
+    }
     if matches!(result.code, "hive.msg-acknowledged" | "hive.msg-duplicate") {
         flow::after_ack(&context, &message_id, &mut result)?;
     }
@@ -1251,6 +1265,56 @@ fn notify_ack_completion(
     data["notification"] = notice;
 }
 
+/// Measure the worker's real model from its host session log and publish it once. A failed
+/// measurement never undoes the receipt; the notice then says the model was not measured.
+fn record_measurement(
+    context: &Context,
+    user_root: &Path,
+    host: measure::WorkerHost,
+    worker_id: &str,
+    message_id: &str,
+    result: &mut ActionResult,
+) {
+    let outcome = measure::measure(user_root, host, worker_id, message_id, context.now).and_then(
+        |measurement| {
+            let path = measure::measurement_path(message_id);
+            let bytes = record_bytes(&measurement).map_err(|error| error.message)?;
+            match publish_new(&context.target, &path, &bytes).map_err(|error| error.message)? {
+                Published::Different(_) => Err("a different measurement already exists".into()),
+                Published::Created | Published::SameBytes => Ok((path, measurement)),
+            }
+        },
+    );
+    let data = result.data.get_or_insert_with(|| json!({}));
+    match outcome {
+        Ok((path, measurement)) => {
+            data["measurement"] = json!({
+                "provider": measurement.provider,
+                "model": measurement.model,
+                "effort": measurement.effort,
+                "source": measurement.source,
+            });
+            result.changed_paths.push(path);
+        }
+        Err(reason) => data["measurement_error"] = json!(reason),
+    }
+}
+
+/// `실행 모델: Codex gpt-6-luna · medium`, or `측정 안 됨` without a readable measurement.
+fn measured_label(context: &Context, message_id: &str) -> String {
+    let measured = context
+        .target
+        .read_optional(Path::new(&measure::measurement_path(message_id)), 64 * 1024)
+        .ok()
+        .flatten()
+        .and_then(|bytes| serde_json::from_slice::<measure::Measurement>(&bytes).ok())
+        .filter(|measurement| measurement.message_id == message_id);
+    match measured {
+        Some(measurement) => format!("실행 모델: {}", measurement.label()),
+        None => "실행 모델: 측정 안 됨".to_owned(),
+    }
+}
+
 fn text_first_line(bytes: &[u8]) -> Option<String> {
     std::str::from_utf8(bytes)
         .ok()
@@ -1279,13 +1343,14 @@ fn message_detail(context: &Context, message_id: &str) -> hive_core::decision::C
         let sender = &envelope.sender;
         detail.roles = vec![
             format!(
-                "보낸 역할: {} ({} {} · {})",
-                sender.god.as_deref().unwrap_or(&sender.role),
-                sender.provider,
-                sender.model,
-                sender.effort
+                "보낸 역할: {}",
+                sender.god.as_deref().unwrap_or(&sender.role)
             ),
-            format!("받은 역할: {}", envelope.recipient_role),
+            format!(
+                "받은 역할: {} · {}",
+                envelope.recipient_role,
+                measured_label(context, message_id)
+            ),
         ];
         detail.elapsed_seconds = context.now.checked_sub(envelope.created_at);
     }
@@ -1327,7 +1392,15 @@ fn flow_detail(
         }),
         roles: steps
             .iter()
-            .filter_map(|step| step["display"]["ko"].as_str().map(str::to_owned))
+            .filter_map(|step| {
+                let name = step["god_display"].as_str()?;
+                let label = step["label"]["ko"].as_str().unwrap_or_default();
+                let model = message_of(step).map_or_else(
+                    || "실행 모델: 측정 안 됨".to_owned(),
+                    |id| measured_label(context, &id),
+                );
+                Some(format!("{name} ▸ {label} · {model}"))
+            })
             .collect(),
         elapsed_seconds: first
             .as_ref()
@@ -1542,6 +1615,7 @@ mod containment;
 mod flow;
 mod hook;
 mod hooks;
+mod measure;
 mod stop;
 
 /// Claim token of `id` as `msg claim` returned it, for test `ack`/`cancel-ack` calls.
