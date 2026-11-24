@@ -3829,6 +3829,7 @@ fn render_user_guidance(
             }
         },
     );
+    let scope_rules = setup.map_or_else(String::new, scope_rules);
     let optional_questions = if question_pending && setup.is_some() {
         match setup.map(|config| config.interface_language) {
             Some(crate::user_setup::InterfaceLanguage::Ko) => {
@@ -3842,10 +3843,56 @@ fn render_user_guidance(
         ""
     };
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{scope_rules}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
+}
+
+/// Rules that hold in every folder, Hive project or not. The multi-host Skill rule is rendered
+/// only when two or more hosts are selected, so a single-host install keeps making a Skill for
+/// that host alone.
+fn scope_rules(config: &crate::user_setup::UserSetupConfig) -> String {
+    use std::fmt::Write as _;
+    let ko = matches!(
+        config.interface_language,
+        crate::user_setup::InterfaceLanguage::Ko
+    );
+    let selected: Vec<&str> = config
+        .selected_hosts
+        .iter()
+        .map(|host| host.as_str())
+        .collect();
+    let mut rules = String::new();
+    if selected.len() >= 2 {
+        let folders = selected
+            .iter()
+            .filter_map(|host| match *host {
+                "codex" => Some("Codex `.agents/skills/<name>/`"),
+                "claude" => Some("Claude `.claude/skills/<name>/`"),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let _ = if ko {
+            writeln!(rules, "- 선택한 호스트가 여러 개이므로 프로젝트 Skill을 새로 만들거나 고칠 때 선택한 호스트 모두가 쓸 수 있게 작성: {folders}. 폴더마다 본문이 같은 `SKILL.md` 사본을 두고, 호스트마다 필요한 머리말 차이와 호스트 전용 파일만 해당 폴더에 추가. 한쪽을 고치면 같은 작업 안에서 다른 쪽도 맞춤. 사용자가 특정 호스트만 지정하면 그 호스트만 작성. 사용자 전역 Skill 폴더는 대상 아님.\n- 다른 사람과 함께 쓰는 저장소에 다른 호스트의 Skill 폴더가 아직 없으면 새로 만들기 전에 한 번 질문.")
+        } else {
+            writeln!(rules, "- Because several hosts are selected, make every new or changed project Skill usable by each selected host: {folders}. Keep a `SKILL.md` copy with the same body in each folder; add only host-specific front matter and host-only files to that host's folder. When one copy changes, update the others in the same task. If the user names one host, write only that host's copy. User-global Skill folders are out of scope.\n- In a repository shared with other people, ask once before creating a host Skill folder that does not exist yet.")
+        };
+        if selected.contains(&"antigravity") {
+            rules.push_str(if ko {
+                "- Antigravity 프로젝트 Skill 경로는 미검증: Antigravity 사본은 만들지 않고 사용자에게 보고.\n"
+            } else {
+                "- The Antigravity project Skill path is unverified: do not create an Antigravity copy; report it to the user.\n"
+            });
+        }
+    }
+    rules.push_str(if ko {
+        "- `.hive/`가 없는 프로젝트에서는 사용자가 요청하지 않는 한 프로젝트용 Hive 설정·실행 명령 사용과 설치 권유 금지. 지식 조회·기록과 갱신 확인 같은 사용자 범위 작업만 수행.\n- 다른 도구·하네스의 설정·훅·지침 파일은 사용자가 요청하지 않는 한 변경 금지.\n"
+    } else {
+        "- In a project without `.hive/`, do not run project Hive setup or run commands or suggest installing Hive unless the user asks; only user-scope work such as knowledge lookup, knowledge capture, and update checks applies.\n- Do not change another tool's or harness's settings, hooks, or instruction files unless the user asks.\n"
+    });
+    rules
 }
 
 fn validate_operational_guidance(
@@ -9938,6 +9985,24 @@ mod tests {
             false,
         ))
         .expect("English guidance");
+        // One selected host keeps single-host Skill creation; the scope rules always hold.
+        assert!(!english.contains("several hosts are selected"));
+        assert!(english.contains("In a project without `.hive/`"));
+        assert!(english.contains("Do not change another tool's or harness's settings"));
+        let mut multi = config(InterfaceLanguage::Ko);
+        multi.selected_hosts = vec![
+            SelectedHost::Codex,
+            SelectedHost::Claude,
+            SelectedHost::Antigravity,
+        ];
+        let multi = String::from_utf8(render_user_guidance(UserHost::Claude, Some(&multi), false))
+            .expect("multi-host guidance");
+        assert!(multi.contains(
+            "선택한 호스트 모두가 쓸 수 있게 작성: Codex `.agents/skills/<name>/`, Claude `.claude/skills/<name>/`."
+        ));
+        assert!(multi.contains("새로 만들기 전에 한 번 질문"));
+        assert!(multi.contains("Antigravity 프로젝트 Skill 경로는 미검증"));
+        assert!(multi.contains("`.hive/`가 없는 프로젝트에서는"));
         assert!(english.contains(
             "use English for every question and response unless the user explicitly requests another language for the current response"
         ));
