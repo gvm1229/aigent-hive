@@ -4,7 +4,8 @@
   "package_version": "0.16.0-test.8",
   "plan_ids": [
     "OV160-032",
-    "OV160-033"
+    "OV160-033",
+    "OV160-034"
   ],
-  "product_tree_sha256": "sha256:3a0971573928a31c33aedbb9d2952049d46bb327a7979f8321b100796abeee49"
+  "product_tree_sha256": "sha256:a6cbddb294e2bd9dbbfffb23a7ac8dd76428af9f9ee80975286427eb8e91e976"
 }
