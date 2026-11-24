@@ -10,7 +10,7 @@ tags: [bootstrap, onboarding, setup]
 aliases: ["User setup"]
 sources:
   - "repo:README.md#sha256:6b22b8f1ca50ca08e43822daf915657639eb42344d8a0f63ab9db3da6b91bd8c"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bae3e86f788d8720c04f151ac37ad8120e5e2e57623c5fe56041abe7c82c594"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ecb5eb8be00aa5902b1cf2d11d9bcdb51e76ceab68fce047c5463a9fc5920762"
   - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
   - "repo:docs/archive/plans/foundations/native-usage-sensor.md#sha256:231e96967c32029d539eb82f245399e37156a43c2028be8a01a51215a5455807"
   - "repo:docs/archive/plans/foundations/usage-guard-policy.md#sha256:4b99d1f046ff56eeb9102b99dec4e88226ca2cdfa4947bb233c9a5c541a19172"
@@ -20,7 +20,7 @@ sources:
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848"
   - "repo:harness/user-setup/catalog.yml#sha256:d55a8ec71cddf4c2cd946850f8c345d58951ae4156b33659d57fe5c4d313f522"
-  - "repo:schemas/user-setup.schema.json#sha256:cefe939bedb7f6645fd1851e086def9677e4a2f3f7774258d54dd203cc8b10fc"
+  - "repo:schemas/user-setup.schema.json#sha256:f47704e89efc256c1ee46052bb594948d99cb5fcb19eb49628105f6c074ce71a"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
