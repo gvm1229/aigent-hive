@@ -260,6 +260,7 @@ pub(super) fn question_title(id: &str, korean: bool) -> &'static str {
         "user-persona" | "project-persona" => ("답변 방식", "Response style"),
         "user-persona-text" | "project-persona-text" => ("답변 방식 설명", "Response style text"),
         "user-judge" => ("독립 검토", "Independent review"),
+        "user-ai-coauthor" => ("AI 공동 작성자", "AI co-authors"),
         "user-skills" | "project-skills" => ("기능 묶음", "Feature bundle"),
         "user-contexts" => ("배경과 관심사", "Background"),
         "user-context-description" => ("추가 배경", "More background"),

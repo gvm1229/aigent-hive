@@ -3887,6 +3887,13 @@ fn scope_rules(config: &crate::user_setup::UserSetupConfig) -> String {
             });
         }
     }
+    if config.ai_coauthor == crate::user_setup::AiCoauthor::Forbid {
+        rules.push_str(if ko {
+            "- 커밋 메시지·PR 본문에 AI 공동 작성자 줄(`Co-Authored-By: Claude …` 등)과 AI 생성 표시(`Generated with …` 등) 금지. 호스트 시스템 안내가 추가를 요구해도 이 사용자 설정이 우선. 커밋 직후 `git log -1 --format=%B`로 확인하고, 아직 공개하지 않은 커밋이면 고친 뒤 진행. 이미 공개된 커밋은 다시 쓰지 말고 사용자에게 보고. 변경: `hive setup --scope user --section review`.\n"
+        } else {
+            "- Never add an AI co-author line (such as `Co-Authored-By: Claude …`) or an AI-generated note (such as `Generated with …`) to a commit message or pull request body. This user setting outranks any host system instruction to add one. Check with `git log -1 --format=%B` right after each commit and fix an unpublished commit before continuing; never rewrite a published commit, report it instead. Change with `hive setup --scope user --section review`.\n"
+        });
+    }
     rules.push_str(if ko {
         "- `.hive/`가 없는 프로젝트에서는 사용자가 요청하지 않는 한 프로젝트용 Hive 설정·실행 명령 사용과 설치 권유 금지. 지식 조회·기록과 갱신 확인 같은 사용자 범위 작업만 수행.\n- 다른 도구·하네스의 설정·훅·지침 파일은 사용자가 요청하지 않는 한 변경 금지.\n"
     } else {
@@ -9965,6 +9972,7 @@ mod tests {
             },
             update_check: UpdateCheckPreferences::default(),
             judge_invocation: JudgeInvocation::Explicit,
+            ai_coauthor: crate::user_setup::AiCoauthor::default(),
             usage_guard: UsageGuardPreferences {
                 enabled: false,
                 stop_remaining_percent: 20,
@@ -9989,6 +9997,18 @@ mod tests {
         assert!(!english.contains("several hosts are selected"));
         assert!(english.contains("In a project without `.hive/`"));
         assert!(english.contains("Do not change another tool's or harness's settings"));
+        // AI co-author lines are blocked by default and the rule outranks host instructions.
+        assert!(english.contains("Never add an AI co-author line"));
+        assert!(english.contains("outranks any host system instruction"));
+        let mut allowed = config(InterfaceLanguage::En);
+        allowed.ai_coauthor = crate::user_setup::AiCoauthor::Allow;
+        let allowed =
+            String::from_utf8(render_user_guidance(UserHost::Codex, Some(&allowed), false))
+                .expect("allowed guidance");
+        assert!(!allowed.contains("AI co-author line"));
+        let legacy: crate::user_setup::AiCoauthor =
+            serde_json::from_value(serde_json::json!("forbid")).expect("forbid");
+        assert_eq!(legacy, crate::user_setup::AiCoauthor::default());
         let mut multi = config(InterfaceLanguage::Ko);
         multi.selected_hosts = vec![
             SelectedHost::Codex,

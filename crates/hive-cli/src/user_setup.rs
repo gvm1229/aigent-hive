@@ -363,6 +363,16 @@ pub(crate) struct UpdateCheckPreferences {
     pub(crate) enabled: bool,
 }
 
+/// AI co-author and "generated with" attribution in commits and pull requests. Off by default;
+/// an install without the key keeps the default.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum AiCoauthor {
+    #[default]
+    Forbid,
+    Allow,
+}
+
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum JudgeInvocation {
@@ -401,6 +411,8 @@ pub(crate) struct UserSetupConfig {
     pub(crate) update_check: UpdateCheckPreferences,
     #[serde(default)]
     pub(crate) judge_invocation: JudgeInvocation,
+    #[serde(default)]
+    pub(crate) ai_coauthor: AiCoauthor,
     pub(crate) usage_guard: UsageGuardPreferences,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) preference_decisions: hive_core::preferences::PreferenceDecisions,

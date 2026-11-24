@@ -36,7 +36,7 @@ questions:
       - {"value":"profile","label":{"ko":"배경과 관심사","en":"Background and interests"}}
       - {"value":"persona","label":{"ko":"답변 방식","en":"Response style"}}
       - {"value":"hosts","label":{"ko":"사용할 앱","en":"Apps"}}
-      - {"value":"review","label":{"ko":"독립 검토","en":"Independent review"}}
+      - {"value":"review","label":{"ko":"독립 검토와 AI 공동 작성자","en":"Independent review and AI co-authors"}}
       - {"value":"skills","label":{"ko":"기능 선택","en":"Feature selection"}}
       - {"value":"updates","label":{"ko":"새 버전 확인","en":"Update checks"}}
       - {"value":"usage","label":{"ko":"사용량 보호","en":"Usage protection"}}
@@ -110,6 +110,16 @@ questions:
     help: {"ko":"","en":""}
     default: "explicit"
     options: [{"value":"explicit","label":{"ko":"요청할 때만","en":"Only when requested"}},{"value":"implicit","label":{"ko":"작업 규칙에 따라","en":"As required by the workflow"}}]
+  - id: user-ai-coauthor
+    revision: 1
+    scope: "user"
+    section: "review"
+    key: "/ai_coauthor"
+    input: "choice"
+    prompt: {"ko":"커밋과 PR에 AI 공동 작성자 표시를 막을까요?","en":"Block AI co-author lines in commits and pull requests?"}
+    help: {"ko":"`Co-Authored-By: Claude` 같은 줄과 AI 생성 표시. 호스트 안내보다 이 설정 우선.","en":"Lines such as `Co-Authored-By: Claude` and AI-generated notes. This setting outranks host instructions."}
+    default: "forbid"
+    options: [{"value":"forbid","label":{"ko":"막기(권장)","en":"Block (recommended)"}},{"value":"allow","label":{"ko":"허용","en":"Allow"}}]
   - id: user-skills
     revision: 1
     scope: "user"

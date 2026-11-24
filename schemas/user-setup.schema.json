@@ -57,6 +57,9 @@
     "judge_invocation": {
       "$ref": "#/$defs/judge_invocation"
     },
+    "ai_coauthor": {
+      "$ref": "#/$defs/ai_coauthor"
+    },
     "usage_guard": {
       "type": "object"
     },
@@ -256,6 +259,13 @@
         "implicit"
       ],
       "default": "explicit"
+    },
+    "ai_coauthor": {
+      "enum": [
+        "forbid",
+        "allow"
+      ],
+      "default": "forbid"
     },
     "usage_guard": {
       "type": "object",
