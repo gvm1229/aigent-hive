@@ -10,7 +10,7 @@ tags: [installation, migration, projection, update]
 aliases: ["갱신 뒤 투영 refresh"]
 sources:
   - "repo:crates/hive-cli/src/update_activation.rs#sha256:550cb3fb71ad6f3e4060262bf2788fa6efbd675d054b84e4d0b3168f9816da95"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:7223c43e1fae841724b16530c166d11255a3bde62ffc29568d75426154144408"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:0f38c221f9d1eff944ba7099f78811a7d4224abbed933130c158db29c5fa0d13"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:0bae3e86f788d8720c04f151ac37ad8120e5e2e57623c5fe56041abe7c82c594"
   - "repo:docs/research/usage-upgrade-0.13.1.md#sha256:34eef7d725766ab1de07923d443623df1dd10b4e681950db813488249db2ace4"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"

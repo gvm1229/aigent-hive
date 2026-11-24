@@ -9,7 +9,7 @@ summary: "지침의 독립 이식"
 tags: [directive, project, skill]
 aliases: []
 sources:
-  - "repo:harness/directives/00-project-harness.md#sha256:7073d74da76915240b5061818f9a00644872a3b5ff7d84fa55e30dc26c99a50c"
+  - "repo:harness/directives/00-project-harness.md#sha256:2745a3b014401254f4188ce8eff69270453fd3a9fc22e12c0b1ecf285f989559"
   - "repo:harness/skills/amend-directive/SKILL.md#sha256:8e9ad50eb58c10d535c7773e58d95a40b07e84da47a223fbd9655e15969ac15c"
   - "repo:harness/skills/amend-directive/references/transplant.md#sha256:ccf62ac92693760e2b7267679880edb41c55439fb7668dac36db470cfccf3b12"
 links: [agent-directive-ownership, codex-skill-delivery]
