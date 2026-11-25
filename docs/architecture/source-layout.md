@@ -258,7 +258,7 @@ Current precedence:
 1. explicit direct/plain answer
 2. explicit Skill
 3. simple-question isolation gate
-4. Hive run data contract (`run-checkpoint|run-resume|run-handoff`)
+4. Hive run data contract (`run`; `0.16.0` 이전 `run-checkpoint|run-resume|run-handoff`)
 5. approved Hive orchestration·task Skill candidate
 6. host-native direct capability
 7. legacy migration·recovery의 explicit foreign provenance reader

@@ -67,6 +67,8 @@ const SETUP_OPTIONS: &[&str] = &[
     "--answers",
     "--apply",
     "--capabilities",
+    "--claude-statusline",
+    "--confirm",
     "--describe",
     "--dry-run",
     "--id",
@@ -192,6 +194,7 @@ const KNOWLEDGE_OPTIONS: &[&str] = &[
     "--snapshot",
     "--source",
     "--source-locator",
+    "--stdin-json",
     "--subject",
     "--tag",
     "--target",
@@ -253,16 +256,20 @@ const USAGE_OPTIONS: &[&str] = &[
     "--confirm-zero-quota-guard-disable",
     "--dry-run",
     "--host",
+    "--pass-through",
     "--process-id",
     "--remaining-percent",
     "--request",
     "--run",
     "--session-id",
     "--stdin-json",
+    "--stop-remaining-percent",
+    "--stop-used-percent",
     "--target",
     "--target-from-stdin",
     "--threshold",
     "--user-root",
+    "--window",
 ];
 const PROJECT_OPTIONS: &[&str] = &[
     "--apply",
@@ -318,6 +325,56 @@ const ORCHESTRATION_OPTIONS: &[&str] = &[
     "--target",
     "--task",
     "--trust-root",
+    "--user-root",
+];
+const MSG_OPTIONS: &[&str] = &[
+    "--advisor",
+    "--allow-same-provider",
+    "--binding",
+    "--builder",
+    "--check",
+    "--claim",
+    "--confirm",
+    "--effort",
+    "--event",
+    "--file",
+    "--flow",
+    "--from",
+    "--host",
+    "--id",
+    "--key",
+    "--kind",
+    "--lease",
+    "--message",
+    "--model",
+    "--note-file",
+    "--now",
+    "--option",
+    "--provider",
+    "--question-file",
+    "--recommend",
+    "--receipt",
+    "--result",
+    "--return",
+    "--reviewer",
+    "--reviewer-provider",
+    "--role",
+    "--state",
+    "--target",
+    "--task",
+    "--to",
+    "--ttl",
+    "--user-root",
+    "--worker",
+    "--worktree",
+];
+const STOP_OPTIONS: &[&str] = &[
+    "--confirm",
+    "--flow",
+    "--now",
+    "--reason",
+    "--target",
+    "--task",
     "--user-root",
 ];
 const SUMMON_OPTIONS: &[&str] = &[
@@ -409,9 +466,22 @@ pub(crate) const COMMANDS: &[Command] = &[
         &["hive roster --target . --user-root <user-root>"]),
     command("summon", Group::Setup, "신 이름으로 기능 호출", "Call a function by its named role",
         &[], SUMMON_OPTIONS, &["hive summon --help"]),
+    command("msg", Group::Setup, "역할 사이 메시지 보내기·받기", "Send and read role messages",
+        &["send", "inbox", "claim", "ack", "status", "flow", "decide", "cancel-ack", "hooks", "hook"], MSG_OPTIONS,
+        &["hive msg inbox --target . --user-root ~",
+          "hive msg send --to artemis --from athena --file a.md --target . --user-root ~",
+          "hive msg status --id <message-id> --target . --user-root ~",
+          "hive msg flow start --builder hephaistos --reviewer athena --task t1 --file a.md --target . --user-root ~",
+          "hive msg hooks preview --host claude --role athena --target . --user-root ~",
+          "hive msg decide list --state open --target . --user-root ~"]),
+    command("stop", Group::Setup, "새 메시지 중지와 취소 요청", "Stop new messages and request cancel",
+        &["status", "clear"], STOP_OPTIONS,
+        &["hive stop --target . --user-root ~",
+          "hive stop status --target . --user-root ~",
+          "hive stop clear --confirm <stop-digest> --target . --user-root ~"]),
     command("knowledge", Group::Knowledge, "지식 저장·검색·관리", "Save, find and manage knowledge",
         &["ingest", "add", "query", "graph", "list", "read", "promote", "lint", "delete",
-          "suppress", "remember", "retrieve", "subjects", "authorize-confidential",
+          "suppress", "remember", "retrieve", "prompt-context", "subjects", "authorize-confidential",
           "authorize-collection", "collection", "refresh", "scan", "export", "import", "transfer",
           "vector"], KNOWLEDGE_OPTIONS,
         &["hive knowledge lint --target .",
@@ -435,13 +505,14 @@ pub(crate) const COMMANDS: &[Command] = &[
         &["verify"], &["--bundle"], &["hive release verify --bundle <release-dir>"]),
     command("usage", Group::Diagnose, "사용량 확인과 사용량 보호", "Check usage and the usage guard",
         &["check", "probe-native", "monitor", "show", "enforce", "status", "threshold", "session",
-          "capture", "summarize-tokens", "fallback-install"], USAGE_OPTIONS,
+          "capture", "statusline", "summarize-tokens", "fallback-install"], USAGE_OPTIONS,
         &["hive usage threshold --user-root <user-root> --remaining-percent 20",
           "hive usage monitor status --user-root <user-root>",
           "hive usage status --target . --session-id <id> --process-id <pid>",
           "hive usage show --host codex --user-root <user-root>"]),
     command("storage", Group::Diagnose, "Hive 저장 공간 측정", "Measure Hive storage",
-        &[], &["--confirm", "--dry-run", "--user-root"], &["hive storage"]),
+        &["backup"], &["--confirm", "--dry-run", "--id", "--path", "--user-root"],
+        &["hive storage", "hive storage backup list"]),
     command("prune", Group::Diagnose, "정리할 파일 미리 보기·삭제", "Preview or remove old files",
         &[], &["--confirm", "--dry-run", "--user-root"], &["hive prune --dry-run"]),
     command("report", Group::Diagnose, "문제 보고 자료 만들기", "Prepare a problem report",
@@ -467,12 +538,12 @@ pub(crate) const COMMANDS: &[Command] = &[
         &["package", "receipt", "quorum"],
         &["--assignment", "--package", "--request", "--target", "--trust-root"],
         &["hive judge --help"]),
-    command("route", Group::Advanced, "요청 경로 결정 (에이전트용)", "Route a request (for agents)",
-        &[], &["--request"], &["hive route --request <request.json>"]),
-    command("prompt", Group::Advanced, "다듬은 프롬프트 검증·승인", "Validate or approve a refined prompt",
-        &["validate", "approve"],
+    command("advanced", Group::Advanced, "요청 경로 결정·프롬프트 검증 (에이전트용)",
+        "Route requests or check prompts (for agents)",
+        &["route", "prompt"],
         &["--confirm-refined-prompt", "--digest", "--request", "--result", "--target-host"],
-        &["hive prompt validate --request <input.json> --result <result.json>"]),
+        &["hive advanced route --request <request.json>",
+          "hive advanced prompt validate --request <input.json> --result <result.json>"]),
     command("hook", Group::Advanced, "호스트 hook 처리 (호스트 전용)", "Handle host hooks (hosts only)",
         &[], &["--capabilities", "--capability", "--event", "--input"],
         &["hive hook --help"]),
@@ -485,6 +556,75 @@ pub(crate) const COMMANDS: &[Command] = &[
 
 pub(crate) fn find(name: &str) -> Option<&'static Command> {
     COMMANDS.iter().find(|command| command.name == name)
+}
+
+/// Top-level spellings retired in 0.16.0. Each now runs only as `hive advanced <name>`.
+/// No shipped hook, Skill, template or installer calls them, so the old spelling only explains
+/// the move and never runs the command.
+pub(crate) const MOVED_TO_ADVANCED: &[&str] = &["route", "prompt"];
+
+/// Explains a retired top-level command and exits 2 without running it.
+pub(crate) fn moved_command(arguments: &[String]) -> Option<ExitCode> {
+    let name = arguments.first()?.as_str();
+    if !MOVED_TO_ADVANCED.contains(&name) {
+        return None;
+    }
+    let replacement = format!("hive advanced {name}");
+    let example = moved_example(name);
+    if crate::human_output::machine() {
+        let result = crate::ActionResult {
+            schema_version: 1,
+            action: "UnknownAction",
+            status: "error",
+            exit_code: 2,
+            code: "hive.command-moved",
+            message: format!("hive {name} moved to {replacement}"),
+            changed_paths: Vec::new(),
+            evidence: Vec::new(),
+            next_action: Some(example.to_owned()),
+            data: Some(serde_json::json!({
+                "retired_command": format!("hive {name}"),
+                "replacement": replacement,
+                "help_command": "hive advanced --help",
+            })),
+        };
+        return Some(crate::emit_action_result(&result));
+    }
+    print!(
+        "{}",
+        moved_text(name, example, crate::human_output::language())
+    );
+    Some(ExitCode::from(2))
+}
+
+/// The `hive advanced` example for a moved command.
+fn moved_example(name: &str) -> &'static str {
+    let prefix = format!("hive advanced {name} ");
+    find("advanced")
+        .and_then(|entry| {
+            entry
+                .examples
+                .iter()
+                .find(|example| example.starts_with(&prefix))
+        })
+        .copied()
+        .unwrap_or("hive advanced --help")
+}
+
+fn moved_text(name: &str, example: &str, language: InterfaceLanguage) -> String {
+    if language == InterfaceLanguage::Ko {
+        format!(
+            "처리 실패: hive {name} 명령은 hive advanced {name}로 옮겨졌습니다.\n\
+             예시: {example}\n\
+             다음 단계: hive advanced --help 로 옵션과 예시를 확인하세요.\n"
+        )
+    } else {
+        format!(
+            "Failed. hive {name} moved to hive advanced {name}.\n\
+             Example: {example}\n\
+             Next: see hive advanced --help for options and examples.\n"
+        )
+    }
 }
 
 /// Every option some Hive parser accepts. Only a token outside this set is rejected early,
@@ -997,10 +1137,15 @@ const USAGE_HELP: Detailed = Detailed {
     ],
     optional: &[
         ("--host <호스트>", "codex, claude, antigravity 중 하나", "One of codex, claude, antigravity"),
+        ("--window <five-hour|weekly|all>", "호스트별 보호 창", "Per-host guarded window"),
+        ("--stop-used-percent <1..100>", "사용한 비율 기준 (호스트별)", "Used-percent threshold (per host)"),
+        ("--stop-remaining-percent <0..99>", "남은 비율 기준 (호스트별)", "Remaining-percent threshold (per host)"),
+        ("--confirm", "사용한 비율 50 미만 확인", "Confirm a used value below 50"),
         ("--remaining-percent <0..99>", "모든 보호 한도의 남은 양 기준 % (threshold)", "Threshold %, all guarded limits (threshold)"),
         ("--output json", "기계용 JSON 출력", "Machine-readable JSON output"),
     ],
     examples: &["hive usage threshold --user-root <user-root> --remaining-percent 20",
+                "hive usage threshold --user-root <user-root> --host claude --window weekly --stop-used-percent 80",
                 "hive usage monitor status --user-root <user-root>"],
 };
 

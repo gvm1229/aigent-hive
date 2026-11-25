@@ -25,7 +25,7 @@ class PublicTestAcceptanceContract(unittest.TestCase):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertLess(text.index("Qualify original public update"), text.index("Install the exact public npm package"))
         for required in (
-            "for previous in 0.13.1 0.13.2-test.2", "--owner direct", "--owner npm --redirected",
+            "previous=$(jq -r .stable_version docs/public-stable-release.json)", "--owner direct", "--owner npm --redirected",
             "setup-ko setup-en project cancel-resume unattended", "--scenario windows-terminal",
             "test_recorded_model_project_choices_remain_a_real_cli_regression_gate",
             "test_recorded_model_user_choices_remain_a_real_cli_regression_gate",

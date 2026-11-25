@@ -1,5 +1,6 @@
 schema_version: 1
 retired_names:
+  adversarial-judge: judge
   ai-slop-cleaner: code-polish
   answer: quick-answer
   auto-setup-harness: project-setup
@@ -8,48 +9,65 @@ retired_names:
   clean-ai-slop: code-polish
   configure: user-setup
   engineer-run: verified-workflow
-  handoff-role: run-handoff
-  hive-judge-package: judge-evidence
+  handoff-role: run
+  hive-judge-package: judge
   hive-knowledge-capture: knowledge-capture
-  hive-knowledge-maintenance: knowledge-maintain
-  hive-knowledge-promote: knowledge-promote
+  hive-knowledge-maintenance: knowledge-manage
+  hive-knowledge-promote: knowledge-manage
   hive-knowledge-query: knowledge-recall
-  hive-knowledge-scan: knowledge-scan
-  knowledge-import: knowledge-scan
+  hive-knowledge-scan: knowledge-capture
   hive-loop-engineering: verified-workflow
   hive-migrate: project-transition
   hive-project-upgrade: project-refresh
   hive-prompt-refine: prompt-refine
-  hive-role-handoff: run-handoff
-  hive-run-checkpoint: run-checkpoint
-  hive-run-resume: run-resume
+  hive-role-handoff: run
+  hive-run-checkpoint: run
+  hive-run-resume: run
   hive-simple-question: quick-answer
   hive-update: product-update
   hive-usage-guard: usage-guard
-  hive-wiki: knowledge-maintain
-  import-repository-knowledge: knowledge-scan
+  hive-wiki: knowledge-manage
+  import-repository-knowledge: knowledge-capture
   iterative-execution: verified-workflow
-  maintain-knowledge: knowledge-maintain
+  judge-evidence: judge
+  knowledge-import: knowledge-capture
+  knowledge-maintain: knowledge-manage
+  knowledge-promote: knowledge-manage
+  knowledge-scan: knowledge-capture
+  knowledge-transfer: knowledge-manage
+  maintain-knowledge: knowledge-manage
   manage-usage: usage-guard
-  manage-wiki: knowledge-maintain
+  manage-wiki: knowledge-manage
   migrate-project: project-transition
+  package-review: judge
+  ralph-loop: verified-workflow
   record-knowledge: knowledge-capture
   refine-prompt: prompt-refine
   research-practices: research-best-practices
-  ralph-loop: verified-workflow
-  resume-work: run-resume
-  save-progress: run-checkpoint
+  resume-work: run
+  run-checkpoint: run
+  run-handoff: run
+  run-resume: run
+  save-progress: run
   search-knowledge: knowledge-recall
   setup-harness: project-setup
   setup-hive: user-setup
   setup-project: project-setup
-  share-knowledge: knowledge-promote
+  share-knowledge: knowledge-manage
   update-hive: product-update
   upgrade-project: project-refresh
-  package-review: judge-evidence
-  verify-package: judge-evidence
+  verify-package: judge
 lifecycle:
   - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: rename }
   - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: merge }
-  - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge-evidence, transition_kind: rename }
-  - { retired_name: knowledge-import, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: knowledge-scan, transition_kind: rename }
+  - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge, transition_kind: rename }
+  - { retired_name: knowledge-import, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: knowledge-capture, transition_kind: rename }
+  - { retired_name: knowledge-maintain, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: knowledge-manage, transition_kind: merge }
+  - { retired_name: knowledge-promote, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: knowledge-manage, transition_kind: merge }
+  - { retired_name: knowledge-transfer, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: knowledge-manage, transition_kind: merge }
+  - { retired_name: knowledge-scan, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: knowledge-capture, transition_kind: merge }
+  - { retired_name: run-checkpoint, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: run, transition_kind: merge }
+  - { retired_name: run-handoff, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: run, transition_kind: merge }
+  - { retired_name: run-resume, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: run, transition_kind: merge }
+  - { retired_name: adversarial-judge, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }
+  - { retired_name: judge-evidence, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }

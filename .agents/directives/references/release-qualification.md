@@ -35,6 +35,11 @@
 - Create the protected `main` stable candidate only after the latest numbered test is accepted and
   the active plan reports zero incomplete in-scope items. Stable publication cannot create missing
   qualification evidence or be described as testing.
+- Keep the latest published numbered test installed on the maintainer PC at all times. A published
+  test that is not yet verified there blocks stable. Before the stable candidate, that latest test
+  must pass every local check in the active handoff on that PC, with a real host session where the
+  check names one. Only checks the maintainer explicitly excludes by name (for example, Codex
+  compatibility until told otherwise) may stay unverified; record each exclusion and its source.
 
 Keep existing hostile and security tests. Until the first public release, do not add a new
 hostile edge-case implementation or test unless it directly protects installation, canonical

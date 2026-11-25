@@ -9,10 +9,10 @@ summary: "28개 제품 Skill과 직접 이름 이관, 지식 스캔·이전 역�
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:82599d4eeb2477228ff3b76ef634a18be0a208c9ebaa2ec823b8c1da229d8a35"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:9561647510a75cdc259d93a93f032e09d620f41adab550291f1c93ef3b564ed4"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:0914190795ac1ac59555a994d0e39620060cdedd63b57230fe05b8c97b95cae5"
-  - "repo:harness/skills/catalog.yml#sha256:7ceee94c26a31fd99960527c8570d9d35f97683aa0c97511493cc1494bef4078"
+  - "repo:docs/skills.md#sha256:92c6ae4cc0766a45e77a353a77592363b2e5b95ba8baa3f3c77338c144a17bb3"
+  - "repo:harness/skills/catalog.yml#sha256:ffc547c4d245a37da39faa89f75900fc6dfb1ab8f4b9375d81289b087195b506"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active
@@ -20,7 +20,7 @@ status: active
 
 # Skill identity
 
-Aigent Hive 제품 Skill 정본: 37개. 옛 ID의 직접 이관 별칭 유지.
-`knowledge-scan`: 새 지식 추출. `knowledge-transfer`: 기존 지식 이전.
+Aigent Hive 제품 Skill 정본: 31개. 옛 ID의 직접 이관 별칭 유지.
+`knowledge-capture`: 대화 기록과 새 지식 추출. `knowledge-manage`: 기존 지식 정비·공유·이전.
 `humanize-kor`: 보존 검사를 거치는 명시적 한국어 윤문.
 지식 Skill 표시 이름은 한국어 기능, 설명 첫머리는 정본 ID. 과거 배포 대장 바이트 보존.

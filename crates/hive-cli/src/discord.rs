@@ -31,6 +31,8 @@ pub(crate) struct UsageHaltNotification<'a> {
     pub(crate) project_name: &'a str,
     pub(crate) host_scope: &'a str,
     pub(crate) selected_window: &'a str,
+    /// Why the halt was recorded: it selects the recovery advice.
+    pub(crate) decision: &'a str,
     pub(crate) remaining_percent: Option<f64>,
     pub(crate) measured_at: u64,
     pub(crate) evidence_digest: &'a str,
@@ -40,6 +42,115 @@ pub(crate) struct UsageHaltNotification<'a> {
     pub(crate) request_privacy: &'a str,
     pub(crate) interface_language: &'a str,
     pub(crate) message_fields: &'a [String],
+}
+
+/// Non-sensitive fields of a missing-measurement warning (OV160-013 U5). Work continues.
+pub(crate) struct UsageObservationWarning<'a> {
+    pub(crate) project_name: &'a str,
+    pub(crate) host_scope: &'a str,
+    pub(crate) missing_windows: &'a [&'a str],
+    pub(crate) cause: &'a str,
+    pub(crate) capture_reason: Option<&'a str>,
+    pub(crate) interface_language: &'a str,
+}
+
+/// Localized label of one usage window value.
+pub(crate) fn window_display(window: &str, korean: bool) -> &'static str {
+    match (window, korean) {
+        ("session", true) => "세션(5시간)",
+        ("session", false) => "session (5-hour)",
+        ("weekly", true) => "주간",
+        ("weekly", false) => "weekly",
+        ("provider", true) => "제공자 한도",
+        ("provider", false) => "provider quota",
+        (_, true) => "알 수 없음",
+        (_, false) => "unknown",
+    }
+}
+
+fn host_display(host: &str) -> &str {
+    match host {
+        "claude" => "Claude Code",
+        "codex" => "Codex",
+        "antigravity" => "Antigravity",
+        other => other,
+    }
+}
+
+/// Localized cause of a missing measurement.
+pub(crate) fn observation_cause_display(
+    cause: &str,
+    host: &str,
+    capture_reason: Option<&str>,
+    korean: bool,
+) -> String {
+    match (cause, korean) {
+        ("no-measurement", true) if host == "claude" => {
+            "상태 표시줄 기록 없음(상태 표시줄 연결 없음 또는 첫 응답 전)".to_owned()
+        }
+        ("no-measurement", false) if host == "claude" => {
+            "no status-line capture (status line not connected, or before the first response)"
+                .to_owned()
+        }
+        ("no-measurement", true) => "측정값 없음".to_owned(),
+        ("no-measurement", false) => "no measurement".to_owned(),
+        ("measurement-stale", true) => "마지막 측정이 오래됨".to_owned(),
+        ("measurement-stale", false) => "the last measurement is too old".to_owned(),
+        ("window-missing", true) => "호스트가 이 한도를 보고하지 않음".to_owned(),
+        ("window-missing", false) => "the host did not report this window".to_owned(),
+        ("capture-failed", true) => format!(
+            "상태 표시줄 기록 거부({})",
+            capture_reason.unwrap_or("capture-failed")
+        ),
+        ("capture-failed", false) => format!(
+            "status-line capture rejected ({})",
+            capture_reason.unwrap_or("capture-failed")
+        ),
+        ("fallback-required", true) => "대체 측정 동의 필요".to_owned(),
+        ("fallback-required", false) => "fallback measurement needs consent".to_owned(),
+        ("sensor-unavailable", true) => "측정 도구 사용 불가".to_owned(),
+        ("sensor-unavailable", false) => "usage sensor unavailable".to_owned(),
+        (_, true) => "측정값 확인 불가".to_owned(),
+        (_, false) => "measurement could not be verified".to_owned(),
+    }
+}
+
+/// The one command that makes the host's usage measurable.
+pub(crate) fn observation_fix_command(host: &str) -> &'static str {
+    match host {
+        "claude" => "hive setup --scope user --section usage --claude-statusline preview",
+        "codex" => "hive usage probe-native --host codex",
+        _ => "hive setup --scope user --section usage",
+    }
+}
+
+/// Dedicated missing-measurement notice. It never says that work stopped.
+pub(crate) fn observation_warning_content(warning: &UsageObservationWarning<'_>) -> String {
+    let korean = warning.interface_language == "ko";
+    let windows = warning
+        .missing_windows
+        .iter()
+        .map(|window| window_display(window, korean))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let cause = observation_cause_display(
+        warning.cause,
+        warning.host_scope,
+        warning.capture_reason,
+        korean,
+    );
+    let project = display_project_name(warning.project_name);
+    let host = host_display(warning.host_scope);
+    let fix = observation_fix_command(warning.host_scope);
+    if korean {
+        format!(
+            "⚠️ **Aigent Hive 사용량 확인 경고**\n사용량을 측정하지 못해 경고 후 작업을 계속합니다.\n\n📊 **빠진 측정**\n한도: {windows}\n원인: {cause}\n\n📋 **작업 정보**\n프로젝트: {project}\n호스트: {host}\n\n🔧 **해결 방법**\n`{fix}`"
+        )
+    } else {
+        format!(
+            "⚠️ **Aigent Hive usage check warning**\nUsage could not be measured. Work continues with this warning.\n\n📊 **Missing measurement**\nwindows: {windows}\ncause: {cause}\n\n📋 **Task details**\nproject: {project}\nhost: {host}\n\n🔧 **To fix**\n`{fix}`"
+        )
+    }
 }
 
 pub(crate) fn default_message_fields() -> Vec<String> {
@@ -179,6 +290,7 @@ fn test_result(arguments: &TestArguments) -> ActionResult {
                     project_name: "example-project",
                     host_scope: "codex",
                     selected_window: "session",
+                    decision: "halted",
                     remaining_percent: Some(20.0),
                     measured_at: 0,
                     evidence_digest: "sha256:test-notification",
@@ -299,6 +411,12 @@ struct AllowedMentions {
     parse: Vec<String>,
 }
 
+/// The exact text a halt notice would send.
+#[cfg(test)]
+pub(crate) fn halt_content(halt: &UsageHaltNotification<'_>) -> String {
+    payload_for(halt, false).content
+}
+
 /// Deliver one fresh halt notification if the optional integration is enabled.
 pub(crate) fn notify_usage_halt(
     enabled: bool,
@@ -316,6 +434,36 @@ pub(crate) fn notify_usage_halt(
         return NotificationOutcome::MissingWebhookEnvironment;
     };
     notify_with_url(&url, halt, deliver_https)
+}
+
+/// Deliver one prepared mediation notice (OV160-006) through the same opt-in webhook path.
+///
+/// The caller builds the text from bounded, non-secret fields; it is cut to Discord's 2000
+/// characters and mentions stay disabled. One call is one delivery attempt in the existing
+/// transport sense; the caller records the outcome and never calls again for the same event.
+pub(crate) fn notify_content(
+    enabled: bool,
+    webhook_url_env: Option<&str>,
+    content: &str,
+) -> NotificationOutcome {
+    let Some(environment_name) = enabled.then_some(webhook_url_env).flatten() else {
+        return if enabled {
+            NotificationOutcome::MissingWebhookEnvironment
+        } else {
+            NotificationOutcome::Disabled
+        };
+    };
+    let Ok(url) = env::var(environment_name) else {
+        return NotificationOutcome::MissingWebhookEnvironment;
+    };
+    notify_payload_with_url(&url, &content_payload(content), deliver_https)
+}
+
+fn content_payload(content: &str) -> DiscordPayload {
+    DiscordPayload {
+        content: content.chars().take(2000).collect(),
+        allowed_mentions: AllowedMentions { parse: Vec::new() },
+    }
 }
 
 fn notify_with_url<F>(
@@ -439,20 +587,28 @@ fn notification_field_line(
     korean: bool,
 ) -> Option<String> {
     Some(match field {
-        "remaining-usage" => format!(
-            "{}: {}",
-            if korean {
-                "남은 사용량"
-            } else {
-                "remaining usage"
-            },
-            display_remaining_usage(halt.remaining_percent, korean)
-        ),
+        // Claude's own screen counts up (used); Codex and Antigravity count down (remaining).
+        "remaining-usage" => {
+            let used = crate::usage_control::native_usage_direction(halt.host_scope) == "used";
+            let label = match (used, korean) {
+                (true, true) => "사용한 양",
+                (true, false) => "used",
+                (false, true) => "남은 사용량",
+                (false, false) => "remaining usage",
+            };
+            let shown = halt
+                .remaining_percent
+                .map(|remaining| if used { 100.0 - remaining } else { remaining });
+            format!("{label}: {}", display_usage_percent(shown, korean))
+        }
         "project" => format!(
             "{}: {}",
             if korean { "프로젝트" } else { "project" },
             display_project_name(halt.project_name)
         ),
+        // A start-of-work check has no run plan; say so instead of an empty field.
+        "request" if korean && halt.run_id.is_none() => "요청: 실행 계획 없음".to_owned(),
+        "request" if halt.run_id.is_none() => "request: no run plan".to_owned(),
         "request" if korean => request_summary.map_or_else(
             || "요청: 공유하지 않음(확인 가능한 작업 요약 없음)".to_owned(),
             |summary| format!("요청: {summary}"),
@@ -461,6 +617,8 @@ fn notification_field_line(
             || "request: not shared (no canonical request summary is available)".to_owned(),
             |summary| format!("request: {summary}"),
         ),
+        "progress" if korean && halt.run_id.is_none() => "진행 상태: 실행 계획 없음".to_owned(),
+        "progress" if halt.run_id.is_none() => "progress: no run plan".to_owned(),
         "progress" if korean => halt.progress.map_or_else(
             || "진행 상태: 알 수 없음(확인 가능한 작업 진행 정보 없음)".to_owned(),
             |progress| format!("진행 상태: {progress} 완료 항목"),
@@ -472,24 +630,44 @@ fn notification_field_line(
         "host" => format!(
             "{}: {} · {}",
             if korean { "호스트" } else { "host" },
-            halt.host_scope,
-            halt.selected_window
+            host_display(halt.host_scope),
+            window_display(halt.selected_window, korean)
         ),
+        "resume" if halt.decision == "usage-reset" => if korean {
+            "사용량 초기화를 감지해 새 할당량을 지키려고 멈췄습니다. 계속하려면 이 프로젝트의 Hive 대화에서 새 요청을 보내세요."
+        } else {
+            "Hive stopped to protect the quota after a detected reset. To continue, send a new request in this project's Hive conversation."
+        }
+        .to_owned(),
+        // Without a measurement there is nothing to recover above the threshold.
+        "resume" if halt.remaining_percent.is_none() => {
+            let fix = observation_fix_command(halt.host_scope);
+            if korean {
+                format!("한도 초과가 아니라 사용량을 읽지 못해 멈췄습니다. 같은 요청을 반복하기 전에 측정을 복구하세요: `{fix}`")
+            } else {
+                format!("Usage could not be read; this is not a reached limit. Restore the measurement before you repeat the request: `{fix}`")
+            }
+        }
+        "resume" if crate::usage_control::native_usage_direction(halt.host_scope) == "used" => {
+            used_direction_resume(halt, korean)
+        }
+        // Asking to continue before usage recovers only repeats the same stop, so the advice
+        // names the recovery condition first.
         "resume" if korean => halt.run_id.map_or_else(
-            || "이 프로젝트의 Hive 대화에서 \"작업을 계속 진행해 주세요.\"라고 요청하세요."
+            || "사용량이 기준 위로 회복된 뒤(초기화 뒤) 이 프로젝트의 Hive 대화에서 새 요청을 보내세요. 새 요청마다 사용량을 다시 확인합니다."
                 .to_owned(),
             |run_id| {
                 format!(
-                    "이 프로젝트의 Hive 대화에서 run `{run_id}` 작업을 계속 진행해 달라고 요청하세요."
+                    "사용량이 기준 위로 회복된 뒤 이 프로젝트의 Hive 대화에서 run `{run_id}` 이어 하기를 요청하세요."
                 )
             },
         ),
         "resume" => halt.run_id.map_or_else(
-            || "Return to this project's Hive conversation and ask to continue the task."
+            || "After usage recovers above the threshold (after the reset), send a new request in this project's Hive conversation. Each new request rechecks usage."
                 .to_owned(),
             |run_id| {
                 format!(
-                    "Return to this project's Hive conversation and ask to continue run `{run_id}`."
+                    "After usage recovers above the threshold, ask this project's Hive conversation to continue run `{run_id}`."
                 )
             },
         ),
@@ -515,8 +693,18 @@ fn notification_field_line(
     })
 }
 
-fn display_remaining_usage(remaining_percent: Option<f64>, korean: bool) -> String {
-    remaining_percent
+/// A used number counts up, so recovery means falling below the stop point.
+fn used_direction_resume(halt: &UsageHaltNotification<'_>, korean: bool) -> String {
+    match (korean, halt.run_id) {
+                (true, None) => "사용량이 초기화되어 사용한 양이 멈춤 기준 아래로 내려간 뒤 이 프로젝트의 Hive 대화에서 새 요청을 보내세요. 새 요청마다 사용량을 다시 확인합니다.".to_owned(),
+                (true, Some(run_id)) => format!("사용량이 초기화되어 사용한 양이 멈춤 기준 아래로 내려간 뒤 이 프로젝트의 Hive 대화에서 run `{run_id}` 이어 하기를 요청하세요."),
+                (false, None) => "After usage resets below the stop point, send a new request in this project's Hive conversation. Each new request rechecks usage.".to_owned(),
+                (false, Some(run_id)) => format!("After usage resets below the stop point, ask this project's Hive conversation to continue run `{run_id}`."),
+            }
+}
+
+fn display_usage_percent(percent: Option<f64>, korean: bool) -> String {
+    percent
         .filter(|value| value.is_finite() && (0.0..=100.0).contains(value))
         .map_or_else(
             || {
@@ -593,6 +781,7 @@ mod tests {
             project_name: "aigent-hive",
             host_scope: "codex",
             selected_window: "weekly",
+            decision: "halted",
             remaining_percent: Some(18.5),
             measured_at: 1_700_000_000,
             evidence_digest: "sha256:allowed-evidence",
@@ -617,8 +806,85 @@ mod tests {
         assert!(!payload.contains("token"));
         assert!(!payload.contains("webhook"));
         assert!(payload.contains("project: aigent-hive"));
-        assert!(payload.contains("progress: unknown"));
+        assert!(payload.contains("progress: no run plan"));
+        assert!(payload.contains("request: no run plan"));
+        assert!(payload.contains("host: Codex · weekly"));
         assert!(payload.contains("remaining usage: 18.50%"));
+        assert!(!payload.contains("continue the task"));
+    }
+
+    #[test]
+    fn korean_halt_names_the_window_and_drops_the_looping_continue_advice() {
+        let fields = default_message_fields();
+        let mut notification = notification(&fields);
+        notification.interface_language = "ko";
+        notification.host_scope = "claude";
+        notification.selected_window = "session";
+        let payload = payload_for(&notification, false).content;
+
+        assert!(payload.contains("호스트: Claude Code · 세션(5시간)"));
+        assert!(payload.contains("요청: 실행 계획 없음"));
+        assert!(payload.contains("진행 상태: 실행 계획 없음"));
+        assert!(payload.contains("멈춤 기준 아래로 내려간 뒤"));
+        assert!(!payload.contains("기준 위로"));
+        assert!(!payload.contains("작업을 계속 진행해 주세요"));
+        assert!(!payload.contains("unknown"));
+    }
+
+    #[test]
+    fn claude_halts_show_used_and_unreadable_usage_never_promises_recovery() {
+        let fields = default_message_fields();
+        let mut notification = notification(&fields);
+        notification.interface_language = "ko";
+        notification.host_scope = "claude";
+        notification.remaining_percent = Some(3.0);
+        let limited = payload_for(&notification, false).content;
+        assert!(limited.contains("사용한 양: 97.00%"), "{limited}");
+        assert!(!limited.contains("남은 사용량"), "{limited}");
+
+        notification.decision = "usage-unknown";
+        notification.remaining_percent = None;
+        let unknown = payload_for(&notification, false).content;
+        assert!(unknown.contains("사용한 양: 알 수 없음"), "{unknown}");
+        assert!(unknown.contains("한도 초과가 아니라"), "{unknown}");
+        assert!(unknown.contains("--claude-statusline preview"), "{unknown}");
+        assert!(!unknown.contains("회복된 뒤"), "{unknown}");
+
+        notification.decision = "usage-reset";
+        notification.remaining_percent = Some(100.0);
+        let reset = payload_for(&notification, false).content;
+        assert!(reset.contains("초기화를 감지해"), "{reset}");
+        assert!(!reset.contains("회복된 뒤"), "{reset}");
+    }
+
+    #[test]
+    fn missing_measurement_notice_is_a_warning_with_windows_cause_and_fix() {
+        let windows = ["session", "weekly"];
+        let korean = super::observation_warning_content(&super::UsageObservationWarning {
+            project_name: "aigent-hive",
+            host_scope: "claude",
+            missing_windows: &windows,
+            cause: "no-measurement",
+            capture_reason: None,
+            interface_language: "ko",
+        });
+        assert_eq!(
+            korean,
+            "⚠️ **Aigent Hive 사용량 확인 경고**\n사용량을 측정하지 못해 경고 후 작업을 계속합니다.\n\n📊 **빠진 측정**\n한도: 세션(5시간), 주간\n원인: 상태 표시줄 기록 없음(상태 표시줄 연결 없음 또는 첫 응답 전)\n\n📋 **작업 정보**\n프로젝트: aigent-hive\n호스트: Claude Code\n\n🔧 **해결 방법**\n`hive setup --scope user --section usage --claude-statusline preview`"
+        );
+        assert!(!korean.contains("중단"));
+        let english = super::observation_warning_content(&super::UsageObservationWarning {
+            project_name: "aigent-hive",
+            host_scope: "claude",
+            missing_windows: &windows[1..],
+            cause: "capture-failed",
+            capture_reason: Some("user-setup-missing"),
+            interface_language: "en",
+        });
+        assert!(english.starts_with("⚠️ **Aigent Hive usage check warning**\nUsage could not be measured. Work continues with this warning."));
+        assert!(english
+            .contains("windows: weekly\ncause: status-line capture rejected (user-setup-missing)"));
+        assert!(!english.contains("stopped"));
     }
 
     #[test]
@@ -676,7 +942,8 @@ mod tests {
 
         assert!(payload.contains("request: Verify the release package"));
         assert!(payload.contains("progress: 2/3 checklist items complete"));
-        assert!(payload.contains("ask to continue run `release-verify`"));
+        assert!(payload
+            .contains("ask this project's Hive conversation to continue run `release-verify`"));
     }
 
     #[test]
@@ -731,6 +998,32 @@ mod tests {
 
         assert_eq!(outcome, NotificationOutcome::DeliveryFailed);
         assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn mediation_notice_uses_the_same_webhook_path_without_mentions() {
+        let mut sent = Vec::new();
+        let long = "가".repeat(2100);
+        let outcome = super::notify_payload_with_url(
+            "https://discord.com/api/webhooks/1234567890/a-valid-token",
+            &super::content_payload(&long),
+            |_, payload| {
+                sent.push(payload.to_vec());
+                Ok(())
+            },
+        );
+        assert_eq!(outcome, NotificationOutcome::Sent);
+        let payload: serde_json::Value = serde_json::from_slice(&sent[0]).unwrap();
+        assert_eq!(payload["allowed_mentions"]["parse"], serde_json::json!([]));
+        assert_eq!(payload["content"].as_str().unwrap().chars().count(), 2000);
+        assert_eq!(
+            super::notify_content(false, None, "x"),
+            NotificationOutcome::Disabled
+        );
+        assert_eq!(
+            super::notify_content(true, None, "x"),
+            NotificationOutcome::MissingWebhookEnvironment
+        );
     }
 
     #[test]

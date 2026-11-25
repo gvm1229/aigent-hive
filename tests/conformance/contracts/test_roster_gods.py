@@ -91,6 +91,9 @@ class GodEntryTests(unittest.TestCase):
         main = (ROOT / "crates/hive-cli/src/main.rs").read_text(encoding="utf-8")
         dispatch = main.split("fn dispatch(", 1)[1].split("struct UsageArguments", 1)[0]
         public = set(re.findall(r'^        Some\("([a-z][a-z-]+)"', dispatch, re.M)) | {"doctor", "check-target"}
+        # `hive advanced` is a group; each named role owns the commands it holds.
+        advanced = main.split("fn run_advanced(", 1)[1].split("\n}\n", 1)[0]
+        public = (public - {"advanced"}) | set(re.findall(r'Some\("([a-z][a-z-]+)"\)', advanced))
         self.assertEqual(set(commands), public)
         self.assertEqual(len(commands), len(set(commands)))
 

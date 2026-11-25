@@ -1,3 +1,4 @@
+pub(crate) mod backup;
 pub(crate) mod deactivation;
 mod host_state;
 mod index_removal;
@@ -79,6 +80,26 @@ const USER_070_CODEX_MARKETPLACE_DIGEST: &str =
     "sha256:5fc994474640b82960f5c015c6fdcb50a01df010441b065c991a114e96f84620";
 const USER_070_CLAUDE_MARKETPLACE_DIGEST: &str =
     "sha256:52681102bb7c8c9c0bb2ce332602e8b4cb418ebfbe0fe1fd0d0cc34ee3aa5af9";
+/// Frozen bytes of published releases. Never derive these from the live template: editing the
+/// template would then break update authentication for every one of these installations.
+const PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS: &[(&str, &str)] = &[
+    (
+        "0.15.0",
+        "sha256:9d039c1a88f693436c143a31435619c12722812bbe4c1c8e8e789f434dbdccbf",
+    ),
+    (
+        "0.15.1",
+        "sha256:d6cf535e085c3b4e0054f67bc848fa6b4772358747c4625efe755edf62a7a553",
+    ),
+    (
+        "0.15.2",
+        "sha256:d8ade24e87c05f8d527e75098a9e4ed3ffe3fc8ba328aaf0c2ba19308ca2d1ea",
+    ),
+    (
+        "0.15.3",
+        "sha256:1d6d0940307f9d379a25a12d1ff8f7e94e8e10563044cc0b0dadd471552b7d69",
+    ),
+];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
 const PRE_SCOPE_ROUTING_SETUP_HARNESS_DIGEST: &str =
@@ -327,7 +348,7 @@ struct UserCommandArguments {
 }
 
 #[derive(Debug)]
-enum InstallError {
+pub(crate) enum InstallError {
     Input(String),
     Conflict(String),
     Unsupported(String),
@@ -715,7 +736,6 @@ fn parse_uninstall(arguments: &[String]) -> Result<UserUninstallArguments, Insta
 const UNINSTALL_TREES: &[&str] = &[
     ".hive/install",
     ".hive/install-transactions",
-    ".hive/backups",
     ".hive/marketplaces",
     ".hive/plugins",
     ".hive/index",
@@ -730,13 +750,35 @@ const UNINSTALL_FILES: &[&str] = &[
     ".hive/config/user-setup-review.yml",
     ".hive/config/projects.yml",
 ];
+/// The preserving reinstall may delete only regenerable Hive trees and files. User data
+/// (`projects.yml`, runtime state, backups, claims) is never removed on this path.
+const REINSTALL_REMOVABLE_TREES: &[&str] = &[
+    ".hive/install",
+    ".hive/install-transactions",
+    ".hive/marketplaces",
+    ".hive/plugins",
+    ".hive/index",
+    ".hive/guides",
+];
+const REINSTALL_REMOVABLE_FILES: &[&str] = &[
+    ROOT_INDEX_RELATIVE,
+    ".hive/config/user-active-skills.yml",
+    ".hive/config/user-setup-progress.yml",
+    ".hive/config/user-setup-review.yml",
+];
 
 fn execute_uninstall(
     arguments: &UserUninstallArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    refuse_enabled_usage_monitor(&arguments.root_cap)?;
+    execute_uninstall_after_checks(arguments, runner)
+}
+
+/// The usage monitor's scheduled task must be disabled before Hive files are removed.
+fn refuse_enabled_usage_monitor(root_cap: &Dir) -> Result<(), InstallError> {
     if let Some(bytes) = read_optional_regular(
-        &arguments.root_cap,
+        root_cap,
         Path::new(".hive/runtime/usage-monitor/config.json"),
         65_536,
     )? {
@@ -746,6 +788,13 @@ fn execute_uninstall(
             return Err(InstallError::Conflict("disable the usage monitor before uninstall so its scheduled task cannot become orphaned".into()));
         }
     }
+    Ok(())
+}
+
+fn execute_uninstall_after_checks(
+    arguments: &UserUninstallArguments,
+    runner: &impl CommandRunner,
+) -> Result<ActionResult, InstallError> {
     let mut changed_paths = Vec::new();
     let mut removed_hosts = Vec::new();
     let mut installed = Vec::new();
@@ -795,10 +844,10 @@ fn execute_uninstall(
     {
         remove_owned_regular(&arguments.root_cap, &path, &mut changed_paths)?;
     }
-    for relative in UNINSTALL_TREES {
+    for relative in REINSTALL_REMOVABLE_TREES {
         remove_owned_tree(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
-    for relative in UNINSTALL_FILES {
+    for relative in REINSTALL_REMOVABLE_FILES {
         remove_owned_regular(&arguments.root_cap, Path::new(relative), &mut changed_paths)?;
     }
     for relative in [
@@ -1282,8 +1331,11 @@ pub(crate) fn authentic_historical_user_skill(
                 || [DescriptorLanguage::En, DescriptorLanguage::Ko]
                     .into_iter()
                     .any(|language| {
-                        hive_projection::localized_builtin_artifact(name, suffix, source, language)
-                            .is_ok_and(|expected| expected == bytes)
+                        hive_projection::historical_localized_builtin_artifacts(
+                            name, suffix, source, language,
+                        )
+                        .iter()
+                        .any(|expected| expected == bytes)
                     })
         })
 }
@@ -1976,11 +2028,16 @@ fn authenticate_current_projection_host(
 }
 
 fn open_user_root(root: &Path) -> Result<Dir, InstallError> {
-    if !root.is_absolute() {
-        return Err(InstallError::Input(
-            "--user-root must be an absolute directory".to_owned(),
-        ));
-    }
+    let absolute = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| {
+                InstallError::Input(format!("cannot resolve current directory: {error}"))
+            })?
+            .join(root)
+    };
+    let root = hive_core::normalize_platform_root(&absolute);
     let parent = root
         .parent()
         .ok_or_else(|| InstallError::Input("user root has no parent directory".to_owned()))?;
@@ -2702,8 +2759,16 @@ fn preserving_reinstall_dry_run(
                 ".hive/knowledge",
                 ".hive/config/user-setup.yml",
                 ".hive/config/user-feature-answers.yml",
-                ".hive/config/user-preferences.json"
+                ".hive/config/user-preferences.json",
+                ".hive/config/projects.yml",
+                ".hive/config/collections.yml",
+                ".hive/runtime",
+                ".hive/backups",
+                ".hive/claims",
+                ".hive/history"
             ],
+            "backup_transaction_planned": true,
+            "backup_location": "hive-backups",
         })),
     }
 }
@@ -2713,15 +2778,50 @@ fn execute_preserving_reinstall(
     arguments: &UserArguments,
     runner: &impl CommandRunner,
 ) -> Result<ActionResult, InstallError> {
+    // Refuse before writing a backup, so a refused attempt leaves no extra copy.
+    refuse_enabled_usage_monitor(&arguments.root_cap)?;
+    // Backup first: everything the removal can delete, copied outside `.hive` (OV160-023).
+    let mut affected: Vec<PathBuf> = REINSTALL_REMOVABLE_FILES
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+    for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+        let relative = PathBuf::from(format!(".hive/install/{}.json", host.as_str()));
+        if let Some(manifest) = read_installed_manifest(&arguments.root_cap, &relative, host)? {
+            affected.extend(
+                manifest
+                    .entries
+                    .into_iter()
+                    .map(|entry| PathBuf::from(entry.path)),
+            );
+        }
+    }
+    affected.extend(
+        crate::user_setup::uninstall_projection_paths(&arguments.root_cap)
+            .map_err(|error| InstallError::Conflict(error.message().to_owned()))?,
+    );
+    // Files that no manifest lists are removed with these trees too.
+    for tree in [".hive/guides", ".hive/install"] {
+        affected.extend(backup::tree_files(&arguments.root_cap, Path::new(tree))?);
+    }
+    let backup_relative =
+        backup::create(&arguments.root_cap, "reinstall", affected)?.ok_or_else(|| {
+            InstallError::Verification(
+                "a reinstall found nothing to back up; nothing was changed".to_owned(),
+            )
+        })?;
     let (user_root, root_cap) = open_canonical_user_root(&arguments.user_root)?;
+    let saved_at = format!("; recovery copy: {}", portable(&backup_relative));
     let removed = execute_uninstall(
         &UserUninstallArguments {
             user_root,
             root_cap,
         },
         runner,
-    )?;
-    let mut reinstalled = execute(operation, arguments, runner)?;
+    )
+    .map_err(|error| error.with_suffix(&saved_at))?;
+    let mut reinstalled =
+        execute(operation, arguments, runner).map_err(|error| error.with_suffix(&saved_at))?;
     reinstalled.code = match operation {
         UserOperation::Install => "hive.user-install-complete-after-preserving-reinstall",
         UserOperation::Update => "hive.user-update-complete-after-preserving-reinstall",
@@ -2729,8 +2829,16 @@ fn execute_preserving_reinstall(
     "user-scope Hive installation completed after preserving knowledge and saved preferences"
         .clone_into(&mut reinstalled.message);
     reinstalled.changed_paths.extend(removed.changed_paths);
+    reinstalled.changed_paths.push(portable(&backup_relative));
     reinstalled.changed_paths.sort();
     reinstalled.changed_paths.dedup();
+    let backup_value = json!(portable(&backup_relative));
+    match reinstalled.data.as_mut() {
+        Some(serde_json::Value::Object(map)) => {
+            map.insert("preinstall_backup".to_owned(), backup_value);
+        }
+        _ => reinstalled.data = Some(json!({ "preinstall_backup": backup_value })),
+    }
     Ok(reinstalled)
 }
 
@@ -2757,6 +2865,18 @@ fn execute_apply(
     validate_codex_prestate(arguments, codex_before.as_ref())?;
     validate_claude_prestate(arguments, claude_before.as_ref())?;
     validate_antigravity_prestate(arguments, plan, antigravity_before.as_ref())?;
+    let recovery_backup = if plan.changed_paths.is_empty() {
+        None
+    } else {
+        backup::create(
+            &arguments.root_cap,
+            "install",
+            plan.changed_paths
+                .iter()
+                .map(PathBuf::from)
+                .chain(plan.retired_files.keys().cloned()),
+        )?
+    };
     let claude_before = remove_dangling_claude_marketplace(
         arguments,
         claude_before,
@@ -2902,6 +3022,7 @@ fn execute_apply(
     );
     if let Some(data) = result.data.as_mut() {
         data["user_projection"] = json!({"paths": projection.reports});
+        data["recovery_backup"] = json!(recovery_backup.as_deref().map(portable));
     }
     if index_rebuild_deferred {
         let path = arguments.user_root.to_string_lossy();
@@ -3624,12 +3745,12 @@ fn render_user_guidance(
                 "disabled"
             };
             let memory_gate_en = if config.wiki.enabled {
-                "- Before every final response, review the current user statement and completed outcome for each safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, split it into atomic facts with one condition each and give every fact one subject of one or two lowercase English levels, such as `design/visual-style`; facts that answer the same later question share a subject, and an existing subject from `hive knowledge subjects list --user-root <user-root> --output json` is reused. A lasting preference or rule (from now on, always, never, remember) must be recorded before the final response. Run `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` once for one fact, or `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` once for two to eight facts, each with its `subject`; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before knowledge-dependent work, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`, adding `--expansions \"<term,term>\"` for Korean, English and inflected key words; claim hits arrive with their whole subject group, and at most two follow-up lookups with new key words are allowed when hits are insufficient. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
+                "- Before every final response, review the current user statement and completed outcome for each safe reusable fact, preference, workflow, decision, convention, project profile, or verified outcome. This user-level gate applies immediately after installation in every selected-host folder; project setup, a Hive harness, a project marker, or an attached collection is not required. Resolve `user-root|current-project|named-project` scope explicitly. An unregistered repository's user-global fact stays at `user-root`; ambiguous project-specific scope fails closed.\n- For an explicit safe user-root statement, split it into atomic facts with one condition each and give every fact one subject of one or two lowercase English levels, such as `design/visual-style`; facts that answer the same later question share a subject, and an existing subject from `hive knowledge subjects list --user-root <user-root> --output json` is reused. A lasting preference or rule (from now on, always, never, remember) must be recorded before the final response. Run `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` once for one fact, or `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` once for two to eight facts, each with its `subject`; use `--request <request.json>` only for reviewed artifacts or another supported scope. Require the canonical Markdown and derived-index receipt before the final response; identical current truth is a no-op.\n- After a successful knowledge write, use `hive source-wiki lint --target <source-root> --output json` only for a valid source workspace. Otherwise use `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json` for an enabled registered project, or `hive knowledge lint --target <user-root> --user-root <user-root> --output json` when the current project is unregistered. Missing project setup, a project marker, or an attached collection never skips lint.\n- Before every task except a greeting or small talk, run one bounded `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`, adding `--expansions \"<term,term>\"` for Korean, English and inflected key words; claim hits arrive with their whole subject group, and at most two follow-up lookups with new key words are allowed when hits are insufficient. An unregistered target falls back to user-root and shared knowledge while excluding project-private knowledge; missing project setup or collection is not a reason to skip retrieval. Work that produces an artifact (document, HTML, PDF, design, writing, or code) always qualifies. A session scope that forbids edits or limits work to reading is not a reason to skip retrieval, because retrieval changes nothing. In Claude Code, the Hive plugin hook adds the top matches for each prompt automatically; that automatic context does not replace this targeted lookup.\n- Never record a secret, credential, confidential item without current-action authorization, ephemeral status, ambiguous inference, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, or runtime state.\n"
             } else {
                 "- Global Wiki is disabled: do not write or refresh knowledge.\n"
             };
             let memory_gate_ko = if config.wiki.enabled {
-                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과를 각각 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화는 조건 하나씩의 원자 사실로 나누고, 각 사실에 `design/visual-style`처럼 소문자 영어 1–2단계 주제 부여. 나중에 같은 질문에 답할 사실은 같은 주제를 쓰고, `hive knowledge subjects list --user-root <user-root> --output json`의 기존 주제를 재사용. 앞으로·항상·금지·기억 같은 지속 선호·규칙은 최종 응답 전 반드시 기록. 사실 1개는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` 1회, 사실 2–8개는 사실마다 `subject`를 담은 `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 지식이 필요한 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행하고 한국어·영어·어형 핵심어는 `--expansions \"<term,term>\"`으로 전달. 주제가 있는 사실은 같은 주제 묶음으로 반환되며, 부족하면 새 핵심어로 후속 조회 최대 2회. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
+                "- 모든 최종 응답 전 현재 사용자 발화와 완료 결과에서 안전하고 재사용 가능한 사실·선호·작업 방식·결정·규약·프로젝트 특성·검증된 결과를 각각 검토. 이 사용자 범위 절차는 설치 직후 선택 호스트의 모든 폴더에 적용하며 프로젝트 설정·Hive harness·project marker·연결 collection을 전제하지 않음. `user-root|current-project|named-project` 범위를 명시적으로 결정. 미등록 repository의 사용자 전역 사실은 `user-root`에 유지하고, 모호한 project 범위는 안전하게 중단.\n- 안전한 명시적 user-root 사용자 발화는 조건 하나씩의 원자 사실로 나누고, 각 사실에 `design/visual-style`처럼 소문자 영어 1–2단계 주제 부여. 나중에 같은 질문에 답할 사실은 같은 주제를 쓰고, `hive knowledge subjects list --user-root <user-root> --output json`의 기존 주제를 재사용. 앞으로·항상·금지·기억 같은 지속 선호·규칙은 최종 응답 전 반드시 기록. 사실 1개는 `hive knowledge remember --user-root <user-root> --user-statement <normalized-fact> --claim-key <stable-key> --kind <preference|workflow|decision|convention|project-profile> --subject <area/topic> --output json` 1회, 사실 2–8개는 사실마다 `subject`를 담은 `hive knowledge remember --user-root <user-root> --batch <facts.json> --output json` 1회 우선 실행. 검토 artifact 또는 다른 지원 범위에는 `--request <request.json>` 사용. 최종 응답 전 canonical Markdown과 derived-index receipt를 확인하며, 동일한 현재 truth는 no-op.\n- 지식 기록 성공 뒤 유효한 source workspace에서만 `hive source-wiki lint --target <source-root> --output json` 실행. 그 밖에는 등록된 project에서 `hive knowledge lint --target <current-project-root> --user-root <user-root> --output json`, 미등록 project에서 `hive knowledge lint --target <user-root> --user-root <user-root> --output json` 실행. 프로젝트 설정·project marker·연결 collection 부재를 lint 건너뜀 사유로 사용 금지.\n- 인사·잡담을 뺀 모든 작업 전 `hive knowledge retrieve --user-root <user-root> --target <current-project-root> --scope auto --query <query> --top-k 5 --byte-budget 16384 --output json`을 제한된 범위에서 1회 실행하고 한국어·영어·어형 핵심어는 `--expansions \"<term,term>\"`으로 전달. 주제가 있는 사실은 같은 주제 묶음으로 반환되며, 부족하면 새 핵심어로 후속 조회 최대 2회. 미등록 target은 project-private 지식을 제외한 user-root·shared 지식으로 폴백하며, 프로젝트 설정 또는 collection 부재만으로 조회를 건너뛰지 않음. 문서·HTML·PDF·디자인·글·코드 같은 결과물을 만드는 작업은 항상 해당. 수정 금지·읽기 전용 같은 세션 범위 제한도 조회 생략 사유가 아님(조회는 아무것도 바꾸지 않음). Claude Code에서는 Hive 플러그인 훅이 요청마다 상위 결과를 자동으로 덧붙이며, 이 자동 결과는 핵심어를 넣은 이 조회를 대신하지 않음.\n- 현재 action 승인 없는 secret·credential·confidential 항목, ephemeral 상태, 모호한 추론, private path, raw transcript, complete conversation, hook payload, tool output, hidden prompt, cache, database, runtime state는 기록 금지.\n"
             } else {
                 "- 전역 위키 비활성: knowledge 기록·갱신 금지.\n"
             };
@@ -3708,6 +3829,7 @@ fn render_user_guidance(
             }
         },
     );
+    let scope_rules = setup.map_or_else(String::new, scope_rules);
     let optional_questions = if question_pending && setup.is_some() {
         match setup.map(|config| config.interface_language) {
             Some(crate::user_setup::InterfaceLanguage::Ko) => {
@@ -3721,10 +3843,63 @@ fn render_user_guidance(
         ""
     };
     format!(
-        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
+        "<!-- AIGENT-HIVE:USER:START -->\n{heading}\n\n- {adapter_label}: `{}`\n{optional_questions}{body}{explanation_style}{result_clarity}{scope_rules}{footer}<!-- AIGENT-HIVE:USER:END -->\n",
         host.as_str()
     )
     .into_bytes()
+}
+
+/// Rules that hold in every folder, Hive project or not. The multi-host Skill rule is rendered
+/// only when two or more hosts are selected, so a single-host install keeps making a Skill for
+/// that host alone.
+fn scope_rules(config: &crate::user_setup::UserSetupConfig) -> String {
+    use std::fmt::Write as _;
+    let ko = matches!(
+        config.interface_language,
+        crate::user_setup::InterfaceLanguage::Ko
+    );
+    let selected: Vec<&str> = config
+        .selected_hosts
+        .iter()
+        .map(|host| host.as_str())
+        .collect();
+    let mut rules = String::new();
+    if selected.len() >= 2 {
+        let folders = selected
+            .iter()
+            .filter_map(|host| match *host {
+                "codex" => Some("Codex `.agents/skills/<name>/`"),
+                "claude" => Some("Claude `.claude/skills/<name>/`"),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let _ = if ko {
+            writeln!(rules, "- 선택한 호스트가 여러 개이므로 프로젝트 Skill을 새로 만들거나 고칠 때 선택한 호스트 모두가 쓸 수 있게 작성: {folders}. 폴더마다 본문이 같은 `SKILL.md` 사본을 두고, 호스트마다 필요한 머리말 차이와 호스트 전용 파일만 해당 폴더에 추가. 한쪽을 고치면 같은 작업 안에서 다른 쪽도 맞춤. 사용자가 특정 호스트만 지정하면 그 호스트만 작성. 사용자 전역 Skill 폴더는 대상 아님.\n- 다른 사람과 함께 쓰는 저장소에 다른 호스트의 Skill 폴더가 아직 없으면 새로 만들기 전에 한 번 질문.")
+        } else {
+            writeln!(rules, "- Because several hosts are selected, make every new or changed project Skill usable by each selected host: {folders}. Keep a `SKILL.md` copy with the same body in each folder; add only host-specific front matter and host-only files to that host's folder. When one copy changes, update the others in the same task. If the user names one host, write only that host's copy. User-global Skill folders are out of scope.\n- In a repository shared with other people, ask once before creating a host Skill folder that does not exist yet.")
+        };
+        if selected.contains(&"antigravity") {
+            rules.push_str(if ko {
+                "- Antigravity 프로젝트 Skill 경로는 미검증: Antigravity 사본은 만들지 않고 사용자에게 보고.\n"
+            } else {
+                "- The Antigravity project Skill path is unverified: do not create an Antigravity copy; report it to the user.\n"
+            });
+        }
+    }
+    if config.ai_coauthor == crate::user_setup::AiCoauthor::Forbid {
+        rules.push_str(if ko {
+            "- 커밋 메시지·PR 본문에 AI 공동 작성자 줄(`Co-Authored-By: Claude …` 등)과 AI 생성 표시(`Generated with …` 등) 금지. 호스트 시스템 안내가 추가를 요구해도 이 사용자 설정이 우선. 커밋 직후 `git log -1 --format=%B`로 확인하고, 아직 공개하지 않은 커밋이면 고친 뒤 진행. 이미 공개된 커밋은 다시 쓰지 말고 사용자에게 보고. 변경: `hive setup --scope user --section review`.\n"
+        } else {
+            "- Never add an AI co-author line (such as `Co-Authored-By: Claude …`) or an AI-generated note (such as `Generated with …`) to a commit message or pull request body. This user setting outranks any host system instruction to add one. Check with `git log -1 --format=%B` right after each commit and fix an unpublished commit before continuing; never rewrite a published commit, report it instead. Change with `hive setup --scope user --section review`.\n"
+        });
+    }
+    rules.push_str(if ko {
+        "- `.hive/`가 없는 프로젝트에서는 사용자가 요청하지 않는 한 프로젝트용 Hive 설정·실행 명령 사용과 설치 권유 금지. 지식 조회·기록과 갱신 확인 같은 사용자 범위 작업만 수행.\n- 다른 도구·하네스의 설정·훅·지침 파일은 사용자가 요청하지 않는 한 변경 금지.\n"
+    } else {
+        "- In a project without `.hive/`, do not run project Hive setup or run commands or suggest installing Hive unless the user asks; only user-scope work such as knowledge lookup, knowledge capture, and update checks applies.\n- Do not change another tool's or harness's settings, hooks, or instruction files unless the user asks.\n"
+    });
+    rules
 }
 
 fn validate_operational_guidance(
@@ -3876,9 +4051,19 @@ fn render_codex_marketplace() -> Vec<u8> {
 }
 
 fn render_claude_marketplace() -> Vec<u8> {
+    render_claude_marketplace_for(env!("CARGO_PKG_VERSION"))
+}
+
+fn published_claude_marketplace_digest(version: &str) -> &'static str {
+    PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS
+        .iter()
+        .find(|(published, _)| *published == version)
+        .map_or(USER_070_CLAUDE_MARKETPLACE_DIGEST, |(_, digest)| *digest)
+}
+
+fn render_claude_marketplace_for(version: &str) -> Vec<u8> {
     format!(
-        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{}\"\n    }}\n  ]\n}}\n",
-        env!("CARGO_PKG_VERSION")
+        "{{\n  \"name\": \"aigent-hive\",\n  \"owner\": {{\n    \"name\": \"Hojin (Tom) Jeong\"\n  }},\n  \"plugins\": [\n    {{\n      \"name\": \"aigent-hive\",\n      \"source\": \"./plugins/aigent-hive\",\n      \"description\": \"Initialize and maintain project-local Aigent Hive harnesses.\",\n      \"version\": \"{version}\"\n    }}\n  ]\n}}\n"
     )
     .into_bytes()
 }
@@ -4638,6 +4823,11 @@ fn historical_09x_user_inventory(
     let expected_range = match host {
         UserHost::Codex => ">=0.145.0 <1.0.0",
         UserHost::Claude => ">=2.1.0 <3.0.0",
+        UserHost::Antigravity
+            if parse_three_part_version(request.product_version).ok()? >= (0, 15, 2) =>
+        {
+            ">=1.1.7 <2.0.0"
+        }
         UserHost::Antigravity => ">=1.1.7 <1.2.0",
     };
     if request.installed_host_version_range != expected_range
@@ -4673,12 +4863,16 @@ fn historical_09x_user_inventory(
                 let (path, digest) = match host {
                     UserHost::Codex => (
                         ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
-                        USER_070_CODEX_MARKETPLACE_DIGEST,
+                        USER_070_CODEX_MARKETPLACE_DIGEST.to_owned(),
                     ),
-                    UserHost::Claude => (
-                        ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
-                        USER_070_CLAUDE_MARKETPLACE_DIGEST,
-                    ),
+                    UserHost::Claude => {
+                        let digest =
+                            published_claude_marketplace_digest(request.product_version).to_owned();
+                        (
+                            ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
+                            digest,
+                        )
+                    }
                     UserHost::Antigravity => return None,
                 };
                 if entry.path != path
@@ -4788,27 +4982,28 @@ fn historical_user_artifact_matches(
     [DescriptorLanguage::En, DescriptorLanguage::Ko]
         .into_iter()
         .any(|language| {
-            hive_projection::localized_builtin_artifact(name, suffix, source, language).is_ok_and(
-                |bytes| {
-                    sha256_digest(&bytes) == digest
+            hive_projection::historical_localized_builtin_artifacts(name, suffix, source, language)
+                .iter()
+                .any(|bytes| {
+                    sha256_digest(bytes) == digest
                         || (Path::new(suffix)
                             .extension()
                             .and_then(OsStr::to_str)
                             .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
                             && sha256_digest(
-                                String::from_utf8_lossy(&bytes)
+                                String::from_utf8_lossy(bytes)
                                     .replace("\r\n", "\n")
                                     .replace('\n', "\r\n")
                                     .as_bytes(),
                             ) == digest)
-                },
-            )
+                })
         })
 }
 
 fn historical_user_artifact_required(host: UserHost, relative: &str) -> bool {
     if relative.starts_with("skills/") {
-        return true;
+        // The projection writes Codex metadata for Codex and Antigravity, never for Claude.
+        return host != UserHost::Claude || !relative.ends_with("/agents/openai.yaml");
     }
     match host {
         UserHost::Codex | UserHost::Claude => matches!(
@@ -5282,24 +5477,9 @@ fn apply_plan(
     claude_state_before: Option<ClaudeHostState>,
     antigravity_state_before: Option<AntigravityHostState>,
 ) -> Result<UserTransaction, InstallError> {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
     let journal_relative = transaction_journal_relative(arguments.host);
     ensure_no_open_transaction(arguments, &journal_relative)?;
-    let mut backup_nonce = [0_u8; 16];
-    getrandom::fill(&mut backup_nonce).map_err(|error| {
-        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
-    })?;
-    let mut encoded_nonce = String::with_capacity(32);
-    for byte in backup_nonce {
-        encoded_nonce.push(char::from(HEX[usize::from(byte >> 4)]));
-        encoded_nonce.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    let backup_relative = PathBuf::from(format!(
-        ".hive/backups/user-install/{}/{}-{}-{encoded_nonce}",
-        arguments.host.as_str(),
-        unix_seconds()?,
-        std::process::id()
-    ));
+    let backup_relative = new_backup_relative(arguments.host)?;
     let snapshots = preflight_plan(&arguments.root_cap, plan)?;
     let index_existed = root_index_exists(&arguments.root_cap)?;
     let mut backup_entries = Vec::new();
@@ -5783,6 +5963,25 @@ fn persist_backup(
         expected.as_deref(),
         expected_permissions,
     )
+}
+
+fn new_backup_relative(host: UserHost) -> Result<PathBuf, InstallError> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(|error| {
+        InstallError::Internal(format!("cannot obtain user backup entropy: {error}"))
+    })?;
+    let mut encoded = String::with_capacity(32);
+    for byte in nonce {
+        encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    Ok(PathBuf::from(format!(
+        ".hive/backups/user-install/{}/{}-{}-{encoded}",
+        host.as_str(),
+        unix_seconds()?,
+        std::process::id()
+    )))
 }
 
 fn read_transaction_journal(
@@ -6463,7 +6662,7 @@ fn probe_supported_host_version(
     Ok(version.to_owned())
 }
 
-fn parse_three_part_version(value: &str) -> Result<(u64, u64, u64), InstallError> {
+pub(crate) fn parse_three_part_version(value: &str) -> Result<(u64, u64, u64), InstallError> {
     let mut parts = value.split('.');
     let parse = |part: Option<&str>| {
         let part = part.ok_or_else(|| {
@@ -7678,6 +7877,11 @@ fn unix_seconds() -> Result<u64, InstallError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relative_dot_user_root_is_accepted() {
+        open_user_root(Path::new(".")).expect("relative user root resolves");
+    }
 
     #[cfg(unix)]
     #[test]
@@ -8929,6 +9133,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn authenticated_release_mismatch_automatically_preserves_and_reinstalls_user_scope() {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex"]);
@@ -8981,11 +9186,61 @@ mod tests {
         assert!(knowledge.is_file());
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
 
+        // OV160-016: user data outside the regenerable allowlist survives, and a backup is
+        // written before anything is removed.
+        let projects = temporary.path().join(".hive/config/projects.yml");
+        let projects_bytes = b"schema_version: 1\nprojects: []\n# sentinel\n";
+        fs::write(&projects, projects_bytes).unwrap();
+        let mut sentinels = Vec::new();
+        for relative in [
+            ".hive/backups/manual/keep.txt",
+            ".hive/claims/keep.json",
+            ".hive/runtime/usage-guard/keep.json",
+        ] {
+            let path = temporary.path().join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, relative.as_bytes()).unwrap();
+            sentinels.push(path);
+        }
+        let backups = temporary.path().join("hive-backups");
+        let set_aside = temporary.path().join("hive-backups-set-aside");
+        if backups.exists() {
+            fs::rename(&backups, &set_aside).unwrap();
+        }
+        fs::write(&backups, b"not a folder").unwrap();
+        let manifest_before = fs::read(&manifest_path).unwrap();
+        assert!(execute(UserOperation::Install, &install, &runner).is_err());
+        assert_eq!(fs::read(&manifest_path).unwrap(), manifest_before);
+        assert_eq!(fs::read(&projects).unwrap(), projects_bytes);
+        fs::remove_file(&backups).unwrap();
+        if set_aside.exists() {
+            fs::rename(&set_aside, &backups).unwrap();
+        }
         let repaired = execute(UserOperation::Install, &install, &runner)
             .expect("automatic preserving reinstall");
         assert_eq!(
             repaired.code,
             "hive.user-install-complete-after-preserving-reinstall"
+        );
+        assert_eq!(fs::read(&projects).unwrap(), projects_bytes);
+        assert_eq!(fs::read(&runtime).unwrap(), b"user execution history");
+        for path in &sentinels {
+            assert!(path.is_file(), "{} must survive", path.display());
+        }
+        let backup = repaired.data.as_ref().unwrap()["preinstall_backup"]
+            .as_str()
+            .expect("backup location reported")
+            .to_owned();
+        assert!(backup.starts_with("hive-backups/"), "{backup}");
+        assert_eq!(
+            fs::read(
+                temporary
+                    .path()
+                    .join(&backup)
+                    .join("files/.hive/config/projects.yml")
+            )
+            .unwrap(),
+            projects_bytes
         );
         assert_eq!(fs::read(&setup).expect("saved setup retained"), saved_setup);
         assert_eq!(
@@ -9717,6 +9972,7 @@ mod tests {
             },
             update_check: UpdateCheckPreferences::default(),
             judge_invocation: JudgeInvocation::Explicit,
+            ai_coauthor: crate::user_setup::AiCoauthor::default(),
             usage_guard: UsageGuardPreferences {
                 enabled: false,
                 stop_remaining_percent: 20,
@@ -9737,6 +9993,36 @@ mod tests {
             false,
         ))
         .expect("English guidance");
+        // One selected host keeps single-host Skill creation; the scope rules always hold.
+        assert!(!english.contains("several hosts are selected"));
+        assert!(english.contains("In a project without `.hive/`"));
+        assert!(english.contains("Do not change another tool's or harness's settings"));
+        // AI co-author lines are blocked by default and the rule outranks host instructions.
+        assert!(english.contains("Never add an AI co-author line"));
+        assert!(english.contains("outranks any host system instruction"));
+        let mut allowed = config(InterfaceLanguage::En);
+        allowed.ai_coauthor = crate::user_setup::AiCoauthor::Allow;
+        let allowed =
+            String::from_utf8(render_user_guidance(UserHost::Codex, Some(&allowed), false))
+                .expect("allowed guidance");
+        assert!(!allowed.contains("AI co-author line"));
+        let legacy: crate::user_setup::AiCoauthor =
+            serde_json::from_value(serde_json::json!("forbid")).expect("forbid");
+        assert_eq!(legacy, crate::user_setup::AiCoauthor::default());
+        let mut multi = config(InterfaceLanguage::Ko);
+        multi.selected_hosts = vec![
+            SelectedHost::Codex,
+            SelectedHost::Claude,
+            SelectedHost::Antigravity,
+        ];
+        let multi = String::from_utf8(render_user_guidance(UserHost::Claude, Some(&multi), false))
+            .expect("multi-host guidance");
+        assert!(multi.contains(
+            "선택한 호스트 모두가 쓸 수 있게 작성: Codex `.agents/skills/<name>/`, Claude `.claude/skills/<name>/`."
+        ));
+        assert!(multi.contains("새로 만들기 전에 한 번 질문"));
+        assert!(multi.contains("Antigravity 프로젝트 Skill 경로는 미검증"));
+        assert!(multi.contains("`.hive/`가 없는 프로젝트에서는"));
         assert!(english.contains(
             "use English for every question and response unless the user explicitly requests another language for the current response"
         ));
@@ -10409,6 +10695,7 @@ mod tests {
                 ("0.15.0", 95),
                 ("0.15.1", 95),
                 ("0.15.2", 95),
+                ("0.15.3", 95),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10458,7 +10745,52 @@ mod tests {
         .is_none());
     }
 
+    /// The fixture's own statement of the files a published installer wrote. It must not call
+    /// the completeness rule under test, or a wrong rule would also write its own fixture.
+    fn published_install_contains(host: UserHost, relative: &str) -> bool {
+        if relative.starts_with("skills/") {
+            return host != UserHost::Claude || !relative.ends_with("/agents/openai.yaml");
+        }
+        match host {
+            UserHost::Codex | UserHost::Claude => [
+                ".codex-plugin/plugin.json",
+                ".claude-plugin/plugin.json",
+                "bin/hive-claude-usage-capture",
+            ]
+            .contains(&relative),
+            UserHost::Antigravity => relative == "plugin.json",
+        }
+    }
+
     #[test]
+    fn completeness_requires_codex_metadata_only_where_the_installer_writes_it() {
+        let relative = "skills/user-setup/agents/openai.yaml";
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            let projection = compile_user_projection_localized(
+                host.projection_host(),
+                &["user-setup".to_owned()],
+                &[],
+                DescriptorLanguage::En,
+            )
+            .expect("user projection");
+            let installed = projection
+                .files
+                .keys()
+                .any(|path| path.ends_with("/user-setup/agents/openai.yaml"));
+            assert_eq!(published_install_contains(host, relative), installed);
+            assert_eq!(historical_user_artifact_required(host, relative), installed);
+            // A selected Skill still needs its instructions and references on every host.
+            for needed in [
+                "skills/user-setup/SKILL.md",
+                "skills/user-setup/references/workflow.md",
+            ] {
+                assert!(historical_user_artifact_required(host, needed));
+            }
+        }
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
     fn every_09_stable_user_inventory_authenticates_for_every_host() {
         for &(version, files) in HISTORICAL_USER_PLUGIN_RELEASES {
             for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
@@ -10469,7 +10801,7 @@ mod tests {
                 };
                 let mut entries = files
                     .iter()
-                    .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+                    .filter(|(relative, _)| published_install_contains(host, relative))
                     .map(|(relative, digest)| {
                         let executable = relative.starts_with("bin/");
                         UserOwnershipEntry {
@@ -10485,17 +10817,17 @@ mod tests {
                     let (path, digest) = match host {
                         UserHost::Codex => (
                             ".hive/marketplaces/codex/.agents/plugins/marketplace.json",
-                            USER_070_CODEX_MARKETPLACE_DIGEST,
+                            USER_070_CODEX_MARKETPLACE_DIGEST.to_owned(),
                         ),
                         UserHost::Claude => (
                             ".hive/marketplaces/claude/.claude-plugin/marketplace.json",
-                            USER_070_CLAUDE_MARKETPLACE_DIGEST,
+                            published_claude_marketplace_digest(version).to_owned(),
                         ),
                         UserHost::Antigravity => unreachable!(),
                     };
                     entries.push(UserOwnershipEntry {
                         path: path.to_owned(),
-                        digest: digest.to_owned(),
+                        digest: digest.clone(),
                         executable: false,
                         unix_mode: installed_unix_mode(false),
                         ownership: "host-adapter-metadata".to_owned(),
@@ -10523,6 +10855,12 @@ mod tests {
                     installed_host_version_range: match host {
                         UserHost::Codex => ">=0.145.0 <1.0.0",
                         UserHost::Claude => ">=2.1.0 <3.0.0",
+                        UserHost::Antigravity
+                            if parse_three_part_version(version).expect("stable version")
+                                >= (0, 15, 2) =>
+                        {
+                            ">=1.1.7 <2.0.0"
+                        }
                         UserHost::Antigravity => ">=1.1.7 <1.2.0",
                     },
                     source_release_digest: &source_release_digest,
@@ -10534,8 +10872,10 @@ mod tests {
                     current_entries: &[],
                     authenticated_prior: None,
                 };
-                let authenticated = authenticated_user_inventory(host, &request)
-                    .expect("stable user inventory must authenticate");
+                let authenticated =
+                    authenticated_user_inventory(host, &request).unwrap_or_else(|| {
+                        panic!("stable user inventory must authenticate: {version} {host:?}")
+                    });
                 assert_user_entries_equal(&authenticated.entries, &entries);
 
                 let mut tampered = entries.clone();
@@ -10581,6 +10921,7 @@ mod tests {
                         | "0.15.0"
                         | "0.15.1"
                         | "0.15.2"
+                        | "0.15.3"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -10642,6 +10983,81 @@ mod tests {
             &runner,
         )
         .expect("upgraded antigravity validates");
+    }
+
+    #[test]
+    fn prior_0_15_3_user_install_updates_without_reinstall() {
+        let temporary = tempdir().expect("tempdir");
+        write_operational_setup(temporary.path(), &["codex", "claude", "antigravity"]);
+        for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
+            seed_historical_09x_user_install(temporary.path(), "0.15.3", host);
+        }
+
+        let manifest_path = temporary.path().join(".hive/install/claude.json");
+        let mut manifest: UserOwnershipManifest =
+            serde_json::from_slice(&fs::read(&manifest_path).expect("Claude manifest"))
+                .expect("Claude manifest JSON");
+        let marketplace_path = ".hive/marketplaces/claude/.claude-plugin/marketplace.json";
+        let marketplace = render_claude_marketplace_for("0.15.3");
+        assert_eq!(
+            sha256_digest(&marketplace),
+            published_claude_marketplace_digest("0.15.3"),
+            "the seed must be the published 0.15.3 bytes"
+        );
+        fs::create_dir_all(
+            temporary
+                .path()
+                .join(marketplace_path)
+                .parent()
+                .expect("marketplace parent"),
+        )
+        .expect("marketplace parent");
+        fs::write(temporary.path().join(marketplace_path), &marketplace)
+            .expect("marketplace bytes");
+        manifest.entries.push(UserOwnershipEntry {
+            path: marketplace_path.to_owned(),
+            digest: sha256_digest(&marketplace),
+            executable: false,
+            unix_mode: installed_unix_mode(false),
+            ownership: "host-adapter-metadata".to_owned(),
+        });
+        manifest
+            .entries
+            .sort_by(|left, right| left.path.cmp(&right.path));
+        manifest.source_release_digest = source_release_digest_from_entries(&manifest.entries);
+        manifest.plan_digest = inventory_digest(
+            manifest.host,
+            &manifest.product_version,
+            &manifest.host_version_range,
+            Path::new(&manifest.guidance_path),
+            &manifest.source_release_digest,
+            &manifest.entries,
+        );
+        fs::write(
+            &manifest_path,
+            json_line(&manifest).expect("Claude manifest JSON"),
+        )
+        .expect("Claude manifest");
+
+        let hosts = authenticated_saved_projection_hosts(temporary.path())
+            .expect("0.15.3 projections authenticate for update");
+        assert_eq!(hosts, ["codex", "claude", "antigravity"]);
+
+        let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
+        for host in [UserHost::Codex, UserHost::Claude] {
+            execute(
+                UserOperation::Update,
+                &args(temporary.path(), host, UserMode::Apply),
+                &runner,
+            )
+            .expect("prior user projection updates without reinstall");
+        }
+        execute(
+            UserOperation::Update,
+            &args(temporary.path(), UserHost::Antigravity, UserMode::Apply),
+            &AntigravityRunner::new(temporary.path()),
+        )
+        .expect("prior Antigravity projection updates without reinstall");
     }
 
     #[test]
@@ -10753,12 +11169,15 @@ mod tests {
                 };
                 let target = temporary.path().join(&entry.path);
                 let raw = fs::read(&target).unwrap();
-                let mut bytes = hive_projection::localized_builtin_artifact(
+                // A published 0.13.0 Korean install carries the descriptor of that release, which
+                // is the last variant for a Skill merged or reworded in 0.16.0.
+                let mut bytes = hive_projection::historical_localized_builtin_artifacts(
                     name,
                     suffix,
                     &raw,
                     DescriptorLanguage::Ko,
                 )
+                .pop()
                 .unwrap();
                 if Path::new(suffix)
                     .extension()
@@ -10840,7 +11259,7 @@ mod tests {
         let mut entries = Vec::new();
         for (relative, digest) in files
             .iter()
-            .filter(|(relative, _)| historical_user_artifact_required(host, relative))
+            .filter(|(relative, _)| published_install_contains(host, relative))
         {
             let path = format!("{prefix}{relative}");
             let target = root.join(&path);
@@ -10891,6 +11310,11 @@ mod tests {
             host_version_range: match host {
                 UserHost::Codex => ">=0.145.0 <1.0.0",
                 UserHost::Claude => ">=2.1.0 <3.0.0",
+                UserHost::Antigravity
+                    if parse_three_part_version(version).expect("stable version") >= (0, 15, 2) =>
+                {
+                    ">=1.1.7 <2.0.0"
+                }
                 UserHost::Antigravity => ">=1.1.7 <1.2.0",
             }
             .to_owned(),

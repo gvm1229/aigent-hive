@@ -11,7 +11,7 @@ aliases: []
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
   - "repo:.agents/directives/references/run-closure.md#sha256:e55fe262c9a36e7a1c0f372941cc7334f5c4f78d888872add82635c0015865a2"
-  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:b540e5ca68afee2e3947932e9b21bef1c5707cbde322d7c89cd287965609d5cf"
+  - "repo:harness/skills/verified-workflow/SKILL.md#sha256:f06e29b9f7738d4ef33c16bd45fea4844e9408b87ee287c611d152d2f6c76cf6"
 links: [host-neutral-continuation, verified-workflow]
 reviewed_revision: "git:55b0498374de1a10818ab15b2b0eda5fbb4a645d"
 status: active

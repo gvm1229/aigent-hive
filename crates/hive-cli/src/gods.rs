@@ -75,6 +75,13 @@ fn alias_arguments(god: &God, args: &[String]) -> Result<Vec<String>, String> {
             vec!["prune".into(), "--dry-run".into()]
         }
         ("athena" | "poseidon", "plan") => vec!["orchestration".into(), "plan".into()],
+        // A command moved under `hive advanced` keeps its named-role alias.
+        (_, command)
+            if command_owner(command) == Some(god.name)
+                && crate::cli_help::MOVED_TO_ADVANCED.contains(&command) =>
+        {
+            vec!["advanced".into(), command.into()]
+        }
         (_, command) if command_owner(command) == Some(god.name) => vec![command.into()],
         _ => return Err(format!("unsupported {} command: {action}", god.name)),
     };
@@ -141,5 +148,27 @@ mod alias_tests {
         );
         assert!(alias_arguments(god, &["plan".into(), "--confirm".into()]).is_err());
         assert!(alias_arguments(god, &["usage".into()]).is_err());
+    }
+
+    #[test]
+    fn gods_aliases_reach_commands_moved_under_advanced() {
+        let artemis = hive_core::gods::find("artemis").unwrap();
+        assert_eq!(
+            alias_arguments(
+                artemis,
+                &["route".into(), "--request".into(), "r.json".into()]
+            )
+            .unwrap(),
+            ["advanced", "route", "--request", "r.json"]
+        );
+        let apollon = hive_core::gods::find("apollon").unwrap();
+        assert_eq!(
+            alias_arguments(apollon, &["prompt".into(), "validate".into()]).unwrap(),
+            ["advanced", "prompt", "validate"]
+        );
+        assert_eq!(
+            alias_arguments(apollon, &["korean".into()]).unwrap(),
+            ["korean"]
+        );
     }
 }

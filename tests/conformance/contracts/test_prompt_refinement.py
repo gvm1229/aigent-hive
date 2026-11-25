@@ -59,6 +59,7 @@ class Phase3PromptRefinementContract(Phase1CliTestCase):
         process = subprocess.run(
             [
                 str(self.hive_binary),
+                "advanced",
                 "prompt",
                 "validate",
                 "--request",
@@ -96,6 +97,7 @@ class Phase3PromptRefinementContract(Phase1CliTestCase):
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
         command = [
             str(self.hive_binary),
+            "advanced",
             "prompt",
             "approve",
             "--request",

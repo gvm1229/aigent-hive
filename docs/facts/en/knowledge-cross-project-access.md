@@ -9,13 +9,13 @@ summary: "Automatic retrieval stays isolated; explicit collection retrieval is d
 tags: [collection, knowledge, promotion, retrieval, v0-9-3]
 aliases: ["Automatic knowledge promotion", "Cross-project knowledge"]
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:32db20fc6252cd4a5dcf6fac16ff4e7da275a8c0ca41ddd93c3eb6f6b1f28f68"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:2972313e61138d862c92568c88b6fbd40c255ca25158bdcc051934b1c2a3a5a2"
   - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a0cf1b55b6cfc9d02920f117d25fb752e25267093d1be960b33267b8f6b0a94c"
   - "repo:crates/hive-wiki/src/rag.rs#sha256:631d823968b135efa90bb0515185fed724c1c1522af3623aa1a26e7c9842d1a7"
   - "repo:crates/hive-wiki/src/store.rs#sha256:812c302031f36694ad109479698f9d89b125392dba55468c0131e52d45f47b44"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
+  - "repo:harness/skills/knowledge-capture/references/scan.md#sha256:83063c0c0a97e81bd71170c1325df6a118d21e0659a806eecd6723912c1b26f0"
   - "repo:harness/skills/knowledge-recall/SKILL.md#sha256:d80f5871428941be1d05b12d488857f40bb894752c0c4354cee12f15a46578f6"
-  - "repo:harness/skills/knowledge-scan/SKILL.md#sha256:b8c3928df97c6f5e84f60b5a20ed9944c3ccd785cc408ffa5aa4a1db4d4b2aef"
 links: [global-knowledge-rag, knowledge-portability-scan, shared-index]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active

@@ -155,6 +155,16 @@ Hook 금지 기능:
 - automatic memory ingestion
 - dispatch·retry·continuation decision
 
+명시 예외(0.16.0, OV160-027): Claude 플러그인 선언의 `UserPromptSubmit` 지식 조회 훅 1개.
+
+- 동작: 요청 글로 Hive 지식을 읽기 전용 조회(상위 5개, 4KiB), `additionalContext`로만 전달
+- 금지 유지: 요청 분류·문장 변경·차단·Skill 실행·기억 저장·요청 글 보관
+- 동의: 기본 활성. 갱신 안내에 고지, `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off` 또는 플러그인 비활성화로 끄기
+- 근거: 지침만으로는 Agent의 작업 전 조회 누락을 막지 못한 실제 사례([OV160-027](../research/overhaul/OV160-027.md))
+- 계약 시험: 예외 파일 1개의 응답 형식과 금지 항목 고정
+
+다른 하네스와의 공존: Claude Code는 여러 플러그인의 훅을 함께 실행. Hive는 다른 하네스의 제거를 요구하지 않고, 다른 하네스의 설정·훅 변경 0건.
+
 Wiki-enabled turn의 agent-reviewed memory gate: hook capability가 아닌 final response 전
 Skill·CLI 계약. Current authorized task와 reviewed artifact의 bounded semantic claim만
 대상. Raw transcript, hook payload, tool output, hidden prompt, secret와 runtime state의

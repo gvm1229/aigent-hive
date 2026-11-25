@@ -37,6 +37,7 @@ class Phase3RoutingContract(Phase1CliTestCase):
         process = subprocess.run(
             [
                 str(self.hive_binary),
+                "advanced",
                 "route",
                 "--request",
                 str(FIXTURE_ROOT / name),

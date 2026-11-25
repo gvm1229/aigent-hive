@@ -32,6 +32,7 @@ mod knowledge;
 mod knowledge_scan;
 mod korean;
 mod loop_engineering;
+mod msg;
 mod orchestration;
 mod policy;
 mod project_upgrade;
@@ -76,6 +77,8 @@ USAGE:
     hive doctor [--output json]
     hive roster --help
     hive summon --help
+    hive msg --help
+    hive stop --help
     hive <god> <command> [options]
     hive install --scope user (--host codex|claude|antigravity)...|--hosts <comma-separated-hosts> (--dry-run|--apply|--validate) [--user-root <dir>] [--output json]
     hive uninstall [--user-root <dir>] [--dry-run | --confirm] [--output json]
@@ -101,15 +104,17 @@ USAGE:
     hive session close --target <dir> --host codex|claude|antigravity --session-id <id> [--output json]
     hive session recover --target <dir> [--output json]
     hive index rebuild --target <dir> [--output json]
-    hive route --request <json> [--output json]
-    hive prompt validate --request <input.json> --result <result.json> [--output json]
-    hive prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
+    hive advanced route --request <json> [--output json]
+    hive advanced prompt validate --request <input.json> --result <result.json> [--output json]
+    hive advanced prompt approve --request <input.json> --result <result.json> --digest <sha256:...> --target-host codex|claude|antigravity --confirm-refined-prompt [--output json]
     hive hook --capability <name> --event <event> [--capabilities <fresh-json>] [--input <json>] [--output json]
     hive policy evaluate --input <json> [--output json]
     hive usage check --account-digest <sha256:...> [--threshold <0..99>] [--output json]
     hive usage probe-native --host codex|claude|antigravity [--output json]
     hive usage monitor preview|enable|disable|status --user-root <dir> [--output json]
     hive storage [--user-root <dir>] [--output json]
+    hive storage backup list [--user-root <dir>] [--output json]
+    hive storage backup restore --id <backup> [--path <file>] [--confirm <sha256>] [--user-root <dir>] [--output json]
     hive prune --dry-run|--confirm [--user-root <dir>] [--output json]
     hive usage enforce --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--account-digest <sha256:...>] [--user-root <dir>] [--output json]
     hive usage status --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] [--output json]
@@ -280,6 +285,9 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
     {
         return gods::run_alias(god, &arguments[1..]);
     }
+    if let Some(code) = cli_help::moved_command(&arguments) {
+        return code;
+    }
     if let Some(code) = cli_help::precheck(&arguments) {
         return code;
     }
@@ -329,14 +337,15 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("project") => project_upgrade::run(&arguments[1..]),
         Some("session") => session::run(&arguments[1..]),
         Some("index") => knowledge::run_index(&arguments[1..]),
-        Some("route") => run_route(&arguments[1..]),
-        Some("prompt") => run_prompt(&arguments[1..]),
+        Some("advanced") => run_advanced(&arguments[1..]),
         Some("hook") => run_hook(&arguments[1..]),
         Some("policy") => policy::run(&arguments[1..]),
         Some("usage") => run_usage(&arguments[1..]),
         Some("storage") => storage::run_storage(&arguments[1..]),
         Some("prune") => storage::run_prune(&arguments[1..]),
         Some("summon") => summon::run(&arguments[1..]),
+        Some("msg") => msg::run(&arguments[1..]),
+        Some("stop") => msg::run_stop(&arguments[1..]),
         Some("roster") => roster::run(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
@@ -433,6 +442,7 @@ fn run_usage(arguments: &[String]) -> ExitCode {
                 | "threshold"
                 | "session"
                 | "capture"
+                | "statusline"
                 | "summarize-tokens"
         )
     ) {
@@ -1258,6 +1268,22 @@ struct PromptContracts {
     output: PromptRefinementResult,
     input_bytes: Vec<u8>,
     output_bytes: Vec<u8>,
+}
+
+/// `hive advanced` holds agent-only commands that left the top level in 0.16.0.
+fn run_advanced(arguments: &[String]) -> ExitCode {
+    match arguments.first().map(String::as_str) {
+        Some("route") => run_route(&arguments[1..]),
+        Some("prompt") => run_prompt(&arguments[1..]),
+        None => {
+            print_family_help("advanced");
+            ExitCode::SUCCESS
+        }
+        Some(other) => emit_action_result(&invalid_input_result(
+            "UnknownAction",
+            format!("unknown advanced action: {other}"),
+        )),
+    }
 }
 
 fn run_prompt(arguments: &[String]) -> ExitCode {

@@ -54,9 +54,7 @@ OWNER_KEYS = (
     "subagent_support",
 )
 DATA_SKILLS = {
-    "run-handoff",
-    "run-checkpoint",
-    "run-resume",
+    "run",
 }
 RAW_USAGE_ACCOUNT = "usage-guard@example.invalid"
 USAGE_ACCOUNT_DIGEST = (
@@ -1785,6 +1783,15 @@ class Phase4Contracts(unittest.TestCase):
                     ),
                 )
 
+                self.assertFalse(sensor_log.exists())
+                if case == "stale":
+                    # OV160-013 U1: an old capture is a missing measurement; work continues with a warning.
+                    self.assertEqual(resumed.returncode, 0, resume_payload)
+                    self.assertEqual(
+                        resume_payload["data"]["usage_guard"]["outcome"],
+                        "observation-unavailable",
+                    )
+                    continue
                 self.assertEqual(resumed.returncode, 3, resume_payload)
                 self.assertEqual(resume_payload["code"], "hive.usage-unknown")
                 self.assertEqual(
@@ -1907,11 +1914,12 @@ class Phase4Contracts(unittest.TestCase):
             extra_environment=environment,
         )
 
-        self.assertEqual(resumed.returncode, 3, resume_payload)
-        self.assertEqual(resume_payload["code"], "hive.usage-unknown")
-        self.assertEqual(resume_payload["data"]["dispatch_briefs"], [])
+        # OV160-013 U1: a failed native reading is a missing measurement; work continues with a warning.
+        self.assertEqual(resumed.returncode, 0, resume_payload)
+        self.assertEqual(
+            resume_payload["data"]["usage_guard"]["outcome"], "observation-unavailable"
+        )
         self.assertFalse(sensor_log.exists())
-        self.assert_only_new_guard_marker(target, before, resume_payload)
 
     def test_automatic_resume_rejects_installed_and_pinned_host_mismatch_before_sensor(
         self,
@@ -1946,11 +1954,11 @@ class Phase4Contracts(unittest.TestCase):
         self.assertFalse(sensor_log.exists())
         self.assertEqual(snapshot_tree(target), before)
 
-    def test_automatic_resume_blocks_at_ten_percent_or_unknown_sensor(self) -> None:
+    def test_automatic_resume_blocks_at_ten_percent_and_warns_without_sensor(self) -> None:
         for case, sensor_case, threshold, expected_code, expected_outcome in (
             ("default-threshold", "threshold", None, "hive.usage-limited", "limited"),
             ("configured-threshold", "allow", 60, "hive.usage-limited", "limited"),
-            ("missing", "missing", None, "hive.usage-unknown", "unknown"),
+            ("missing", "missing", None, "hive.run-resume-prepared", "observation-unavailable"),
         ):
             with self.subTest(case=case):
                 target = self.fresh_target(f"automatic-{case}")
@@ -1987,6 +1995,15 @@ class Phase4Contracts(unittest.TestCase):
                     ),
                 )
 
+                if case == "missing":
+                    # OV160-013 U1: no measurement warns and work continues.
+                    self.assertEqual(resumed.returncode, 0, resume_payload)
+                    self.assertEqual(
+                        resume_payload["data"]["usage_guard"]["outcome"],
+                        "observation-unavailable",
+                    )
+                    self.assertNotIn(RAW_USAGE_ACCOUNT, resumed.stdout)
+                    continue
                 self.assertEqual(resumed.returncode, 3, resume_payload)
                 self.assertEqual(resume_payload["code"], expected_code)
                 self.assert_resume_payload(

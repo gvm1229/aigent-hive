@@ -160,6 +160,23 @@ impl Roster {
         Ok((name, provider, role))
     }
 
+    /// Resolve a role or god with an explicitly selected provider.
+    /// # Errors
+    /// Rejects missing roles, providers or provider-specific model settings.
+    pub fn resolve_named_for<'a>(
+        &'a self,
+        name: &str,
+        provider: &'a str,
+    ) -> Result<(&'a str, &'a str, Role), String> {
+        let name = self.role_name(name);
+        let (name, _) = self
+            .roles
+            .get_key_value(name)
+            .ok_or_else(|| format!("unknown role: {name}"))?;
+        let (provider, role) = self.resolve_role_for(name, provider)?;
+        Ok((name, provider, role))
+    }
+
     fn role_name<'a>(&'a self, name: &'a str) -> &'a str {
         let name = crate::gods::find(name).map_or(name, |god| god.name);
         self.gods.get(name).map_or(name, String::as_str)
@@ -175,21 +192,39 @@ impl Roster {
             .as_deref()
             .or(self.workspace.provider.as_deref())
             .ok_or("missing provider")?;
+        self.resolve_role_for(name, provider)
+    }
+
+    fn resolve_role_for<'a>(
+        &'a self,
+        name: &str,
+        provider: &'a str,
+    ) -> Result<(&'a str, Role), String> {
+        let role = self
+            .roles
+            .get(name)
+            .ok_or_else(|| format!("unknown role: {name}"))?;
         let defaults = self
             .providers
             .get(provider)
             .ok_or("unknown provider")?
             .roles
             .get(name);
+        let use_role_defaults = role
+            .provider
+            .as_deref()
+            .is_none_or(|selected| selected == provider);
         let resolved = Role {
             provider: Some(provider.into()),
             model: role
                 .model
                 .clone()
+                .filter(|_| use_role_defaults)
                 .or_else(|| defaults.and_then(|d| d.model.clone())),
             effort: role
                 .effort
                 .clone()
+                .filter(|_| use_role_defaults)
                 .or_else(|| defaults.and_then(|d| d.effort.clone())),
         };
         if resolved.model.as_deref().is_none_or(str::is_empty)
@@ -262,6 +297,12 @@ mod tests {
             roster.resolve("Minerva").unwrap().1.model.as_deref(),
             Some("gpt-5.6-terra")
         );
+        let (name, provider, role) = roster
+            .resolve_named_for("hive-routine-implementer", "claude")
+            .unwrap();
+        assert_eq!(name, "hive-routine-implementer");
+        assert_eq!(provider, "claude");
+        assert_eq!(role.model.as_deref(), Some("claude-sonnet-5"));
     }
     #[test]
     fn roster_rejects_unknown_keys_and_references() {

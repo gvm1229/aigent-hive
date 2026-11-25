@@ -218,12 +218,122 @@ ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".agents/skills/knowledge-capture/references/scan.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/knowledge-manage/references/maintenance.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/knowledge-manage/references/promote.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/knowledge-manage/references/transfer.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/run/references/checkpoint.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/run/references/handoff.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/run/references/resume.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/run/references/policy-review.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/judge/references/adversarial.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/judge/references/evidence.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-capture/references/scan.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-manage/references/maintenance.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-manage/references/promote.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/knowledge-manage/references/transfer.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/run/references/checkpoint.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/run/references/handoff.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/run/references/resume.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/run/references/policy-review.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/judge/references/adversarial.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/judge/references/evidence.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".agents/skills/amend-directive/references/transplant.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
 [[paths]]
 pattern = ".claude/skills/amend-directive/references/transplant.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/team-execution/references/mediation.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/team-execution/references/mediation.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 

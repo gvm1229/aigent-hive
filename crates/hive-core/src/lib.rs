@@ -7,13 +7,18 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod containment;
 pub mod custom_agent;
+pub mod decision;
 pub mod file_ops;
+pub mod flow;
 pub mod gods;
+pub mod hook_events;
 pub mod judge;
 pub mod judge_auth;
 pub mod korean;
 pub mod loop_graph;
+pub mod mediation;
 pub mod native_workflow;
 pub mod orchestration;
 pub mod policy;
@@ -362,7 +367,15 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
                     "advanced-setup.md" | "directive-recovery.md" | "structured-choices.md"
                 )
                 | ("knowledge-recall", "confidential.md")
-                | ("knowledge-capture", "ingest.md")
+                | ("knowledge-capture", "ingest.md" | "scan.md")
+                | ("knowledge-manage", "maintenance.md" | "promote.md" | "transfer.md")
+                | (
+                    "run",
+                    "checkpoint.md" | "handoff.md" | "resume.md" | "policy-review.md"
+                )
+                | ("judge", "adversarial.md" | "evidence.md")
+                | ("team-execution", "mediation.md")
+                // Retired before 0.16.0; kept so authenticated upgrades can remove it.
                 | ("run-checkpoint", "policy-review.md")
                 | ("amend-directive", "transplant.md")
         );

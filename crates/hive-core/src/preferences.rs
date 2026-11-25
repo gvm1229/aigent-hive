@@ -5,6 +5,42 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Native usage direction and supported guarded windows for each host.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UsageDirection {
+    Used,
+    Remaining,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HostUsageSensor {
+    pub host: &'static str,
+    pub direction: UsageDirection,
+    pub windows: &'static [&'static str],
+    pub version_range: &'static str,
+}
+
+pub const HOST_USAGE_SENSORS: &[HostUsageSensor] = &[
+    HostUsageSensor {
+        host: "claude",
+        direction: UsageDirection::Used,
+        windows: &["five-hour", "weekly"],
+        version_range: "*",
+    },
+    HostUsageSensor {
+        host: "codex",
+        direction: UsageDirection::Remaining,
+        windows: &["five-hour", "weekly"],
+        version_range: "*",
+    },
+    HostUsageSensor {
+        host: "antigravity",
+        direction: UsageDirection::Remaining,
+        windows: &["weekly"],
+        version_range: ">=1.1.18 <2.0.0",
+    },
+];
+
 /// Response to unavailable usage before starting work.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]

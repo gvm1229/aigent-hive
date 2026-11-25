@@ -10,8 +10,8 @@ tags: [orchestration, roster]
 aliases: []
 sources:
   - "repo:crates/hive-cli/src/orchestration.rs#sha256:bd252c5454ed7a152bab69ab0f06a1f094ac1c8505ae73d3b7e99000de22a086"
-  - "repo:crates/hive-cli/src/summon.rs#sha256:b122b9486407c2a896a17497d198356620a86c3002af23d3c80f21e69553a9dd"
-  - "repo:crates/hive-core/src/roster.rs#sha256:d17b1efd3bead532a9cc44cf95d8add4f6ebab53e2305f699637c0daba80ebb7"
+  - "repo:crates/hive-cli/src/summon.rs#sha256:ee1486820a33fe58898f293b7bebb79ca399b6e99b479122f9ee41041af8adf5"
+  - "repo:crates/hive-core/src/roster.rs#sha256:383519773089fc0592645e3dbefdb9dfa7f156a944649de9181f6042798ac8a2"
   - "repo:docs/decisions/ADR-0026-official-cli-extension-points.md#sha256:ce73d78bda06047d4fe899e1f62f669389978675d668fe37a5a6800bfb76bd10"
 links: [hook-inbox-evidence, orchestration-ownership]
 reviewed_revision: "git:386bda71844336fe758acc906994991fa5c6f5f0"
@@ -20,4 +20,4 @@ status: active
 
 # 비활성 소환 계약
 
-0.15.0 summon: 스키마 검사한 호스트 자료의 정확한 지문·작업/대상 지문·역할·사건 머리·권한 결합. Prepare 사건·머리 확정 뒤 작업·수신 봉투 게시. 작업자 프로필은 결과/작업 폴더 자리표시자와 역할별 파일 수정 권한 포함, 서비스 등급은 사용자 Codex 설정 소유. 프로필 왕복 미검증. 미리보기·거부·성공은 ActionResult 규격, 로컬 시험의 실제 호스트 실행 수용 대체 불가.
+0.15.0 summon: 스키마 검사한 호스트 자료의 정확한 지문·작업/대상 지문·역할·사건 머리·권한 결합. Prepare 사건·머리 확정 뒤 작업·수신 봉투 게시. 작업자 프로필은 결과/작업 폴더 자리표시자와 역할별 파일 수정 권한 포함, 서비스 등급은 사용자 Codex 설정 소유. 프로필 왕복 미검증. 같은 준비 요청 반복은 권한 소비 없이 기존 봉투·결과·확인증 반환. 미리보기·거부·성공은 ActionResult 규격, 로컬 시험의 실제 호스트 실행 수용 대체 불가.

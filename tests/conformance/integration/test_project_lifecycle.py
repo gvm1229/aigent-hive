@@ -1181,7 +1181,7 @@ else:
                 for skill in (
                     "prompt-refine",
                     "project-refresh",
-                    "knowledge-promote",
+                    "knowledge-manage",
                 ):
                     self.assertTrue(
                         (target / ".agents/skills" / skill / "SKILL.md").is_file()

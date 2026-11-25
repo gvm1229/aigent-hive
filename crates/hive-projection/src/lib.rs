@@ -25,17 +25,10 @@ const PROMPT_REFINE: &[u8] = include_bytes!("../../../harness/skills/prompt-refi
 const KNOWLEDGE_CAPTURE: &[u8] =
     include_bytes!("../../../harness/skills/knowledge-capture/SKILL.md");
 const KNOWLEDGE_QUERY: &[u8] = include_bytes!("../../../harness/skills/knowledge-recall/SKILL.md");
-const KNOWLEDGE_PROMOTE: &[u8] =
-    include_bytes!("../../../harness/skills/knowledge-promote/SKILL.md");
-const KNOWLEDGE_MAINTENANCE: &[u8] =
-    include_bytes!("../../../harness/skills/knowledge-maintain/SKILL.md");
-const RUN_CHECKPOINT: &[u8] = include_bytes!("../../../harness/skills/run-checkpoint/SKILL.md");
-const RUN_RESUME: &[u8] = include_bytes!("../../../harness/skills/run-resume/SKILL.md");
+const KNOWLEDGE_MANAGE: &[u8] = include_bytes!("../../../harness/skills/knowledge-manage/SKILL.md");
+const RUN: &[u8] = include_bytes!("../../../harness/skills/run/SKILL.md");
 const USAGE_GUARD: &[u8] = include_bytes!("../../../harness/skills/usage-guard/SKILL.md");
-const ROLE_HANDOFF: &[u8] = include_bytes!("../../../harness/skills/run-handoff/SKILL.md");
-const JUDGE_PACKAGE: &[u8] = include_bytes!("../../../harness/skills/judge-evidence/SKILL.md");
-const ADVERSARIAL_JUDGE: &[u8] =
-    include_bytes!("../../../harness/skills/adversarial-judge/SKILL.md");
+const JUDGE: &[u8] = include_bytes!("../../../harness/skills/judge/SKILL.md");
 const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-update/SKILL.md");
 const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
@@ -49,9 +42,6 @@ const CUSTOM_SUBAGENT_CREATE: &[u8] =
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
-const KNOWLEDGE_SCAN: &[u8] = include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md");
-const KNOWLEDGE_TRANSFER: &[u8] =
-    include_bytes!("../../../harness/skills/knowledge-transfer/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
 const AMEND_DIRECTIVE: &[u8] = include_bytes!("../../../harness/skills/amend-directive/SKILL.md");
 const HUMANIZE_KOR: &[u8] = include_bytes!("../../../harness/skills/humanize-kor/SKILL.md");
@@ -232,8 +222,8 @@ struct SkillLifecycleEvent {
 /// Canonicalize a raw project Skill selection from one authenticated historical release.
 ///
 /// Raw duplicate ids, ids absent from the source release, and undeclared canonical collisions
-/// remain invalid. Distinct source ids may converge only when the lifecycle ledger declares at
-/// least one member of that collision as a `merge` into the same current id.
+/// remain invalid. Distinct source ids may converge only when every retired member has a
+/// lifecycle event and the ledger declares at least one `merge` into the same current id.
 ///
 /// # Errors
 ///
@@ -294,13 +284,13 @@ pub fn migrate_historical_project_skill_selection(
                     .iter()
                     .any(|event| event.retired_name == *source && event.replacement == *target)
         });
-        let has_merge = sources.iter().any(|source| {
-            ledger.lifecycle.iter().any(|event| {
-                event.retired_name == *source
-                    && event.replacement == *target
-                    && event.transition_kind == "merge"
-            })
-        });
+        // A renamed predecessor may reach a merge target through a later merged name, for
+        // example `knowledge-import` -> `knowledge-scan` -> `knowledge-capture`. The flattened
+        // ledger keeps only the final target, so the target's own declared merge proves it.
+        let has_merge = ledger
+            .lifecycle
+            .iter()
+            .any(|event| event.replacement == *target && event.transition_kind == "merge");
         if !declared || !has_merge {
             return Err(ProjectionError::new(
                 "hive.skill-selection-invalid",
@@ -394,11 +384,20 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
         "iterative-execution",
         "package-review",
         "knowledge-import",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-transfer",
+        "knowledge-scan",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "adversarial-judge",
+        "judge-evidence",
     ]);
     if lifecycle_names != required_lifecycle {
         return Err(ProjectionError::new(
             "hive.skill-name-ledger-invalid",
-            "retired Skill lifecycle does not cover every 0.10.0 transition",
+            "retired Skill lifecycle does not cover every 0.10.0 and 0.16.0 transition",
         ));
     }
     Ok(ledger.retired_names)
@@ -616,11 +615,11 @@ pub enum SkillSourceType {
 /// Returns an error when the embedded registry is malformed or `version` is
 /// not one of the supported historical releases.
 pub fn historical_builtin_skills(version: &str) -> Result<Vec<ActiveSkill>, ProjectionError> {
-    const SUPPORTED: [&str; 30] = [
+    const SUPPORTED: [&str; 31] = [
         "0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.9.1",
         "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0",
         "0.11.1", "0.12.0", "0.13.0", "0.13.1", "0.13.2", "0.14.0", "0.14.1", "0.14.2", "0.15.0",
-        "0.15.1", "0.15.2",
+        "0.15.1", "0.15.2", "0.15.3",
     ];
     let catalog: HistoricalBuiltInCatalog = serde_yaml::from_str(HISTORICAL_BUILTINS_YAML)
         .map_err(|error| {
@@ -818,6 +817,53 @@ pub fn compile_project_projection(
     )
 }
 
+/// Canonicalize a caller selection while keeping its names unique.
+///
+/// Distinct former names may converge only on a current Skill that the lifecycle ledger
+/// declares as a merge target, such as `run-checkpoint` and `run-resume` into `run`. A current
+/// name listed together with its own former name, or two names that only share a rename,
+/// remain duplicates.
+fn canonical_unique_selection(
+    selected_names: &[String],
+) -> Result<BTreeSet<String>, ProjectionError> {
+    let duplicate = || {
+        ProjectionError::new(
+            "hive.skill-selection-invalid",
+            "selected user Skills must be unique",
+        )
+    };
+    let mut groups = BTreeMap::<String, Vec<&String>>::new();
+    for name in selected_names {
+        let canonical = canonical_builtin_skill_name(name)?.unwrap_or_else(|| name.clone());
+        groups.entry(canonical).or_default().push(name);
+    }
+    if groups.values().all(|names| names.len() == 1) {
+        return Ok(groups.into_keys().collect());
+    }
+    let ledger: RetiredSkillNameLedger =
+        serde_yaml::from_str(RETIRED_SKILL_NAMES_YAML).map_err(|error| {
+            ProjectionError::new(
+                "hive.skill-name-ledger-invalid",
+                format!("retired Skill name ledger is not valid YAML: {error}"),
+            )
+        })?;
+    for (target, names) in &groups {
+        if names.len() < 2 {
+            continue;
+        }
+        let distinct = names.iter().collect::<BTreeSet<_>>().len() == names.len();
+        let all_former = names.iter().all(|name| *name != target);
+        let merge_target = ledger
+            .lifecycle
+            .iter()
+            .any(|event| event.replacement == *target && event.transition_kind == "merge");
+        if !distinct || !all_former || !merge_target {
+            return Err(duplicate());
+        }
+    }
+    Ok(groups.into_keys().collect())
+}
+
 fn compile_named_projection(
     host: Host,
     selected_names: &[String],
@@ -826,19 +872,7 @@ fn compile_named_projection(
     language: DescriptorLanguage,
 ) -> Result<Projection, ProjectionError> {
     let catalog = embedded_catalog()?;
-    let selected: BTreeSet<String> = selected_names
-        .iter()
-        .map(|name| {
-            canonical_builtin_skill_name(name)
-                .map(|canonical| canonical.unwrap_or_else(|| name.clone()))
-        })
-        .collect::<Result<_, _>>()?;
-    if selected.len() != selected_names.len() {
-        return Err(ProjectionError::new(
-            "hive.skill-selection-invalid",
-            "selected user Skills must be unique",
-        ));
-    }
+    let selected = canonical_unique_selection(selected_names)?;
     for name in &selected {
         let entry = catalog
             .skills
@@ -1209,6 +1243,102 @@ fn localized_skill_metadata(
     )
 }
 
+/// Return every localized variant of one historical built-in artifact that a published
+/// release could have installed: the current descriptor and, for Korean, the descriptor that
+/// shipped before the `0.16.0` Skill merges. Authentication of immutable historical bytes must
+/// not depend on later wording or on a retired Skill still being current.
+#[must_use]
+pub fn historical_localized_builtin_artifacts(
+    name: &str,
+    suffix: &str,
+    source: &[u8],
+    language: DescriptorLanguage,
+) -> Vec<Vec<u8>> {
+    let mut variants = Vec::new();
+    if let Ok(bytes) = localized_builtin_artifact(name, suffix, source, language) {
+        variants.push(bytes);
+    }
+    if language == DescriptorLanguage::Ko {
+        if let Some((display_name, description)) = pre_0_16_korean_skill_text(name) {
+            let description = canonical_skill_description(name, description);
+            let legacy = match suffix {
+                "SKILL.md" => replace_metadata_line(
+                    source,
+                    "description:",
+                    &format!("description: {description}"),
+                ),
+                "agents/openai.yaml" => replace_metadata_line(
+                    source,
+                    "  display_name:",
+                    &format!("  display_name: {display_name:?}"),
+                )
+                .and_then(|metadata| {
+                    replace_metadata_line(
+                        &metadata,
+                        "  short_description:",
+                        &format!("  short_description: {description:?}"),
+                    )
+                }),
+                _ => Ok(source.to_vec()),
+            };
+            if let Ok(bytes) = legacy {
+                if !variants.contains(&bytes) {
+                    variants.push(bytes);
+                }
+            }
+        }
+    }
+    variants
+}
+
+/// Korean display names and descriptions published through `0.15.3` for Skills that were
+/// merged or reworded by the `0.16.0` consolidation.
+fn pre_0_16_korean_skill_text(name: &str) -> Option<(&'static str, &'static str)> {
+    Some(match name {
+        "knowledge-capture" => (
+            "유용한 지식 남기기",
+            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식을 골라 한 번에 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
+        ),
+        "knowledge-promote" => (
+            "지식 공유하기",
+            "(knowledge-promote) 한 프로젝트에서 확인한 사실·선호·방식이 다른 작업에도 도움이 될 때 전역 Hive 지식으로 공유.",
+        ),
+        "knowledge-maintain" => (
+            "지식 정비하기",
+            "(knowledge-maintain) Hive 지식을 믿을 수 있게 검사하고, 필요하면 검색 색인을 다시 만들거나 명시 요청된 정리를 수행.",
+        ),
+        "run-checkpoint" => (
+            "진행 상황 저장",
+            "재개 가능한 작업 진행 상황을 정본 Markdown에 저장합니다.",
+        ),
+        "run-resume" => (
+            "작업 재개",
+            "저장한 작업 인계를 검증하고 새 세션의 재개 정보를 읽습니다.",
+        ),
+        "run-handoff" => (
+            "역할 인계",
+            "역할 배정과 인계 기록을 정본 Markdown에 안전하게 갱신합니다.",
+        ),
+        "judge-evidence" => (
+            "Judge 증거 검증",
+            "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
+        ),
+        "adversarial-judge" => (
+            "반대 검토 Judge",
+            "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
+        ),
+        "knowledge-scan" => (
+            "저장소 지식 스캔",
+            "(knowledge-scan) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 기록합니다.",
+        ),
+        "knowledge-transfer" => (
+            "Hive 지식 이전",
+            "(knowledge-transfer) 기존 이식 가능 Hive 지식을 컴퓨터 사이에서 안전하게 옮깁니다.",
+        ),
+        _ => return None,
+    })
+}
+
 fn canonical_skill_description(name: &str, description: &str) -> String {
     let prefix = format!("({name})");
     if description.starts_with(&prefix) {
@@ -1287,9 +1417,9 @@ fn localized_skill_text(
         ),
         "knowledge-capture" => (
             "Remember useful knowledge (knowledge-capture)",
-            "(knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work; never save secrets, raw conversations, or uncertain guesses.",
+            "(knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work, or scan one explicitly selected repository or folder for reviewed knowledge; never save secrets, raw conversations, or uncertain guesses. Formerly knowledge-scan.",
             "유용한 지식 남기기",
-            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식을 골라 한 번에 안전하게 남김. 비밀·대화 원문·확실하지 않은 추측 기록 금지.",
+            "(knowledge-capture) 대화를 마칠 때 나중 작업에 도움이 될 만한 사실·선호·방식을 골라 한 번에 안전하게 남기거나, 사용자가 고른 저장소·폴더를 훑어 검토한 지식만 기록. 비밀·대화 원문·확실하지 않은 추측 기록 금지. 옛 이름 knowledge-scan.",
         ),
         "knowledge-recall" => (
             "Search knowledge (knowledge-recall)",
@@ -1297,29 +1427,17 @@ fn localized_skill_text(
             "지식 찾아보기",
             "(knowledge-recall) 지금 하는 질문이나 작업에 도움이 될 Hive 지식만 찾아봄. 미등록 폴더도 사용자 전역·공유 지식을 안전하게 사용.",
         ),
-        "knowledge-promote" => (
-            "Share knowledge (knowledge-promote)",
-            "(knowledge-promote) Share a reviewed fact, preference, or workflow from one project when it can genuinely help the user's other work.",
-            "지식 공유하기",
-            "(knowledge-promote) 한 프로젝트에서 확인한 사실·선호·방식이 다른 작업에도 도움이 될 때 전역 Hive 지식으로 공유.",
+        "knowledge-manage" => (
+            "Manage knowledge (knowledge-manage)",
+            "(knowledge-manage) Check, clean up, share, or move existing Hive knowledge on explicit request. Formerly knowledge-maintain, knowledge-promote, knowledge-transfer.",
+            "지식 관리하기",
+            "(knowledge-manage) 기존 Hive 지식을 명시 요청에 따라 검사·정리하거나 다른 작업과 공유하거나 다른 컴퓨터로 옮김. 옛 이름 knowledge-maintain·knowledge-promote·knowledge-transfer.",
         ),
-        "knowledge-maintain" => (
-            "Maintain knowledge (knowledge-maintain)",
-            "(knowledge-maintain) Keep Hive knowledge trustworthy by checking it, rebuilding its search index, or carrying out an explicitly requested cleanup.",
-            "지식 정비하기",
-            "(knowledge-maintain) Hive 지식을 믿을 수 있게 검사하고, 필요하면 검색 색인을 다시 만들거나 명시 요청된 정리를 수행.",
-        ),
-        "run-checkpoint" => (
-            "Save progress",
-            "Save durable, resumable work progress in canonical Markdown.",
-            "진행 상황 저장",
-            "재개 가능한 작업 진행 상황을 정본 Markdown에 저장합니다.",
-        ),
-        "run-resume" => (
-            "Resume work",
-            "Validate a work handoff and read safe resume context.",
-            "작업 재개",
-            "저장한 작업 인계를 검증하고 새 세션의 재개 정보를 읽습니다.",
+        "run" => (
+            "Save, hand off, or resume a run (run)",
+            "(run) Save progress, record a role handoff, or resume an existing Hive run. Formerly run-checkpoint, run-handoff, run-resume.",
+            "작업 저장·인계·재개",
+            "(run) 기존 Hive 작업의 진행 상황 저장, 역할 인계 기록, 중단 뒤 재개. 옛 이름 run-checkpoint·run-handoff·run-resume.",
         ),
         "usage-guard" => (
             "Manage usage",
@@ -1327,23 +1445,11 @@ fn localized_skill_text(
             "사용량 보호 관리",
             "사용량 보호 기준과 현재 세션의 안전 상태를 확인하거나 바꿉니다.",
         ),
-        "run-handoff" => (
-            "Hand off role",
-            "Update canonical role assignment and handoff records safely.",
-            "역할 인계",
-            "역할 배정과 인계 기록을 정본 Markdown에 안전하게 갱신합니다.",
-        ),
-        "judge-evidence" => (
-            "Judge evidence",
-            "Validate a clean-context work package and signed Judge attestations.",
-            "Judge 증거 검증",
-            "검증용 작업 패키지와 서명된 확인 정보를 검사합니다.",
-        ),
-        "adversarial-judge" => (
-            "Adversarial Judge",
-            "Prepare an explicit independent clean-context Judge request.",
-            "반대 검토 Judge",
-            "독립 Host Judge의 제한된 clean-context 검토 요청을 준비합니다.",
+        "judge" => (
+            "Independent Judge (judge)",
+            "(judge) Prepare an independent clean-context Judge request or validate signed Judge evidence. Formerly adversarial-judge, judge-evidence.",
+            "독립 Judge 검토",
+            "(judge) 독립 Host Judge의 clean-context 검토 요청을 준비하거나 서명된 Judge 증거를 검증. 옛 이름 adversarial-judge·judge-evidence.",
         ),
         "product-update" => (
             "Update Hive",
@@ -1368,18 +1474,6 @@ fn localized_skill_text(
             "Run a bounded evidence-gated workflow with independent verification.",
             "검증형 작업 흐름",
             "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
-        ),
-        "knowledge-scan" => (
-            "Scan repository knowledge",
-            "(knowledge-scan) Scan one repository or folder and prepare reviewed facts.",
-            "저장소 지식 스캔",
-            "(knowledge-scan) 사용자가 고른 저장소나 폴더를 훑어보고, 그 밖의 작업에도 쓸 만한 검토 완료 지식만 기록합니다.",
-        ),
-        "knowledge-transfer" => (
-            "Transfer Hive knowledge",
-            "(knowledge-transfer) Move Hive knowledge between computers.",
-            "Hive 지식 이전",
-            "(knowledge-transfer) 기존 이식 가능 Hive 지식을 컴퓨터 사이에서 안전하게 옮깁니다.",
         ),
         "code-polish" => (
             "Clean AI slop",
@@ -1437,6 +1531,7 @@ fn localized_skill_text(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: &str) {
     if name == "user-setup" {
         for (relative, bytes) in user_setup_resources() {
@@ -1485,13 +1580,63 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
             "references/confidential.md",
             include_bytes!("../../../harness/skills/knowledge-recall/references/confidential.md"),
         )],
-        "knowledge-capture" => &[(
-            "references/ingest.md",
-            include_bytes!("../../../harness/skills/knowledge-capture/references/ingest.md"),
-        )],
-        "run-checkpoint" => &[(
-            "references/policy-review.md",
-            include_bytes!("../../../harness/skills/run-checkpoint/references/policy-review.md"),
+        "knowledge-capture" => &[
+            (
+                "references/ingest.md",
+                include_bytes!("../../../harness/skills/knowledge-capture/references/ingest.md"),
+            ),
+            (
+                "references/scan.md",
+                include_bytes!("../../../harness/skills/knowledge-capture/references/scan.md"),
+            ),
+        ],
+        "knowledge-manage" => &[
+            (
+                "references/maintenance.md",
+                include_bytes!(
+                    "../../../harness/skills/knowledge-manage/references/maintenance.md"
+                ),
+            ),
+            (
+                "references/promote.md",
+                include_bytes!("../../../harness/skills/knowledge-manage/references/promote.md"),
+            ),
+            (
+                "references/transfer.md",
+                include_bytes!("../../../harness/skills/knowledge-manage/references/transfer.md"),
+            ),
+        ],
+        "run" => &[
+            (
+                "references/checkpoint.md",
+                include_bytes!("../../../harness/skills/run/references/checkpoint.md"),
+            ),
+            (
+                "references/handoff.md",
+                include_bytes!("../../../harness/skills/run/references/handoff.md"),
+            ),
+            (
+                "references/resume.md",
+                include_bytes!("../../../harness/skills/run/references/resume.md"),
+            ),
+            (
+                "references/policy-review.md",
+                include_bytes!("../../../harness/skills/run/references/policy-review.md"),
+            ),
+        ],
+        "judge" => &[
+            (
+                "references/adversarial.md",
+                include_bytes!("../../../harness/skills/judge/references/adversarial.md"),
+            ),
+            (
+                "references/evidence.md",
+                include_bytes!("../../../harness/skills/judge/references/evidence.md"),
+            ),
+        ],
+        "team-execution" => &[(
+            "references/mediation.md",
+            include_bytes!("../../../harness/skills/team-execution/references/mediation.md"),
         )],
         _ => &[],
     };
@@ -1559,29 +1704,17 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "knowledge-recall" => Some(include_bytes!(
             "../../../harness/skills/knowledge-recall/agents/openai.yaml"
         )),
-        "knowledge-promote" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-promote/agents/openai.yaml"
+        "knowledge-manage" => Some(include_bytes!(
+            "../../../harness/skills/knowledge-manage/agents/openai.yaml"
         )),
-        "knowledge-maintain" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-maintain/agents/openai.yaml"
-        )),
-        "run-checkpoint" => Some(include_bytes!(
-            "../../../harness/skills/run-checkpoint/agents/openai.yaml"
-        )),
-        "run-resume" => Some(include_bytes!(
-            "../../../harness/skills/run-resume/agents/openai.yaml"
+        "run" => Some(include_bytes!(
+            "../../../harness/skills/run/agents/openai.yaml"
         )),
         "usage-guard" => Some(include_bytes!(
             "../../../harness/skills/usage-guard/agents/openai.yaml"
         )),
-        "run-handoff" => Some(include_bytes!(
-            "../../../harness/skills/run-handoff/agents/openai.yaml"
-        )),
-        "judge-evidence" => Some(include_bytes!(
-            "../../../harness/skills/judge-evidence/agents/openai.yaml"
-        )),
-        "adversarial-judge" => Some(include_bytes!(
-            "../../../harness/skills/adversarial-judge/agents/openai.yaml"
+        "judge" => Some(include_bytes!(
+            "../../../harness/skills/judge/agents/openai.yaml"
         )),
         "product-update" => Some(include_bytes!(
             "../../../harness/skills/product-update/agents/openai.yaml"
@@ -1609,12 +1742,6 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         )),
         "research-best-practices" => Some(include_bytes!(
             "../../../harness/skills/research-best-practices/agents/openai.yaml"
-        )),
-        "knowledge-scan" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-scan/agents/openai.yaml"
-        )),
-        "knowledge-transfer" => Some(include_bytes!(
-            "../../../harness/skills/knowledge-transfer/agents/openai.yaml"
         )),
         "athena" => Some(include_bytes!(
             "../../../harness/skills/athena/agents/openai.yaml"
@@ -1656,7 +1783,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 37] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1664,14 +1791,10 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 37] {
         ("prompt-refine", PROMPT_REFINE),
         ("knowledge-capture", KNOWLEDGE_CAPTURE),
         ("knowledge-recall", KNOWLEDGE_QUERY),
-        ("knowledge-promote", KNOWLEDGE_PROMOTE),
-        ("knowledge-maintain", KNOWLEDGE_MAINTENANCE),
-        ("run-checkpoint", RUN_CHECKPOINT),
-        ("run-resume", RUN_RESUME),
+        ("knowledge-manage", KNOWLEDGE_MANAGE),
+        ("run", RUN),
         ("usage-guard", USAGE_GUARD),
-        ("run-handoff", ROLE_HANDOFF),
-        ("judge-evidence", JUDGE_PACKAGE),
-        ("adversarial-judge", ADVERSARIAL_JUDGE),
+        ("judge", JUDGE),
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
@@ -1681,8 +1804,6 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 37] {
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("code-polish", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
-        ("knowledge-scan", KNOWLEDGE_SCAN),
-        ("knowledge-transfer", KNOWLEDGE_TRANSFER),
         (
             "athena",
             include_bytes!("../../../harness/skills/athena/SKILL.md"),
@@ -2340,19 +2461,15 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
     match skill {
         "quick-answer" => Some(LogicalAction::AnswerSimpleQuestion),
         "prompt-refine" => Some(LogicalAction::RefinePrompt),
-        "knowledge-capture" | "knowledge-maintain" | "knowledge-promote" | "knowledge-scan"
-        | "knowledge-transfer" => Some(LogicalAction::IngestKnowledge),
+        "knowledge-capture" | "knowledge-manage" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "code-polish"
         | "humanize-kor"
         | "research-best-practices"
         | "verified-workflow"
-        | "run-checkpoint"
-        | "run-handoff"
         | "usage-guard"
         | "ship"
         | "amend-directive" => Some(LogicalAction::RunWork),
-        "run-resume" => Some(LogicalAction::ResumeWork),
         "product-update" | "project-transition" | "project-refresh" => {
             Some(LogicalAction::UpdateHarness)
         }
@@ -2361,7 +2478,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
 }
 
 fn is_phase_four_data_contract_skill(skill: &str) -> bool {
-    matches!(skill, "run-checkpoint" | "run-resume" | "run-handoff")
+    skill == "run"
 }
 
 fn explicit_skill_provider(skill: &str, host: Host) -> Result<RouteProvider, ProjectionError> {
@@ -3091,24 +3208,21 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 32);
-            let expected_file_count = if host == Host::Claude { 39 } else { 71 };
+            assert_eq!(first.active_skills.skills.len(), 27);
+            let expected_file_count = if host == Host::Claude { 44 } else { 71 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "code-polish",
                 "research-best-practices",
-                "judge-evidence",
-                "adversarial-judge",
-                "knowledge-scan",
+                "judge",
+                "knowledge-capture",
                 "verified-workflow",
                 "humanize-kor",
                 "prompt-refine",
-                "run-checkpoint",
-                "run-resume",
-                "run-handoff",
+                "run",
                 "product-update",
                 "usage-guard",
-                "knowledge-maintain",
+                "knowledge-manage",
             ] {
                 assert!(first
                     .files
@@ -3326,6 +3440,118 @@ description: Inspect one local file without changing it.
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
+    fn former_skill_names_resolve_and_are_announced_by_their_merged_skill() {
+        let merges = [
+            ("knowledge-maintain", "knowledge-manage", "maintenance"),
+            ("knowledge-promote", "knowledge-manage", "promotion"),
+            ("knowledge-transfer", "knowledge-manage", "transfer"),
+            ("knowledge-scan", "knowledge-capture", "scan"),
+            ("run-checkpoint", "run", "checkpoint"),
+            ("run-handoff", "run", "handoff"),
+            ("run-resume", "run", "resume"),
+            ("adversarial-judge", "judge", "adversarial"),
+            ("judge-evidence", "judge", "evidence"),
+        ];
+        for (old_name, current_name, mode) in merges {
+            assert_eq!(
+                canonical_builtin_skill_name(old_name).expect("ledger"),
+                Some(current_name.to_owned()),
+            );
+            let body = std::str::from_utf8(
+                embedded_skill_source(current_name).expect("merged Skill source"),
+            )
+            .expect("UTF-8 Skill");
+            let header = body.split("---").nth(1).expect("frontmatter");
+            assert!(
+                header.contains("Formerly"),
+                "{current_name} keeps former names"
+            );
+            assert!(
+                header.contains(old_name),
+                "{old_name} named in {current_name}"
+            );
+            assert!(
+                body.contains(&format!("`{old_name}`")),
+                "{old_name} guidance"
+            );
+            assert!(body.contains(mode), "{old_name} selects {mode}");
+            assert!(
+                body.contains(&format!("say the new name `{current_name}`")),
+                "{current_name} announces its new name"
+            );
+            let metadata = std::str::from_utf8(
+                embedded_skill_metadata(current_name).expect("merged Skill metadata"),
+            )
+            .expect("UTF-8 metadata");
+            assert!(
+                metadata.contains(old_name),
+                "{old_name} in {current_name} metadata"
+            );
+            for language in [DescriptorLanguage::En, DescriptorLanguage::Ko] {
+                let (_, description) =
+                    localized_skill_text(current_name, language).expect("descriptor");
+                assert!(description.contains(old_name), "{old_name} in descriptor");
+            }
+            assert!(embedded_skill_source(old_name).is_none());
+            // Published Korean installs of the former Skill still authenticate before removal.
+            let variants = historical_localized_builtin_artifacts(
+                old_name,
+                "SKILL.md",
+                b"---\nname: former\ndescription: former\n---\n",
+                DescriptorLanguage::Ko,
+            );
+            assert_eq!(
+                variants.len(),
+                1,
+                "{old_name} keeps its published Korean text"
+            );
+        }
+        let migrated = migrate_historical_project_skill_selection(
+            "0.15.3",
+            &[
+                "knowledge-capture".to_owned(),
+                "knowledge-scan".to_owned(),
+                "knowledge-maintain".to_owned(),
+                "knowledge-promote".to_owned(),
+                "knowledge-transfer".to_owned(),
+                "run-checkpoint".to_owned(),
+                "run-handoff".to_owned(),
+                "run-resume".to_owned(),
+                "adversarial-judge".to_owned(),
+                "judge-evidence".to_owned(),
+            ],
+        )
+        .expect("declared 0.16.0 merges");
+        assert_eq!(
+            migrated.selected,
+            ["judge", "knowledge-capture", "knowledge-manage", "run"]
+        );
+        assert_eq!(migrated.merges.len(), 4);
+
+        let legacy = compile_user_projection(
+            Host::Codex,
+            &[
+                "hive-run-checkpoint".to_owned(),
+                "hive-run-resume".to_owned(),
+                "hive-role-handoff".to_owned(),
+            ],
+            &[],
+        )
+        .expect("former names converge on one merged Skill");
+        assert_eq!(legacy.active_skills.skills.len(), 1);
+        assert_eq!(legacy.active_skills.skills[0].name, "run");
+        for duplicate in [
+            ["run", "run-checkpoint"],
+            ["code-polish", "ai-slop-cleaner"],
+        ] {
+            let error = compile_user_projection(Host::Codex, &duplicate.map(str::to_owned), &[])
+                .expect_err("current and former names remain duplicates");
+            assert_eq!(error.code(), "hive.skill-selection-invalid");
+        }
+    }
+
+    #[test]
     fn historical_project_selection_accepts_only_declared_many_to_one_merges() {
         let migrated = migrate_historical_project_skill_selection(
             "0.9.5",
@@ -3338,7 +3564,7 @@ description: Inspect one local file without changing it.
         .expect("declared historical merge");
         assert_eq!(
             migrated.selected,
-            vec!["judge-evidence".to_owned(), "verified-workflow".to_owned()]
+            vec!["judge".to_owned(), "verified-workflow".to_owned()]
         );
         assert_eq!(migrated.merges.len(), 1);
         assert_eq!(
@@ -3444,16 +3670,12 @@ description: Inspect one local file without changing it.
         let selected = [
             "knowledge-capture".to_owned(),
             "knowledge-recall".to_owned(),
-            "knowledge-promote".to_owned(),
-            "knowledge-maintain".to_owned(),
-            "knowledge-scan".to_owned(),
+            "knowledge-manage".to_owned(),
         ];
         let labels = [
             ("knowledge-capture", "유용한 지식 남기기"),
             ("knowledge-recall", "지식 찾아보기"),
-            ("knowledge-promote", "지식 공유하기"),
-            ("knowledge-maintain", "지식 정비하기"),
-            ("knowledge-scan", "저장소 지식 스캔"),
+            ("knowledge-manage", "지식 관리하기"),
         ];
 
         for host in [Host::Codex, Host::Claude, Host::Antigravity] {
@@ -3524,12 +3746,11 @@ description: Inspect one local file without changing it.
     #[test]
     fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
         let default = super::project_default_skills().unwrap();
-        assert_eq!(default.len(), 32);
+        assert_eq!(default.len(), 27);
         let excluded = [
             "user-setup",
             "project-setup",
             "custom-subagent-create",
-            "knowledge-transfer",
             "project-transition",
         ];
         for name in excluded {
@@ -3541,7 +3762,7 @@ description: Inspect one local file without changing it.
                 .map(|name| (*name).to_owned())
                 .collect::<Vec<_>>();
             let projection = compile_project_projection(host, &selected, &[]).unwrap();
-            assert_eq!(projection.active_skills.skills.len(), 4);
+            assert_eq!(projection.active_skills.skills.len(), 3);
             let empty = compile_project_projection(host, &[], &[]).unwrap();
             assert_eq!(empty.active_skills.skills.len(), 0);
             assert_eq!(empty.files.len(), 1);
@@ -3593,6 +3814,7 @@ description: Inspect one local file without changing it.
             ("0.15.0", 37),
             ("0.15.1", 37),
             ("0.15.2", 37),
+            ("0.15.3", 37),
         ];
         for (version, count) in expected_counts {
             let skills = historical_builtin_skills(version).expect("historical release");
@@ -3653,9 +3875,9 @@ description: Inspect one local file without changing it.
                     .as_slice(),
             ),
             (
-                "knowledge-scan",
-                KNOWLEDGE_SCAN,
-                include_bytes!("../../../harness/skills/knowledge-scan/SKILL.md").as_slice(),
+                "knowledge-manage",
+                KNOWLEDGE_MANAGE,
+                include_bytes!("../../../harness/skills/knowledge-manage/SKILL.md").as_slice(),
             ),
             (
                 "verified-workflow",
@@ -3675,24 +3897,14 @@ description: Inspect one local file without changing it.
     fn data_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "judge-evidence",
-                JUDGE_PACKAGE,
-                include_bytes!("../../../harness/skills/judge-evidence/SKILL.md").as_slice(),
+                "judge",
+                JUDGE,
+                include_bytes!("../../../harness/skills/judge/SKILL.md").as_slice(),
             ),
             (
-                "run-checkpoint",
-                RUN_CHECKPOINT,
-                include_bytes!("../../../harness/skills/run-checkpoint/SKILL.md").as_slice(),
-            ),
-            (
-                "run-resume",
-                RUN_RESUME,
-                include_bytes!("../../../harness/skills/run-resume/SKILL.md").as_slice(),
-            ),
-            (
-                "run-handoff",
-                ROLE_HANDOFF,
-                include_bytes!("../../../harness/skills/run-handoff/SKILL.md").as_slice(),
+                "run",
+                RUN,
+                include_bytes!("../../../harness/skills/run/SKILL.md").as_slice(),
             ),
             (
                 "product-update",
@@ -3897,7 +4109,7 @@ description: Inspect one local file without changing it.
 
     #[test]
     fn simple_question_gate_precedes_automatic_data_candidates() {
-        for skill in ["run-resume", "judge-evidence"] {
+        for skill in ["run", "judge"] {
             let mut request = routing_request();
             request.explicit_action = None;
             request.simple_question = true;
@@ -3915,11 +4127,11 @@ description: Inspect one local file without changing it.
     #[test]
     fn phase_four_data_contract_skills_precede_unrelated_external_workflows() {
         for (skill, action) in [
-            ("run-checkpoint", LogicalAction::RunWork),
-            ("run-resume", LogicalAction::ResumeWork),
-            ("run-handoff", LogicalAction::RunWork),
+            ("run", LogicalAction::RunWork),
+            ("run", LogicalAction::ResumeWork),
         ] {
             let mut request = routing_request();
+            request.explicit_action = Some(action);
             request.external_candidate = Some(ExternalCandidate {
                 name: "analyze".to_owned(),
                 provided_by: ExternalProvider::Omx,
@@ -3944,7 +4156,7 @@ description: Inspect one local file without changing it.
             (Host::Codex, ExternalProvider::Omx),
             (Host::Claude, ExternalProvider::Omc),
         ] {
-            for skill in ["knowledge-recall", "judge-evidence"] {
+            for skill in ["knowledge-recall", "judge"] {
                 let mut request = routing_request();
                 request.host = host;
                 request.external_candidate = Some(ExternalCandidate {

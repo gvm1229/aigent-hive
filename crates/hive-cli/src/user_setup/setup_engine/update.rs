@@ -25,6 +25,7 @@ pub(in crate::user_setup) fn run(arguments: &[String]) -> ExitCode {
             let mode = request
                 .resolve(io::stdin().is_terminal(), io::stderr().is_terminal())
                 .map_err(SetupError::Input)?;
+            crate::user_install::backup::before_update(&root).map_err(SetupError::Conflict)?;
             complete(&root, mode, &mut terminal)
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));

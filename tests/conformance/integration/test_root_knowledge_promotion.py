@@ -666,7 +666,7 @@ else:
     def test_copy_ready_skill_commands_execute_with_bound_user_root(self) -> None:
         promote_skill = (
             REPOSITORY_ROOT
-            / "harness/skills/knowledge-promote/SKILL.md"
+            / "harness/skills/knowledge-manage/references/promote.md"
         )
         replacements = {
             "<project-root>": str(self.project),

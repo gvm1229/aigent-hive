@@ -9,7 +9,7 @@ summary: "Fable 검토 요청의 관리자 원문 인용과 소유자 판단, �
 tags: [directives, review]
 aliases: []
 sources:
-  - "repo:.agents/directives/references/agent-delegation.md#sha256:698fc94a7f2304a6e19ab4d96c8ac0337f4e0856aa378cf6573b5657e1be76a9"
+  - "repo:.agents/directives/references/agent-delegation.md#sha256:a971c1ee73be099d60bd1f0463a9f057a005c271e033a5982cbffba9eddd7f47"
 links: [agent-directive-ownership]
 reviewed_revision: "git:23107415bcc1287ae88d92fdee2d303e732ef0a6"
 status: active

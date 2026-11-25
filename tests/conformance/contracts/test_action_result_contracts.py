@@ -20,6 +20,7 @@ LOOP_SOURCE = ROOT / "crates" / "hive-cli" / "src" / "loop_engineering.rs"
 
 EXPECTED_ACTIONS = {
     "Summon",
+    "Message",
     "Orchestration",
     "OrchestrationStatus",
     "OrchestrationPlan",
@@ -68,6 +69,9 @@ EXPECTED_ACTIONS = {
     "AnswerSimpleQuestion",
     "RefinePrompt",
     "VerifySkillProjection",
+    "ListHiveBackups",
+    "RestoreHiveBackup",
+    "ManageHiveBackups",
     "RunWork",
     "ResumeWork",
     "CheckRunClosure",

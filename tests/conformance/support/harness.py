@@ -32,10 +32,20 @@ BUILTIN_REFERENCE_PATHS = (
     "project-setup/references/structured-choices.md",
     "amend-directive/references/transplant.md",
     "knowledge-capture/references/ingest.md",
+    "knowledge-capture/references/scan.md",
+    "knowledge-manage/references/maintenance.md",
+    "knowledge-manage/references/promote.md",
+    "knowledge-manage/references/transfer.md",
     "knowledge-recall/references/confidential.md",
-    "run-checkpoint/references/policy-review.md",
+    "run/references/checkpoint.md",
+    "run/references/handoff.md",
+    "run/references/resume.md",
+    "run/references/policy-review.md",
+    "judge/references/adversarial.md",
+    "judge/references/evidence.md",
     "usage-guard/references/control.md",
     "usage-guard/references/sensors.md",
+    "team-execution/references/mediation.md",
 )
 FRESH_HOOK_CAPABILITIES_PATH = Path(
     ".hive/runtime/current-capability-resolution.json"

@@ -2789,6 +2789,86 @@ fn frozen_project_base_0_15_2(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+// Exact public stable v0.15.3 baseline.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_15_3_without_resources,
+    "0.15.3",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "adversarial-judge",
+        "aither",
+        "amend-directive",
+        "apollon",
+        "artemis",
+        "athena",
+        "code-polish",
+        "custom-subagent-create",
+        "demeter",
+        "eileithyia",
+        "hades",
+        "hephaistos",
+        "humanize-kor",
+        "judge-evidence",
+        "knowledge-capture",
+        "knowledge-maintain",
+        "knowledge-promote",
+        "knowledge-recall",
+        "knowledge-scan",
+        "knowledge-transfer",
+        "multi-goal",
+        "poseidon",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run-checkpoint",
+        "run-handoff",
+        "run-resume",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_15_3(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_15_3_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/amend-directive/references/transplant.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run-checkpoint", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/run-checkpoint/references/policy-review.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.15.3/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" { files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec()); }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
@@ -4045,12 +4125,7 @@ fn normalize_project_skill_policy(
 fn is_project_knowledge_skill(name: &str) -> bool {
     matches!(
         name,
-        "knowledge-capture"
-            | "knowledge-recall"
-            | "knowledge-promote"
-            | "knowledge-maintain"
-            | "knowledge-scan"
-            | "knowledge-transfer"
+        "knowledge-capture" | "knowledge-recall" | "knowledge-manage"
     )
 }
 
@@ -8286,7 +8361,7 @@ mod tests {
             wiki_language: "both".to_owned(),
             persona_id: "balanced".to_owned(),
             persona_custom_description: None,
-            selected_project_skills: vec!["knowledge-maintain".to_owned()],
+            selected_project_skills: vec!["knowledge-manage".to_owned()],
             usage_guard_enabled: true,
             codexbar_fallback_enabled: false,
             discord_guard_enabled: false,
@@ -8587,7 +8662,7 @@ mod tests {
             .expect("base answers")
             .replace(
                 "setup_mode: expedited\n",
-                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-promote\n",
+                "setup_mode: custom\ninterface_language: ko\nwiki:\n  enabled: true\n  language: both\npersona:\n  id: friendly\nskills:\n  mode: individual\n  selected:\n    - knowledge-manage\n",
             );
         fs::write(&answers_path, answers).expect("custom answers");
 
@@ -8621,9 +8696,9 @@ mod tests {
             .expect("effective preferences should be returned");
         assert_eq!(
             effective.selected_project_skills,
-            ["knowledge-capture", "knowledge-promote", "knowledge-recall",]
+            ["knowledge-capture", "knowledge-manage", "knowledge-recall",]
         );
-        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-promote"] {
+        for skill in ["knowledge-capture", "knowledge-recall", "knowledge-manage"] {
             assert!(target
                 .join(format!(".agents/skills/{skill}/SKILL.md"))
                 .is_file());
@@ -8631,7 +8706,7 @@ mod tests {
         let harness =
             fs::read_to_string(target.join(".hive/config/harness.toml")).expect("harness config");
         assert!(harness.contains(
-            "selected_project_skills = [\"knowledge-capture\", \"knowledge-promote\", \"knowledge-recall\"]"
+            "selected_project_skills = [\"knowledge-capture\", \"knowledge-manage\", \"knowledge-recall\"]"
         ));
         assert!(harness.contains("codexbar_fallback_enabled = false"));
     }
@@ -8697,8 +8772,7 @@ mod tests {
             "code-polish",
             "humanize-kor",
             "verified-workflow",
-            "knowledge-scan",
-            "knowledge-maintain",
+            "knowledge-manage",
             "knowledge-capture",
             "prompt-refine",
             "research-best-practices",
@@ -8706,14 +8780,10 @@ mod tests {
             "usage-guard",
             "ship",
             "amend-directive",
-            "run-handoff",
-            "run-resume",
-            "run-checkpoint",
-            "knowledge-promote",
+            "run",
             "product-update",
             "project-refresh",
-            "judge-evidence",
-            "adversarial-judge",
+            "judge",
             "team-execution",
             "multi-goal",
         ];
@@ -8729,8 +8799,18 @@ mod tests {
             "usage-guard/references/sensors.md",
             "knowledge-recall/references/confidential.md",
             "knowledge-capture/references/ingest.md",
-            "run-checkpoint/references/policy-review.md",
+            "knowledge-capture/references/scan.md",
+            "knowledge-manage/references/maintenance.md",
+            "knowledge-manage/references/promote.md",
+            "knowledge-manage/references/transfer.md",
+            "run/references/checkpoint.md",
+            "run/references/handoff.md",
+            "run/references/resume.md",
+            "run/references/policy-review.md",
+            "judge/references/adversarial.md",
+            "judge/references/evidence.md",
             "amend-directive/references/transplant.md",
+            "team-execution/references/mediation.md",
         ] {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
@@ -10821,7 +10901,7 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 38);
+        assert_eq!(deletions.len(), 43);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -11745,7 +11825,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 config["selected_project_skills"].as_array().unwrap().len(),
-                if wiki_enabled { 32 } else { 27 }
+                if wiki_enabled { 27 } else { 24 }
             );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));

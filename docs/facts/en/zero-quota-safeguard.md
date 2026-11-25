@@ -9,15 +9,15 @@ summary: "Legacy exhaustion protection is preserved by migration; new 0.14.0 v2 
 tags: [exhaustion, session, usage, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:crates/hive-cli/src/user_directives.rs#sha256:2bfa879fe9bc0d682e6562c3d323d2400daf80478140a3a1d1fc5aa7b09621ed"
-  - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
+  - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
   - "repo:crates/hive-core/src/usage_guard.rs#sha256:cf4b32123c89cfa9177d3e66ec7eecc8fcffa2fe85033f0d85ea333a5b3e8733"
   - "repo:docs/archive/facts/usage-guard-before-0.13.2.md#sha256:2932a83938b49c193b67e38ba1400c25d3890070dba480674284dc9e2dee07fa"
   - "repo:docs/archive/plans/usage-defaults-0.14.0.md#sha256:61da2591b7e2adbd852472c1ccbab817e695ca424f0ae35f80bc196a77ea8d99"
   - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"
   - "repo:docs/research/usage-compatibility-0.13.2.md#sha256:44f1fb5716b0af3ab556a6d03c38c10d3422a1dc0b2489b79be106f43a62e862"
-  - "repo:harness/skills/usage-guard/references/control.md#sha256:1940e4944e009c00e3de325a585597de9163392dede5920df0f08ccca0e89fbd"
+  - "repo:harness/skills/usage-guard/references/control.md#sha256:41d5e94d3a19590d65d4bd66cda74777509aa70a5debc128923f3806c7867edc"
   - "repo:tests/results/public-zero-0.12.0-test.2.json#sha256:f64d29840b056f157c60f0a5f6556c2e5b62990beb8c9c6bfb3285b4aafd7354"
   - "repo:tests/results/usage-compatibility-live-0.13.2.json#sha256:76abaa5e2595b9aeee3797fd612694112e9c8efbbcb43ccfaed49653907aeafc"
 links: [installed-usage-guard, quota-reset-session-control]

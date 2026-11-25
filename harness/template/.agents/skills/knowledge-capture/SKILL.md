@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: (knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work; never save secrets, raw conversations, or uncertain guesses.
+description: (knowledge-capture) At the end of a Wiki-enabled turn, keep the useful facts, preferences, or workflows that will help later work, or scan one explicitly selected repository or folder for reviewed knowledge; never save secrets, raw conversations, or uncertain guesses. Formerly knowledge-scan.
 ---
 
 # Capture Knowledge Claims (`knowledge-capture`)
@@ -111,6 +111,13 @@ not permission to read confidential knowledge.
 ## Explicit source ingest
 
 For an explicitly selected source or a source created by the authorized task, read [source ingest](references/ingest.md). Ordinary turn capture does not load that procedure.
+
+## Explicit repository scan
+
+When the user explicitly selects one repository or folder to scan, read
+[repository scan](references/scan.md) and run its three digest-bound phases. Ordinary turn
+capture does not load that procedure. The former name `knowledge-scan` selects this scan; when
+the user names it, say the new name `knowledge-capture` once, then continue.
 
 ## Safety
 

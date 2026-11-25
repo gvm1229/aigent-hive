@@ -9,7 +9,7 @@ summary: "Configured targets and opt-in app-preserving interruption remain separ
 tags: [guard, source, usage]
 aliases: ["Installed usage policy"]
 sources:
-  - "repo:crates/hive-cli/src/usage_control.rs#sha256:bebefffbf834ee4eefaeb371f1041e9a74a9eaba1aa51368461d5a425fedeb42"
+  - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:docs/guides/installed-usage-guard.md#sha256:b8bc06b557cc8582ecf988de4fce0c9c2aefd508d33adabcdb59668d078d988e"
 links: [automatic-dispatch-guard, source-development, usage-guard-thresholds]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"

@@ -26,6 +26,8 @@ pub(super) use removal::complete_helper;
 const PRESERVED: &[&str] = &[
     ".hive/knowledge",
     ".hive/history",
+    ".hive/backups",
+    "hive-backups",
     ".hive/config/user-setup.yml",
     ".hive/config/user-feature-answers.yml",
     ".hive/config/user-preferences.json",

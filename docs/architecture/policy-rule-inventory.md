@@ -70,7 +70,7 @@
 기존 실행의 호스트와 `STATUS.md` 세션 지문이 이벤트에 맞을 때만 `systemMessage` 반환.
 다른 세션·취소 상태·이미 검토된 후보는 알림 제외, 기록 변경·작업 재개 없음.
 Antigravity의 비재개 종료 안내는 미지원으로 거부하며 명시적 `policy-review list` 유지.
-출하 절차는 [run-checkpoint 참조](../../harness/skills/run-checkpoint/references/policy-review.md).
+출하 절차는 [run 참조](../../harness/skills/run/references/policy-review.md).
 
 관련 근거: [전체 적용 분석](../research/project-policy-enforcement-2026-09-18.md),
 [호스트 훅 계획](../archive/plans/host-policy-hooks-0.11.0.md),

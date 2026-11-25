@@ -337,11 +337,25 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
             json!(["selected_project_skills", "project_skill_policy_version"])
         );
         assert_eq!(
-            result["data"]["skill_merges"][0],
-            json!({
-                "sources": ["iterative-execution", "ralph-loop"],
-                "target": "verified-workflow"
-            })
+            result["data"]["skill_merges"],
+            json!([
+                {
+                    "sources": ["knowledge-capture", "knowledge-import"],
+                    "target": "knowledge-capture"
+                },
+                {
+                    "sources": ["knowledge-maintain", "knowledge-promote"],
+                    "target": "knowledge-manage"
+                },
+                {
+                    "sources": ["run-checkpoint", "run-handoff", "run-resume"],
+                    "target": "run"
+                },
+                {
+                    "sources": ["iterative-execution", "ralph-loop"],
+                    "target": "verified-workflow"
+                }
+            ])
         );
     }
     for mode in ["--apply", "--validate"] {
@@ -364,6 +378,20 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
     assert!(!current.contains("\"ralph-loop\""));
     assert!(!target.join(".agents/skills/iterative-execution").exists());
     assert!(!target.join(".agents/skills/ralph-loop").exists());
+    for (retired, current_name) in [
+        ("knowledge-maintain", "knowledge-manage"),
+        ("knowledge-promote", "knowledge-manage"),
+        ("run-checkpoint", "run"),
+        ("run-handoff", "run"),
+        ("run-resume", "run"),
+    ] {
+        assert!(!current.contains(&format!("\"{retired}\"")));
+        assert!(current.contains(&format!("\"{current_name}\"")));
+        assert!(!target.join(format!(".agents/skills/{retired}")).exists());
+        assert!(target
+            .join(format!(".agents/skills/{current_name}/SKILL.md"))
+            .is_file());
+    }
 }
 
 #[test]
@@ -427,7 +455,9 @@ fn compiled_cli_converges_after_one_apply_with_a_conflicting_092_projection() {
 
 #[test]
 fn refresh_previews_detection_and_rolls_back_before_confirmed_migration() {
-    for version in ["0.14.0", "0.14.1", "0.14.2", "0.15.0", "0.15.1", "0.15.2"] {
+    for version in [
+        "0.14.0", "0.14.1", "0.14.2", "0.15.0", "0.15.1", "0.15.2", "0.15.3",
+    ] {
         let temporary = secure_tempdir();
         let target = temporary.path().join("consumer");
         fs::create_dir(&target).unwrap();
@@ -484,5 +514,76 @@ fn refresh_previews_detection_and_rolls_back_before_confirmed_migration() {
             fs::read_to_string(target.join("package.json")).unwrap(),
             r#"{"dependencies":{"next":"16"},"packageManager":"pnpm@10"}"#
         );
+    }
+}
+
+/// OV160-005: an old `max_panes` value moves to `max_workers` only through the previewed and
+/// applied project upgrade; the same value drops the old key; a conflict changes nothing.
+#[test]
+fn compiled_cli_migrates_max_panes_to_max_workers_and_refuses_a_conflict() {
+    let upgrade = |target: &Path, mode: &str| {
+        run_hive(&[
+            "project",
+            "upgrade",
+            "--target",
+            target.to_str().expect("target UTF-8"),
+            mode,
+            "--output",
+            "json",
+        ])
+    };
+    for (suffix, expected) in [
+        ("max_panes = 3\n", Some("max_workers = 3\n")),
+        (
+            "max_workers = 2\nmax_panes = 2\nmax_worker_seconds = 600\n",
+            Some("max_workers = 2\nmax_worker_seconds = 600\n"),
+        ),
+        ("max_workers = 2\nmax_panes = 5\n", None),
+    ] {
+        let temporary = secure_tempdir();
+        let target = temporary.path().join("consumer");
+        fs::create_dir_all(&target).expect("consumer directory");
+        seed_historical_project(&target, "0.15.3");
+        let harness = target.join(".hive/config/harness.toml");
+        let mut bytes = fs::read_to_string(&harness).expect("historical harness");
+        bytes.push_str(suffix);
+        fs::write(&harness, &bytes).expect("old worker limit key");
+        let Some(expected) = expected else {
+            for mode in ["--dry-run", "--apply"] {
+                let output = upgrade(&target, mode);
+                assert!(!output.status.success(), "conflict must refuse {mode}");
+                let result: Value = serde_json::from_slice(&output.stdout).expect("JSON result");
+                assert!(
+                    result["message"]
+                        .as_str()
+                        .unwrap_or("")
+                        .contains("conflicts"),
+                    "{result}"
+                );
+                assert_eq!(fs::read_to_string(&harness).expect("unchanged"), bytes);
+            }
+            continue;
+        };
+        let preview = upgrade(&target, "--dry-run");
+        require_success(&preview, "--dry-run");
+        let result: Value = serde_json::from_slice(&preview.stdout).expect("JSON result");
+        let reasons = result["data"]["change_reasons"].to_string();
+        assert!(
+            reasons.contains(
+                "\"path\":\".hive/config/harness.toml\",\"reason\":\"worker-limit-migration\""
+            ),
+            "{reasons}"
+        );
+        assert_eq!(fs::read_to_string(&harness).expect("preview only"), bytes);
+        for mode in ["--apply", "--validate"] {
+            require_success(&upgrade(&target, mode), mode);
+        }
+        let after = fs::read_to_string(&harness).expect("migrated harness");
+        assert!(after.ends_with(expected), "{after}");
+        assert!(!after.contains("max_panes"), "{after}");
+        assert!(after.contains(&format!(
+            "harness_version = \"{}\"",
+            env!("CARGO_PKG_VERSION")
+        )));
     }
 }

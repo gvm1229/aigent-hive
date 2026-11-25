@@ -183,9 +183,10 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertIsNone(repeated["data"]["notice"])
         config["usage_guard"]["preflight"]["observation_failure"] = "block"
         write_yaml(path, config)
+        # OV160-013 U1: the strict choice applies to invalid data, not to a missing measurement.
         process, strict = self.invoke(*args, "--session-id", "strict", "--quiet")
-        self.assertEqual(process.returncode, 3, strict)
-        self.assertIn("error:", process.stderr)
+        self.assertEqual(process.returncode, 0, strict)
+        self.assertEqual(strict["code"], "hive.usage-observation-warning")
 
     def test_v2_master_off_skips_sensors_and_preserves_legacy_runtime(self) -> None:
         config_path = self.setup_user_root / ".hive/config/user-setup.yml"
@@ -1862,8 +1863,10 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             sensor_case="allow",
             extra_environment={"FAKE_CODEXBAR_LOG": str(sensor_log)},
         )
-        self.assertEqual(process.returncode, 3, process.stderr)
-        self.assertEqual(result["code"], "hive.usage-unknown")
+        # OV160-013 U1: no qualified Claude measurement warns; it never authorizes a fake value.
+        self.assertEqual(process.returncode, 0, result)
+        self.assertEqual(result["code"], "hive.usage-observation-warning")
+        self.assertEqual(result["data"]["observation_available"], False)
         self.assertEqual(result["data"]["host_scope"], "claude")
         expected = "sha256:" + hashlib.sha256(
             b"claude\0same-session"
@@ -1901,8 +1904,8 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             extra_environment={"PATH": str(empty_path)},
         )
 
-        self.assertEqual(process.returncode, 3, process.stderr)
-        self.assertEqual(result["code"], "hive.usage-unknown")
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(result["code"], "hive.usage-observation-warning")
         self.assertIn(
             "hive usage fallback-install --host claude --dry-run --output json",
             result["next_action"],

@@ -9,10 +9,10 @@ summary: "사용자용 명령의 쉬운 기본 안내와 명시적 기계 프로
 tags: [cli, compatibility, output]
 aliases: ["human-readable CLI"]
 sources:
-  - "repo:.agents/directives/02-architecture.md#sha256:6f4b5504814c95be4ef7c7035bd090db945804356dafdaf19944af77eb9c3d3b"
-  - "repo:crates/hive-cli/src/human_output.rs#sha256:be0b28414d2c76fc95317bf106576630ccadd5c3f49bafd8cecbe4248b24114a"
-  - "repo:crates/hive-cli/src/main.rs#sha256:7fc5b1b31339f6a712d50877bc29722fdedf9fa402ae269d1b52f034d1ffa7e0"
-  - "repo:crates/hive-cli/tests/human_output.rs#sha256:8486343385d3a9edf6bb88fc89278437065cccb1c6658a45c0e8030f95818fbc"
+  - "repo:.agents/directives/02-architecture.md#sha256:dc4840049ccdb1e5784d256f79201f92943d16a5be99e9593674a2d0520b3e8c"
+  - "repo:crates/hive-cli/src/human_output.rs#sha256:bf38581607b1cf16698c8b1a13ef6028dd42e5c963187299e3e452ce6ce77bc9"
+  - "repo:crates/hive-cli/src/main.rs#sha256:9ba3432d1374deb45c60bdd6a6b7b0ad52cf2f98d3274c55c5ee24c8d86c09e1"
+  - "repo:crates/hive-cli/tests/human_output.rs#sha256:ed87bc2cfbf8ccfac0a3e4a8aeb779903dfdca2f0728f7647244e6bec650f65b"
 links: [inert-summon-contract, usage-threshold-provenance]
 reviewed_revision: "git:43dad991f214a9afdc50524cf2b7f32c22ae46a1"
 status: active

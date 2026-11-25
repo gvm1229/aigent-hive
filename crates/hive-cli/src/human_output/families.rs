@@ -45,6 +45,7 @@ fn family_details(
             out.push_str(&choose(language, "\n찾은 항목: 0개", "\nItems found: 0"));
         }
         "roster" if data.get("roster").is_some() => roster_details(data, language, &mut out),
+        "Message" => message_details(data, ko, &mut out),
         _ if data["questions"]
             .as_array()
             .is_some_and(|items| items.iter().any(|item| item.get("question").is_some())) =>
@@ -106,6 +107,11 @@ fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut S
     };
     let text = |key: &str| settings[key].as_str().unwrap_or("-").to_owned();
     let skills = settings["selected_project_skills"].as_array().map_or(0, Vec::len);
+    let counts_used = crate::usage_control::native_usage_direction(
+        settings["primary_host"].as_str().unwrap_or(""),
+    ) == "used";
+    let floor = settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0);
+    let stop_at = if counts_used { 100_u64.saturating_sub(floor) } else { floor };
     let rows = [
         (label_for(ko, "설정 출처", "Settings source"), source.to_owned()),
         (label_for(ko, "화면 언어", "Interface language"), text("interface_language")),
@@ -119,8 +125,12 @@ fn effective_settings(settings: &Value, language: InterfaceLanguage, out: &mut S
             format!(
                 "{} ({} {}%)",
                 on_off(&settings["usage_guard_enabled"]),
-                label_for(ko, "남은 사용량 기준", "stop below"),
-                settings["usage_stop_remaining_percent"].as_u64().unwrap_or(0)
+                if counts_used {
+                    label_for(ko, "사용한 양 기준", "stop at used")
+                } else {
+                    label_for(ko, "남은 사용량 기준", "stop below")
+                },
+                stop_at
             ),
         ),
         (label_for(ko, "선택한 Skill", "Selected Skills"), skills.to_string()),
@@ -160,6 +170,167 @@ fn nothing_found(data: &Value) -> bool {
         },
         |count| count == 0,
     )
+}
+
+/// Messages and results are other sessions' output: always labelled as data, never as steps.
+fn message_details(data: &Value, ko: bool, out: &mut String) {
+    let list = data["messages"].as_array();
+    let messages: Vec<&Value> = list.map_or_else(
+        || std::iter::once(&data["message"]).filter(|m| m.is_object()).collect(),
+        |items| items.iter().collect(),
+    );
+    if list.is_some() {
+        let count = messages.len();
+        out.push_str(&label_for(ko, &format!("\n메시지: {count}개"), &format!("\nMessages: {count}")));
+    }
+    for message in messages {
+        message_line(message, ko, out);
+    }
+    if let Some(summons) = data["summons"].as_array().filter(|items| !items.is_empty()) {
+        let count = summons.len();
+        out.push_str(&label_for(
+            ko,
+            &format!("\n준비된 소환 봉투: {count}개, 자동 실행 없음"),
+            &format!("\nPrepared summon envelopes: {count}; nothing runs automatically"),
+        ));
+        for summon in summons {
+            let _ = write!(out, "\n- {} · {}", summon["id"].as_str().unwrap_or("-"),
+                summon["state"].as_str().unwrap_or("-"));
+        }
+    }
+    flow_details(data, ko, out);
+    stop_details(data, ko, out);
+    if let Some(summon) = data.get("summon").filter(|summon| summon.is_object()) {
+        let receipts = summon["receipts"].as_array().map_or(0, Vec::len);
+        let _ = write!(out, "\n- {} · {} · {}", summon["id"].as_str().unwrap_or("-"),
+            summon["state"].as_str().unwrap_or("-"),
+            label_for(ko, &format!("확인증 {receipts}개"), &format!("receipts: {receipts}")));
+    }
+    crate::msg::decide::human_details(data, ko, out);
+}
+
+/// Stop results: claimed work is never interrupted; unsupported host cancel is said plainly.
+fn stop_details(data: &Value, ko: bool, out: &mut String) {
+    let stops: Vec<&Value> = data.get("stop").filter(|stop| stop.is_object()).map_or_else(
+        || data["active"].as_array().map_or_else(Vec::new, |items| items.iter().collect()),
+        |stop| vec![stop],
+    );
+    for stop in stops {
+        let _ = write!(
+            out,
+            "\n{} {} · {}",
+            label_for(ko, "중지", "Stop"),
+            stop["record"]["stop_id"].as_str().unwrap_or("-"),
+            label_for(ko, "새 메시지 거부, 강제 취소 없음", "new messages refused, no forced cancel"),
+        );
+        for entry in stop["in_progress"].as_array().into_iter().flatten() {
+            let support = entry["host_cancel"].as_str().unwrap_or("-");
+            let support_text = match (support, ko) {
+                ("unsupported", true) => "공식 취소 미지원",
+                ("unverified", true) => "공식 취소 미검증, 호스트 확인증 필요",
+                ("unsupported", false) => "official cancel unsupported",
+                ("unverified", false) => "official cancel unverified; host receipt needed",
+                _ => support,
+            };
+            let _ = write!(
+                out,
+                "\n- {} · {} · {}",
+                entry["message_id"].as_str().unwrap_or("-"),
+                label_for(ko, "취소 요청", "cancel requested"),
+                support_text,
+            );
+        }
+    }
+}
+
+/// Flow status lines come from Hive records (`display` is built from the recorded profile and
+/// the derived message state), never from a host or worker screen.
+fn flow_details(data: &Value, ko: bool, out: &mut String) {
+    let key = if ko { "ko" } else { "en" };
+    if let Some(flow) = data.get("flow").filter(|flow| flow.is_object()) {
+        let _ = write!(
+            out,
+            "\n{} {} · {}",
+            label_for(ko, "흐름", "Flow"),
+            flow["flow_id"].as_str().unwrap_or("-"),
+            flow["state_label"][key].as_str().unwrap_or("-"),
+        );
+        for step in flow["steps"].as_array().into_iter().flatten() {
+            let _ = write!(out, "\n- {}", step["display"][key].as_str().unwrap_or("-"));
+        }
+    }
+    if let Some(flows) = data["flows"].as_array().filter(|items| !items.is_empty()) {
+        let count = flows.len();
+        out.push_str(&label_for(
+            ko,
+            &format!("\n진행 중인 흐름: {count}개"),
+            &format!("\nFlows in progress: {count}"),
+        ));
+        for flow in flows {
+            let line = flow["current_step"]["display"][key]
+                .as_str()
+                .or(flow["state"].as_str())
+                .unwrap_or("-");
+            let _ = write!(out, "\n- {} · {line}", flow["flow_id"].as_str().unwrap_or("-"));
+        }
+    }
+    if let Some(error) = data.get("flow_error").filter(|error| error.is_object()) {
+        let _ = write!(
+            out,
+            "\n{}: {}",
+            label_for(ko, "흐름을 진행하지 못함", "Flow not advanced"),
+            error["message"].as_str().unwrap_or("-"),
+        );
+    }
+}
+
+fn message_line(message: &Value, ko: bool, out: &mut String) {
+    let state = message["state"].as_str().unwrap_or("-");
+    let state_ko = match state {
+        "queued" => "대기",
+        "claimed" => "소비 중",
+        "acknowledged" => "확인증 있음",
+        "dispatch-uncertain" => "실행 불명, 자동 재호출 없음",
+        "expired" => "만료",
+        "quarantined" => "격리, 전달 안 함",
+        "cancel-requested" => "취소 요청, Hive가 끊지 않음",
+        "cancelled" => "호스트 공식 취소로 종료",
+        _ => state,
+    };
+    let sender = &message["sender"];
+    let _ = write!(
+        out,
+        "\n- {} #{} · {} · {} → {}",
+        message["id"].as_str().unwrap_or("-"),
+        message["sequence"].as_u64().unwrap_or(0),
+        if ko { state_ko } else { state },
+        sender["god"].as_str().or(sender["role"].as_str()).unwrap_or("-"),
+        message["recipient_role"].as_str().unwrap_or("-"),
+    );
+    if let (Some(provider), Some(model)) = (sender["provider"].as_str(), sender["model"].as_str()) {
+        let _ = write!(out, " ({provider} {model} · {})", sender["effort"].as_str().unwrap_or("-"));
+    }
+    if let Some(reason) = message["reason"].as_str() {
+        let _ = write!(out, "\n  {}: {reason}", label_for(ko, "격리 이유", "Quarantine reason"));
+    }
+    for (view, heading_ko, heading_en) in [
+        (&message["body"], "본문", "Body"),
+        (&message["result"]["data"], "결과", "Result"),
+    ] {
+        let Some(text) = view["text"].as_str() else {
+            continue;
+        };
+        let label = label_for(ko, crate::msg::DATA_LABEL_KO, crate::msg::DATA_LABEL_EN);
+        let _ = write!(out, "\n  {} {label}", label_for(ko, heading_ko, heading_en));
+        for line in text.lines() {
+            // Terminal control sequences from another session never reach the screen.
+            let line: String = line
+                .chars()
+                .map(|c| if c.is_control() && c != '\t' { '\u{fffd}' } else { c })
+                .collect();
+            let _ = write!(out, "\n  | {line}");
+        }
+    }
 }
 
 fn roster_details(data: &Value, language: InterfaceLanguage, out: &mut String) {
@@ -303,4 +474,27 @@ fn report_item(item: &str, ko: bool) -> String {
         _ => return item.to_owned(),
     };
     plain.to_owned()
+}
+
+#[cfg(test)]
+mod settings_direction_tests {
+    use super::{effective_settings, InterfaceLanguage};
+    use serde_json::json;
+
+    #[test]
+    fn settings_summary_follows_each_host_screen() {
+        for (host, expected) in [
+            ("claude", "사용한 양 기준 96%"),
+            ("codex", "남은 사용량 기준 4%"),
+            ("antigravity", "남은 사용량 기준 4%"),
+        ] {
+            let mut out = String::new();
+            effective_settings(
+                &json!({"primary_host":host,"usage_stop_remaining_percent":4}),
+                InterfaceLanguage::Ko,
+                &mut out,
+            );
+            assert!(out.contains(expected), "{host}: {out}");
+        }
+    }
 }

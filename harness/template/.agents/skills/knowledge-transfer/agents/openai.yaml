@@ -1,6 +1,0 @@
-interface:
-  display_name: "Transfer Hive knowledge"
-  short_description: "(knowledge-transfer) Move Hive knowledge between computers."
-  default_prompt: "Use $aigent-hive:knowledge-transfer to move my existing Hive knowledge to another computer."
-policy:
-  allow_implicit_invocation: true

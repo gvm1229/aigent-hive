@@ -19,7 +19,8 @@ This directive governs filesystem mutation, setup, update, releases, and externa
 - Preserve non-Hive bytes in shared files; only mutate an exact Hive marker block.
 - Never read, write, delete, or migrate `.omx/`, `.omc/`, foreign runtime state, or host-global configuration as part of Hive setup/update.
 - Project-local host configuration remains foreign-owned by default. The only exception is an exact Hive-namespaced data-integrity hook projection when the host-native hook surface is supported, no explicit external compatibility owner is active, the user has approved the displayed events/capabilities/paths/digest, and the ownership manifest authorizes a non-clobbering structured merge.
-- If external orchestration later becomes available, Hive-owned fallback hooks must remain inert until a consented reconfigure removes only Hive-owned entries; foreign entries and bytes stay untouched.
+- If external orchestration appears, Hive fallback hooks stay inert until a consented reconfigure removes only Hive-owned entries.
 
-For installation/update, file or knowledge removal, recursive moves/deletion, history erasure,
-release deletion or key rotation, read [update/removal safety](references/update-and-removal.md) first.
+Back up before deleting, overwriting or reinstalling user/project data: verified copy in dated
+`~/hive-backups/`, never inside `~/.hive` (reinstall/uninstall deletes it); report the path. For install/update, removal, recursive moves, history erasure, release
+deletion or key rotation read [update/removal safety](references/update-and-removal.md).

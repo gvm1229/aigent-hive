@@ -2,6 +2,8 @@
 
 import hashlib
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -30,9 +32,10 @@ class PlanStateTests(unittest.TestCase):
     def fragment(self, items, *, version="0.11.0", scope="product"):
         return self.write("docs/plans/active/one.md", f"> Plan version: {version}\n> Scope: {scope}\n\n{items}")
 
-    def evidence(self, text="Reviewed evidence\n"):
-        p = self.write("docs/research/evidence.md", text)
-        return "repo:docs/research/evidence.md#sha256:" + hashlib.sha256(p.read_bytes()).hexdigest()
+    def evidence(self, text="Reviewed evidence\n", name="evidence.md"):
+        relative = "docs/research/" + name
+        p = self.write(relative, text)
+        return "repo:" + relative + "#sha256:" + hashlib.sha256(p.read_bytes()).hexdigest()
 
     def test_ignores_unregistered_historical_and_backlog_items(self):
         self.write("docs/plans/active/history.md", "- [x] [OLD-001] historical\n")
@@ -101,6 +104,49 @@ class PlanStateTests(unittest.TestCase):
         with self.assertRaises(policy.PlanError): policy.load_plan(self.root)
         self.fragment("- [ ] [A-001] host acceptance\n  - state: awaiting-external-evidence; owner: host; reason: trust not approved\n")
         self.assertEqual(policy.load_plan(self.root).criteria["A-001"].owner, "host")
+
+    def test_reopened_requires_prior_evidence_reason_link_and_unchecked_box(self):
+        old = self.evidence()
+        reason = "failed local check ([record](../../research/evidence.md))"
+        for checkbox, metadata in (
+            ("x", f"state: reopened; reopened-evidence: {old}; reason: {reason}"),
+            (" ", f"state: reopened; reason: {reason}"),
+            (" ", f"state: reopened; reopened-evidence: {old}; reason: failed local check"),
+        ):
+            self.fragment(f"- [{checkbox}] [A-001] reopened\n  - {metadata}\n")
+            with self.assertRaises(policy.PlanError):
+                policy.load_plan(self.root)
+        self.fragment(f"- [ ] [A-001] reopened\n  - state: reopened; reopened-evidence: {old}; reason: {reason}\n")
+        self.assertEqual(policy.load_plan(self.root).criteria["A-001"].state, "reopened")
+
+    def test_reopened_dependencies_warn_and_release_fails(self):
+        old = self.evidence()
+        reason = "failed ([record](../../research/evidence.md))"
+        self.fragment(
+            f"- [ ] [A-001] reopened\n  - state: reopened; reopened-evidence: {old}; reason: {reason}\n"
+            "- [x] [A-002] old dependent\n  - state: complete; depends: A-001; evidence: "
+            f"{self.evidence('new evidence', 'new-evidence.md')}\n"
+        )
+        plan = policy.load_plan(self.root)
+        self.assertEqual(plan.warnings, ["A-002 depends on reopened criterion A-001"])
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().parents[3] / "scripts/check-plan-state.py"),
+             "--root", str(self.root), "--release"], capture_output=True, text=True, check=False
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("release blocked", result.stdout)
+
+    def test_complete_requires_new_evidence_after_reopening(self):
+        old = self.evidence()
+        self.fragment(f"- [x] [A-001] done\n  - state: complete; evidence: {old}; reopened-evidence: {old}\n")
+        with self.assertRaisesRegex(policy.PlanError, "new evidence"):
+            policy.load_plan(self.root)
+
+    def test_fragment_limit_is_larger_than_root_limit(self):
+        self.fragment("- [ ] [A-001] first\n  - state: agent-owned\n" + ("\n" + "x" * 100) * 100)
+        self.assertLess((self.root / "docs/plans/active/one.md").stat().st_size, policy.MAX_FRAGMENT_BYTES)
+        self.assertGreater((self.root / "docs/plans/active/one.md").stat().st_size, policy.MAX_PLAN_BYTES)
+        self.assertEqual(set(policy.load_plan(self.root).criteria), {"A-001"})
 
     def test_dependency_cycles_missing_nodes_and_unmet_completion(self):
         for items in (

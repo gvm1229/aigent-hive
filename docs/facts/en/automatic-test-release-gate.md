@@ -10,8 +10,8 @@ tags: [automation, product, release]
 aliases: ["numbered public test gate"]
 sources:
   - "repo:.agents/directives/references/ci-and-candidates.md#sha256:b1b2a41cfcad009d6561bcc57e94bdd4ebcaee771931ed3369d85a6935dcd52c"
-  - "repo:.github/workflows/release.yml#sha256:fe8bb871aaa0710a655f41521b7fe7960c63ff5c660795a2ee09aed29cb92631"
-  - "repo:docs/public-test-product.json#sha256:ca8402c7cb20412ee3a9a96d951849acf7552c8b992b5e57d8252e780ed7dcbd"
+  - "repo:.github/workflows/release.yml#sha256:6fa640b5ce08594bdcbccd28530846ff7a34f7dfd6f918f4b62a860555ed7567"
+  - "repo:docs/public-test-product.json#sha256:cfd7fc3e8e8e13af996c104384d890704a857972e0837bb74656f2f1acef4648"
   - "repo:scripts/check-test-release-gate.py#sha256:75a37fd28d2aaf302c7079088b54c4cedb4060bd4497f4aa9219198ff024ce95"
 links: [source-development, v0-9-full-release]
 reviewed_revision: "git:140913559ab6a428546e25fba7c7efbb775e5eef"

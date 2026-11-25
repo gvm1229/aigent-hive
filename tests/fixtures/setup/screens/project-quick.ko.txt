@@ -51,15 +51,13 @@
   잔여량 기준    : 20
 
 기능
-  기능 묶음 : 개별 선택 32개
-              adversarial-judge, aither, amend-directive, apollon, artemis,
-              athena, code-polish, demeter, eileithyia, hades, hephaistos,
-              humanize-kor, judge-evidence, knowledge-capture,
-              knowledge-maintain, knowledge-promote, knowledge-recall,
-              knowledge-scan, multi-goal, poseidon, product-update,
-              project-refresh, prompt-refine, quick-answer,
-              research-best-practices, run-checkpoint, run-handoff, run-resume,
-              ship, team-execution, usage-guard, verified-workflow
+  기능 묶음 : 개별 선택 27개
+              aither, amend-directive, apollon, artemis, athena, code-polish,
+              demeter, eileithyia, hades, hephaistos, humanize-kor, judge,
+              knowledge-capture, knowledge-manage, knowledge-recall, multi-goal,
+              poseidon, product-update, project-refresh, prompt-refine,
+              quick-answer, research-best-practices, run, ship, team-execution,
+              usage-guard, verified-workflow
   역할      : 없음
   선택 기능 : 없음
   후크      : 없음

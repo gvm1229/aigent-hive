@@ -92,6 +92,10 @@ Knowledge, upgrade, and concurrent-edit procedures belong to the numbered siblin
 - Missing or unverified capability returns truthful unsupported or `dispatch-uncertain` without a
   provider call, process launch, automatic backend switch, watcher, or fallback hook.
 - Activate an optional Skill or hook only after exact scope and digest approval.
+- When the user's Hive install selects two or more hosts, give every new or changed project Skill
+  a same-body `SKILL.md` copy in each selected host folder (`.agents/skills/<name>/`,
+  `.claude/skills/<name>/`) and update all copies in the same task. The Antigravity project Skill
+  path is unverified: report instead of creating it. A one-host install keeps one copy.
 
 ## Project entry details
 

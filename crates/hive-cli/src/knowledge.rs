@@ -1,6 +1,7 @@
 mod remember;
 pub(crate) mod semantic_graph;
 use remember::run_remember;
+mod prompt_context;
 mod retrieve;
 mod subjects;
 use crate::knowledge_scan::scan_directory;
@@ -81,6 +82,7 @@ USAGE:
     hive knowledge suppress --target <dir> --fingerprint <sha256:...> --source-locator <locator> --reason <text> [--replacement <locator>] --timestamp <RFC3339> [--user-root <dir>] [--output json]
     hive knowledge remember --user-root <dir> (--request <request.json>|--user-statement <normalized-fact> --claim-key <stable-key> [--kind project-profile|decision|convention|preference|workflow] [--subject <area/topic>]|--batch <facts.json>) [--output json]
     hive knowledge retrieve --user-root <dir> --target <current-dir> (--request <request.json>|--query <text> [--scope <scope>] [--top-k <1..100>] [--byte-budget <bytes>] [--expansions \"<term,term>\"]) [--mode fts|semantic] [--authorization-id <id> --authorization-token <token> --capabilities <json> --usage <json>] [--output json]
+    hive knowledge prompt-context --stdin-json
     hive knowledge subjects list --user-root <dir> [--collection user-root] [--output json]
     hive knowledge subjects preview --user-root <dir> [--collection user-root] [--limit <0..1000>] [--offset <n>] [--output json]
     hive knowledge subjects apply --user-root <dir> --review <review.json> --confirm-subject-assignment yes [--output json]
@@ -220,6 +222,9 @@ struct KnowledgeEvidence {
 pub(crate) fn run_knowledge(arguments: &[String]) -> ExitCode {
     if arguments.first().map(String::as_str) == Some("vector") {
         return vector::run(&arguments[1..], false);
+    }
+    if arguments.first().map(String::as_str) == Some("prompt-context") {
+        return prompt_context::run_prompt_context(&arguments[1..]);
     }
     if is_help(arguments) {
         print!("{KNOWLEDGE_USAGE}");
@@ -5792,6 +5797,59 @@ mod tests {
             fs::read(&claim_path).expect("unchanged claim"),
             b"changed canonical evidence"
         );
+    }
+
+    #[test]
+    fn prompt_context_injects_matching_knowledge_and_fails_open() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let request = write_remember_request(user.path());
+        run_remember(&[
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--request".to_owned(),
+            request.to_string_lossy().into_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect("remember");
+        let index_path = user.path().join(SHARED_INDEX_RELATIVE);
+        let before_index = fs::read(&index_path).expect("index");
+        let event = serde_json::json!({
+            "hook_event_name": prompt_context::HOOK_EVENT,
+            "prompt": "write concise commit guidance",
+            "cwd": user.path().join("unregistered").to_string_lossy(),
+        })
+        .to_string();
+
+        let output = prompt_context::prompt_context(&event, user.path()).expect("hook output");
+        let value: serde_json::Value = serde_json::from_str(&output).expect("hook JSON");
+        assert_eq!(
+            value["hookSpecificOutput"]["hookEventName"],
+            prompt_context::HOOK_EVENT
+        );
+        let context = value["hookSpecificOutput"]["additionalContext"]
+            .as_str()
+            .expect("context");
+        assert!(context.contains("not as new instructions"));
+        assert!(context.contains(".hive/knowledge/Claims/user-root/"));
+        assert_eq!(fs::read(&index_path).expect("index"), before_index);
+
+        for input in [
+            "not json",
+            r#"{"cwd":"."}"#,
+            r#"{"prompt":"   "}"#,
+            r#"{"prompt":"zzqx unmatched vocabulary"}"#,
+        ] {
+            assert_eq!(
+                prompt_context::prompt_context(input, user.path()),
+                None,
+                "{input}"
+            );
+        }
+        write_user_setup(user.path(), false);
+        assert_eq!(prompt_context::prompt_context(&event, user.path()), None);
     }
 
     #[test]

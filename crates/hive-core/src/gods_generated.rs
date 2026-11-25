@@ -70,7 +70,7 @@ pub const GODS: &[God] = &[
         description_en: "(poseidon) Assigns roles across several tasks and records handoffs between them. Use only when the user names poseidon, 포세이돈.",
         description_ko: "(poseidon) 여러 작업의 역할을 배정하고 작업 간 인계를 기록. 사용자가 poseidon, 포세이돈 중 하나를 부를 때만 사용.",
         aliases: &[],
-        commands: &["orchestration", "session", "hook", "policy", "summon"],
+        commands: &["orchestration", "session", "hook", "policy", "summon", "msg", "stop"],
     },
     God {
         name: "demeter",

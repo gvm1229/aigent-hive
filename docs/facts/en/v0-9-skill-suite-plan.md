@@ -15,7 +15,7 @@ sources:
   - "repo:docs/archive/plans/releases/0.9.0/v0.9.0-loop-wiki-skills.md#sha256:22df31e4312c84eeb17fdbe490a39223034b6a67e46f573148ea6132aea1e8e0"
   - "repo:docs/decisions/ADR-0015-host-native-skill-composition.md#sha256:c122052f10778e4c0e3c56c9511c2fdb6fc48528ba3d0dba599f91d3be77a5b5"
   - "repo:docs/decisions/ADR-0016-global-knowledge-rag.md#sha256:fcbeb8013ecc51ea78bb0087d0172372840585b7878f3f72c3fdf0b74b805080"
-  - "repo:docs/research/v0.9-omx-omc-capability-inventory.md#sha256:cde76e53aa9e9921e26b2c15f4dc975d75e55075fad2c482f23d080abe6005c8"
+  - "repo:docs/research/v0.9-omx-omc-capability-inventory.md#sha256:3ca2179c9d8d18d5c3bce911f2933695e00515f052858a1387fca13ebd2dff1a"
 links: [docs-wiki-architecture, global-knowledge-rag, judge-verification, knowledge-portability-scan, orchestration-ownership, skill-routing]
 reviewed_revision: "git:4e750ce659c953d7d71ab6e9536c29968ab1f028"
 status: active

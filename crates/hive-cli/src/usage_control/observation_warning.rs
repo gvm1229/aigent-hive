@@ -1,8 +1,10 @@
-//! A failed observation is not a block when the user selected the v2 warning policy.
+//! A failed observation is not a block when the user selected the v2 warning policy, and a
+//! missing measurement is never a block (OV160-013 U1, maintainer decision 2026-11-21).
 use super::{
-    effective_policy_digest, portable_relative_path, ActionResult, AdapterError, EnforcementTrace,
-    Evidence, HaltMarker, InstalledUsageConfig, LoadedControl, LoadedHalt, OverrideState,
-    PinnedTarget, SessionBinding, TurnObservation,
+    capture_failure::CaptureFailure, effective_policy_digest, missing_window_labels,
+    portable_relative_path, ActionResult, AdapterError, EnforcementTrace, Evidence, HaltMarker,
+    InstalledUsageConfig, LoadedControl, LoadedHalt, OverrideState, PinnedTarget, SessionBinding,
+    TurnObservation,
 };
 use hive_core::sha256_digest;
 use serde_json::json;
@@ -12,8 +14,7 @@ pub(super) fn is_current(
     halt: &LoadedHalt,
 ) -> Result<bool, AdapterError> {
     let policy = effective_policy_digest(config)?;
-    Ok(config.warn_on_observation_failure()
-        && halt.state == OverrideState::Current
+    Ok(halt.state == OverrideState::Current
         && halt.marker.as_ref().is_some_and(|marker| {
             marker.schema_version == 2
                 && marker.decision == "usage-warning"
@@ -93,4 +94,73 @@ pub(super) fn result(
             "scope":"automatic-dispatch-preflight","authorizes_dispatch":false}),
         ),
     })
+}
+
+/// What a warning reported, for the optional Discord notice.
+pub(super) struct WarningSummary {
+    pub(super) missing_windows: Vec<&'static str>,
+    pub(super) cause: &'static str,
+}
+
+/// Name the missing windows, the cause and the fix in the warning result (OV160-013 U1/U3/U5).
+pub(super) fn describe(
+    result: &mut ActionResult,
+    config: &InstalledUsageConfig,
+    observation: &TurnObservation,
+    failure: Option<&CaptureFailure>,
+    shown: bool,
+) -> WarningSummary {
+    let korean = config.interface_language == "ko";
+    let missing_windows = if observation.missing_windows.is_empty() {
+        missing_window_labels(config, None)
+    } else {
+        observation.missing_windows.clone()
+    };
+    // A rejected status-line payload explains an absent or old Claude measurement.
+    let cause = if failure.is_some()
+        && matches!(
+            observation.cause,
+            "no-measurement" | "measurement-stale" | "window-missing"
+        ) {
+        "capture-failed"
+    } else {
+        observation.cause
+    };
+    let windows = missing_windows
+        .iter()
+        .map(|window| crate::discord::window_display(window, korean))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let cause_text = crate::discord::observation_cause_display(
+        cause,
+        &config.primary_host,
+        failure.map(|failure| failure.reason.as_str()),
+        korean,
+    );
+    let fix = crate::discord::observation_fix_command(&config.primary_host);
+    let message = if korean {
+        format!("사용량 측정 없음({windows}): {cause_text}. 경고 후 작업 계속. 해결: `{fix}`")
+    } else {
+        format!(
+            "Usage is not measured ({windows}): {cause_text}. Work continues with a warning. Fix: `{fix}`"
+        )
+    };
+    result.message.clone_from(&message);
+    result.next_action.clone_from(&observation.next_action);
+    if let Some(data) = result.data.as_mut() {
+        data["missing_windows"] = json!(missing_windows);
+        data["observation_cause"] = json!(cause);
+        data["missing_measurement"] = json!(observation.missing_measurement);
+        data["capture_failure"] = failure.map_or(serde_json::Value::Null, CaptureFailure::to_json);
+        data["fix_command"] = json!(fix);
+        data["notice"] = if shown {
+            json!({"kind": "observation-unavailable", "message": message})
+        } else {
+            serde_json::Value::Null
+        };
+    }
+    WarningSummary {
+        missing_windows,
+        cause,
+    }
 }

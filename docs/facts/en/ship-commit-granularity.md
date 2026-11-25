@@ -9,7 +9,7 @@ summary: "The product ship Skill treats all-changes requests as scope, not as pe
 tags: [commit, git, skill, workflow]
 aliases: ["Atomic ship commits"]
 sources:
-  - "repo:docs/skills.md#sha256:0914190795ac1ac59555a994d0e39620060cdedd63b57230fe05b8c97b95cae5"
+  - "repo:docs/skills.md#sha256:92c6ae4cc0766a45e77a353a77592363b2e5b95ba8baa3f3c77338c144a17bb3"
 links: [public-skill-identity, source-development]
 reviewed_revision: "git:23dafb9d646ea893ce06f6ec2cc9ea22b7eed673"
 status: active

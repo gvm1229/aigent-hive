@@ -35,6 +35,8 @@ owner = "harness-core"
 contract = "CLI capabilities, setup schema, Skills, projections, roles, scheduling, and result contracts"
 release_gate = true
 modules = [
+  "tests.conformance.contracts.test_qualify_local_hosts",
+  "tests.conformance.contracts.test_acceptance_workflow_has_no_version_pins",
   "tests.conformance.contracts.test_legacy_bridge_transport",
   "tests.conformance.contracts.test_setup_connection_loss",
   "tests.conformance.contracts.test_setup_console_interrupt",
@@ -95,6 +97,7 @@ modules = [
   "tests.conformance.integration.test_source_wiki",
   "tests.conformance.integration.test_vector_cli",
   "tests.conformance.integration.test_wiki_cli_e2e",
+  "tests.conformance.integration.test_mediation_reference_handler",
 ]
 
 [lanes.release]

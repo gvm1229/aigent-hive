@@ -62,6 +62,17 @@ fn instantiate(template: &Question, host: &str) -> Option<Question> {
     } else {
         question.prompt.ko = template.prompt.ko.replace(PLACEHOLDER, label);
         question.prompt.en = template.prompt.en.replace(PLACEHOLDER, label);
+        if matches!(
+            hive_core::preferences::HOST_USAGE_SENSORS
+                .iter()
+                .find(|sensor| sensor.host == host)
+                .map(|sensor| sensor.direction),
+            Some(hive_core::preferences::UsageDirection::Used)
+        ) && [FIVE_HOUR_THRESHOLD, WEEKLY_THRESHOLD].contains(&template.id.as_str())
+        {
+            question.help.ko.push_str(" 입력값은 저장할 잔여량 기준(96% 사용에서 멈추려면 4 입력). 사용한 비율 입력은 hive usage threshold --help 참고.");
+            question.help.en.push_str(" This setup field stores a remaining-quota floor (enter 4 to stop at 96% used). For a used percentage, see hive usage threshold --help.");
+        }
     }
     Some(question)
 }
@@ -226,6 +237,26 @@ mod tests {
         }
         let off = json!({"selected_hosts":["claude"],"usage_guard":{"enforcement_enabled":false}});
         assert!(usage_questions(&off).is_empty());
+    }
+
+    #[test]
+    fn setup_threshold_help_matches_each_host_sensor_direction() {
+        let answers = json!({"selected_hosts":["claude","codex","antigravity"],
+            "usage_guard":{"enforcement_enabled":true,"host_windows":{
+                "claude":{"five_hour_limit":true,"guard":"both"},
+                "codex":{"five_hour_limit":true,"guard":"both"},
+                "antigravity":{}}}});
+        let questions = usage_questions(&answers);
+        let claude = questions
+            .iter()
+            .find(|question| question.id == "usage-host-weekly-threshold-claude")
+            .unwrap();
+        let codex = questions
+            .iter()
+            .find(|question| question.id == "usage-host-weekly-threshold-codex")
+            .unwrap();
+        assert!(claude.help.en.contains("used percentage"));
+        assert!(!codex.help.en.contains("used percentage"));
     }
 
     #[test]

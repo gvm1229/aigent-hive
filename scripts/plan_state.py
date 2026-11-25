@@ -13,11 +13,13 @@ import tempfile
 
 PLAN_ID = re.compile(r"[A-Z][A-Z0-9]*-[0-9]{3}")
 VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
-STATES = ("complete", "agent-owned", "awaiting-user-authority", "awaiting-external-evidence", "blocked")
+STATES = ("complete", "agent-owned", "awaiting-user-authority", "awaiting-external-evidence", "blocked", "reopened")
+WAITING = {"awaiting-user-authority", "awaiting-external-evidence", "blocked"}
 SCOPES = ("product", "source", "release")
 START = "<!-- HIVE:PLAN-STATE:START -->"
 END = "<!-- HIVE:PLAN-STATE:END -->"
 MAX_PLAN_BYTES = 8192
+MAX_FRAGMENT_BYTES = 32768
 
 
 class PlanError(ValueError):
@@ -44,6 +46,7 @@ class Plan:
     groups: list[tuple[str, str]]
     criteria: dict[str, Criterion]
     inputs: dict[Path, bytes]
+    warnings: list[str]
 
     def completed_product_ids(self) -> set[str]:
         return {item.id for item in self.criteria.values()
@@ -92,12 +95,12 @@ def field(text: str, name: str) -> str:
 def evidence_input(root: Path, locator: str, inputs: dict[Path, bytes]) -> None:
     match = re.fullmatch(r"repo:([^#]+)#sha256:([0-9a-f]{64})", locator)
     if match is None or not match[1].startswith(("docs/", "tests/results/")):
-        raise PlanError("completion evidence must be a bounded repository Markdown locator")
+        raise PlanError("evidence reference must be a bounded repository Markdown locator")
     if not match[1].endswith(".md"):
-        raise PlanError("completion evidence must be Markdown")
+        raise PlanError("evidence reference must be Markdown")
     text = read(root, match[1], inputs, limit=1024 * 1024)
     if hashlib.sha256(inputs[root / match[1]]).hexdigest() != match[2]:
-        raise PlanError(f"stale completion evidence: {match[1]}")
+        raise PlanError(f"stale evidence reference: {match[1]}")
     if match[1].startswith("tests/results/runs/"):
         report = re.search(r"```json\s*\n(.*?)\n```", text, re.S)
         try:
@@ -118,7 +121,7 @@ def metadata(line: str) -> dict[str, str]:
         key, separator, value = part.partition(": ")
         if not separator or not value or key in result:
             raise PlanError("malformed or duplicate criterion metadata")
-        if key not in ("state", "depends", "evidence", "owner", "reason"):
+        if key not in ("state", "depends", "evidence", "owner", "reason", "reopened-evidence"):
             raise PlanError(f"unknown criterion metadata: {key}")
         result[key] = value
     return result
@@ -155,8 +158,9 @@ def load_plan(root: Path) -> Plan:
     if not groups:
         raise PlanError("no active fragments registered")
     criteria = {}
+    warnings = []
     for relative, _label in groups:
-        fragment = read(root, relative, inputs)
+        fragment = read(root, relative, inputs, limit=MAX_FRAGMENT_BYTES)
         if field(fragment, "Plan version") != version:
             raise PlanError(f"fragment version mismatch: {relative}")
         scope = field(fragment, "Scope")
@@ -182,8 +186,26 @@ def load_plan(root: Path) -> Plan:
             depends = tuple(data.get("depends", "").split(",")) if data.get("depends") else ()
             if len(depends) != len(set(depends)) or any(not PLAN_ID.fullmatch(item) for item in depends):
                 raise PlanError(f"invalid dependencies: {ident}")
-            if state in STATES[2:] and not (data.get("owner") and data.get("reason")):
+            if state in WAITING and not (data.get("owner") and data.get("reason")):
                 raise PlanError(f"waiting criterion requires owner and reason: {ident}")
+            if state == "reopened":
+                reason = data.get("reason", "")
+                if match[1] != " " or "reopened-evidence" not in data:
+                    raise PlanError(f"reopened criterion requires unchecked state and prior evidence: {ident}")
+                link = re.search(r"\[[^]]+\]\(([^)#]+\.md)(?:#[^)]+)?\)", reason)
+                if link is None:
+                    raise PlanError(f"reopened criterion reason must link repository evidence: {ident}")
+                try:
+                    linked = ((root / relative).parent / link[1]).resolve()
+                    linked_relative = linked.relative_to(root.resolve()).as_posix()
+                    if not linked_relative.endswith(".md"):
+                        raise ValueError
+                    confined(root, linked_relative)
+                except (OSError, ValueError, PlanError) as error:
+                    raise PlanError(f"reopened criterion reason link is not repository evidence: {ident}") from error
+                evidence_input(root, data["reopened-evidence"], inputs)
+            if state == "complete" and data.get("evidence") == data.get("reopened-evidence"):
+                raise PlanError(f"completion requires new evidence after reopening: {ident}")
             if state == "complete":
                 if not data.get("evidence"):
                     raise PlanError(f"complete criterion lacks evidence: {ident}")
@@ -206,7 +228,11 @@ def load_plan(root: Path) -> Plan:
         for dependency in criteria[ident].dependencies:
             if dependency not in criteria:
                 raise PlanError(f"unknown dependency: {ident} -> {dependency}")
-            if criteria[ident].state == "complete" and criteria[dependency].state != "complete":
+            if criteria[dependency].state == "reopened":
+                warning = f"{ident} depends on reopened criterion {dependency}"
+                if warning not in warnings:
+                    warnings.append(warning)
+            elif criteria[ident].state == "complete" and criteria[dependency].state != "complete":
                 raise PlanError(f"completed criterion has incomplete dependency: {ident}")
             visit(dependency)
         visiting.remove(ident)
@@ -214,7 +240,7 @@ def load_plan(root: Path) -> Plan:
 
     for ident in criteria:
         visit(ident)
-    return Plan(root, version, groups, criteria, inputs)
+    return Plan(root, version, groups, criteria, inputs, warnings)
 
 
 def summaries(plan: Plan) -> tuple[str, str]:

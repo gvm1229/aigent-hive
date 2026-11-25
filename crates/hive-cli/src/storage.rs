@@ -159,7 +159,7 @@ fn failure(action: &'static str, message: String) -> ExitCode {
     })
 }
 
-pub(crate) const STORAGE_USAGE: &str = "Usage:\n  hive storage [--user-root <path>] [--output json]\n  hive prune --dry-run|--confirm [--user-root <path>] [--output json]\n\nstorage reports Hive file bytes by category and changes nothing.\nprune lists or removes monitor executables that the saved monitor records do not use.\n";
+pub(crate) const STORAGE_USAGE: &str = "Usage:\n  hive storage [--user-root <path>] [--output json]\n  hive prune --dry-run|--confirm [--user-root <path>] [--output json]\n  hive storage backup list [--user-root <path>] [--output json]\n  hive storage backup restore --id <backup> [--path <file>] [--confirm <sha256>] [--user-root <path>] [--output json]\n\nstorage reports Hive file bytes by category and changes nothing.\nprune lists or removes monitor executables that the saved monitor records do not use.\nstorage backup lists or restores the copies that Hive keeps in hive-backups, outside .hive.\n";
 
 fn is_help(arguments: &[String]) -> bool {
     arguments
@@ -171,6 +171,9 @@ pub(crate) fn run_storage(arguments: &[String]) -> ExitCode {
     if is_help(arguments) {
         print!("{STORAGE_USAGE}");
         return ExitCode::SUCCESS;
+    }
+    if arguments.first().is_some_and(|first| first == "backup") {
+        return run_backup(&arguments[1..]);
     }
     let options = match parse(arguments, false) {
         Ok(options) => options,
@@ -191,6 +194,55 @@ pub(crate) fn run_storage(arguments: &[String]) -> ExitCode {
         Vec::new(),
         json!({"user_root":options.user_root,"categories":rows,"total_bytes":total}),
     ))
+}
+
+/// `hive storage backup list|restore` (OV160-023).
+fn run_backup(arguments: &[String]) -> ExitCode {
+    let parsed = (|| -> Result<ActionResult, String> {
+        let (mut user_root, mut id, mut path, mut confirm) = (None, None, None, None);
+        let (action, options) = arguments
+            .split_first()
+            .ok_or("storage backup requires list or restore")?;
+        let restoring = match action.as_str() {
+            "list" => false,
+            "restore" => true,
+            other => return Err(format!("unsupported backup action: {other}")),
+        };
+        let mut options = options.iter();
+        while let Some(option) = options.next() {
+            let value = options
+                .next()
+                .ok_or_else(|| format!("{option} requires a value"))?;
+            let slot = match option.as_str() {
+                "--output" if value == "json" => continue,
+                "--user-root" => &mut user_root,
+                "--id" if restoring => &mut id,
+                "--path" if restoring => &mut path,
+                "--confirm" if restoring => &mut confirm,
+                other => return Err(format!("unsupported option: {other}")),
+            };
+            if slot.replace(value.as_str()).is_some() {
+                return Err(format!("{option} may be given once"));
+            }
+        }
+        let root = match user_root {
+            Some(root) => PathBuf::from(root),
+            None => crate::user_install::resolve_user_root_path()?,
+        };
+        if !root.is_absolute() {
+            return Err("--user-root must be absolute".to_owned());
+        }
+        Ok(if restoring {
+            let id = id.ok_or("storage backup restore requires --id")?;
+            crate::user_install::backup::restore_command(&root, id, path, confirm)
+        } else {
+            crate::user_install::backup::list_command(&root)
+        })
+    })();
+    match parsed {
+        Ok(result) => emit_action_result(&result),
+        Err(message) => failure("ManageHiveBackups", message),
+    }
 }
 
 pub(crate) fn run_prune(arguments: &[String]) -> ExitCode {

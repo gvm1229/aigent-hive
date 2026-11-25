@@ -9,11 +9,11 @@ summary: "Global setup의 복수 사용자 맥락: 배경 정보 전용, 한국�
 tags: [bootstrap, communication, onboarding]
 aliases: ["사용자 맥락", "사용자 프로필"]
 sources:
-  - "repo:README.md#sha256:6b22b8f1ca50ca08e43822daf915657639eb42344d8a0f63ab9db3da6b91bd8c"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:082645d4de44857f384e5613bbee10866928140c3932115fb3181baa7c3e27cb"
+  - "repo:README.md#sha256:cfdd9e02efef5feba18f2ccd3594a2aaa60fdfc73bbc687b949ddde9eed09f0a"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ecb5eb8be00aa5902b1cf2d11d9bcdb51e76ceab68fce047c5463a9fc5920762"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848"
-  - "repo:harness/user-setup/catalog.yml#sha256:4c3a188bcdb06752531530478c34cedafcaafb259fff00ff8743ed2d2e4c85c0"
-  - "repo:schemas/user-setup.schema.json#sha256:02903b420365725d94b3cb79000661970338767fe382f163a36c9d58e5288aa8"
+  - "repo:harness/user-setup/catalog.yml#sha256:d55a8ec71cddf4c2cd946850f8c345d58951ae4156b33659d57fe5c4d313f522"
+  - "repo:schemas/user-setup.schema.json#sha256:f47704e89efc256c1ee46052bb594948d99cb5fcb19eb49628105f6c074ce71a"
 links: [global-onboarding, language-consistency]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active

@@ -9,8 +9,8 @@ summary: "0.14.0 전용 임계값 변경의 확인 지문 갱신 누락. 0.14.1�
 tags: [preferences, setup, usage]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:082645d4de44857f384e5613bbee10866928140c3932115fb3181baa7c3e27cb"
-  - "repo:crates/hive-core/src/preferences.rs#sha256:cb912cc72fc576c28ddc2436597326957cdd58bca1810d5408e5127692825016"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ecb5eb8be00aa5902b1cf2d11d9bcdb51e76ceab68fce047c5463a9fc5920762"
+  - "repo:crates/hive-core/src/preferences.rs#sha256:6ec5ee3711750ed82cd015e412ade49185152bec1831dbcbf077e52f122cce3b"
   - "repo:docs/research/usage-threshold-provenance-0.14.0/reproduce.py#sha256:5460ffb967d9381497534988fd6b20f2f89b9faff8c6fa5f2f220df8fd5128c5"
 links: [usage-guard-thresholds]
 reviewed_revision: "git:dd581c30013516a6649e74e3c0d80bf7d46cb278"
