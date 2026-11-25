@@ -472,11 +472,11 @@
         whyTitle: "바꾸지 않는 것까지 약속",
         whyLead: "AI 앱의 실행은 그 앱에 맡기고, Hive는 기억·설정·안전 경계만 담당.",
         card1t: "API 키 요청 없음", card1p: "모델 회사 API를 부르지 않고 지금 쓰는 구독 로그인 그대로 사용.",
-        card2t: "내 컴퓨터의 텍스트", card2p: "지식과 설정은 읽을 수 있는 Markdown·YAML 파일. 검색 색인은 언제든 다시 생성.",
+        card2t: "내 컴퓨터의 텍스트", card2p: "지식과 설정은 읽을 수 있는 Markdown·YAML·TOML 파일. 검색 색인은 언제든 다시 생성.",
         card3t: "바꾸기 전 백업", card3p: "설치·갱신·제거 전에 설정과 바뀔 파일을 복사. 복원은 미리보기부터.",
         card4t: "동의 뒤 적용", card4p: "추가 Skill, 훅, 상태 표시줄 연결은 미리 보여 준 뒤 승인할 때만 적용.",
         installTitle: "설치와 첫 설정",
-        installLead: "설치 프로그램만 Node.js·npm이 필요하고, 설치된 <code>hive</code>는 독립 실행 파일.",
+        installLead: "npm 설치에만 Node.js·npm이 필요하고, 설치된 <code>hive</code>는 독립 실행 파일.",
         step1t: "설치", step1p: "오른쪽 명령 중 하나를 터미널에서 실행",
         step2t: "버전 확인",
         step3t: "앱 연결", step3p: "<code>hive update</code> 실행 뒤 쓰는 AI 앱 선택",
@@ -488,7 +488,7 @@
         qiFor: { mac: "macOS 터미널에서 설치", linux: "Linux 터미널에서 설치", windows: "Windows PowerShell에서 설치", other: "npm으로 설치 · 모든 OS" },
         appsTitle: "쓰던 AI 앱 그대로",
         appsLead: "Codex·Claude Code·Gemini Antigravity 중 여러 앱을 한 번의 설정으로. 앱마다 되는 것과 아직 확인 중인 것을 그대로 표시.",
-        worksHead: "되는 것", caveatHead: "확인 중·주의",
+        worksHead: "되는 것", caveatHead: "미검증·주의",
         newsTitle: "최근 업데이트", newsAll: "전체 릴리스 보기 →",
         faqTitle: "자주 묻는 질문",
         closingTitle: "프로젝트를 기억하는 AI 에이전트, 지금 시작",
@@ -514,11 +514,11 @@
         whyTitle: "Clear promises, including what Hive leaves alone",
         whyLead: "Your AI app keeps running the AI. Hive only handles memory, settings and safety boundaries.",
         card1t: "No API keys", card1p: "Hive never calls a model provider's API. It works with the subscription login you already have.",
-        card2t: "Plain text on your computer", card2p: "Knowledge and settings are readable Markdown and YAML files. The search index can be rebuilt at any time.",
+        card2t: "Plain text on your computer", card2p: "Knowledge and settings are readable Markdown, YAML and TOML files. The search index can be rebuilt at any time.",
         card3t: "Backup before changes", card3p: "Before an install, update or uninstall, Hive copies your settings and the files about to change. Restores start with a preview.",
         card4t: "Applied only with consent", card4p: "Extra Skills, hooks and the status-line connection are shown first and applied only after you approve.",
         installTitle: "Install and first setup",
-        installLead: "Only the installer needs Node.js and npm. The installed <code>hive</code> is a standalone binary.",
+        installLead: "Only the npm install needs Node.js and npm. The installed <code>hive</code> is a standalone binary.",
         step1t: "Install", step1p: "Run one of the commands on the right in a terminal",
         step2t: "Check the version",
         step3t: "Connect your apps", step3p: "Run <code>hive update</code> and choose the AI apps you use",
@@ -527,13 +527,13 @@
         footer: "This page reflects stable 0.16.0. See the GitHub README for what is supported and what is not yet verified.",
         skip: "Skip to content", navApps: "Apps", navFaq: "FAQ", otherMethods: "Other install methods",
         ctaApps: "See supported apps",
-        qiFor: { mac: "Install in the macOS terminal", linux: "Install in a Linux terminal", windows: "Install in Windows PowerShell", other: "Install with npm · any OS" },
+        qiFor: { mac: "Install in a macOS terminal", linux: "Install in a Linux terminal", windows: "Install in Windows PowerShell", other: "Install with npm · any OS" },
         appsTitle: "Keep the AI apps you already use",
-        appsLead: "Set up several of Codex, Claude Code and Gemini Antigravity in one go. Each card shows what works and what is still being verified.",
-        worksHead: "What works", caveatHead: "Still verifying · caveats",
+        appsLead: "Set up Codex, Claude Code and Gemini Antigravity, in any combination, with a single setup. Each card shows what works and what is still being verified.",
+        worksHead: "What works", caveatHead: "Not yet verified · caveats",
         newsTitle: "Recent releases", newsAll: "All releases →",
         faqTitle: "Frequently asked questions",
-        closingTitle: "Give your AI agent a memory of your project",
+        closingTitle: "An AI agent that remembers your project. Start now.",
         closingLead: "Install once and keep your apps and subscriptions. Files about to change are shown first and backed up.",
         replay: "↻ Replay", notesHead: "Good to know", memoryHead: "Saved knowledge", memorySame: "· Both sides start from the same state",
         before: "Before (0.15.x)", me: "You", agent: "AI agent", exp: "Experimental",
@@ -556,23 +556,23 @@
         whyTitle: "しないことまで約束",
         whyLead: "AI アプリの実行はそのアプリに任せ、Hive は記憶・設定・安全の境界だけを担当。",
         card1t: "API キー不要", card1p: "モデル提供元の API は呼び出さず、いまのサブスクリプションのログインのまま使います。",
-        card2t: "手元のテキストファイル", card2p: "知識と設定は読める Markdown・YAML ファイル。検索インデックスはいつでも作り直せます。",
+        card2t: "手元のテキストファイル", card2p: "知識と設定は読める Markdown・YAML・TOML ファイル。検索インデックスはいつでも作り直せます。",
         card3t: "変更前にバックアップ", card3p: "インストール・更新・削除の前に、設定と変更されるファイルをコピー。復元はプレビューから。",
         card4t: "同意してから適用", card4p: "追加の Skill、フック、ステータスラインの接続は、内容を事前に表示し、承認されたときだけ適用。",
         installTitle: "インストールと初期設定",
-        installLead: "Node.js と npm が必要なのはインストーラーだけ。インストールされた <code>hive</code> は単体で動く実行ファイルです。",
+        installLead: "Node.js と npm が必要なのは npm でのインストールだけ。インストールされた <code>hive</code> は単体で動く実行ファイルです。",
         step1t: "インストール", step1p: "右のコマンドのどれかをターミナルで実行",
         step2t: "バージョン確認",
         step3t: "アプリを接続", step3p: "<code>hive update</code> を実行して、使っている AI アプリを選択",
         step4t: "プロジェクト設定", step4p: "AI エージェントにプロジェクト設定 Skill を依頼。空のフォルダーなら質問から、既存のプロジェクトならファイルを確認して提案を 1 つ提示",
         installTabsLabel: "インストール方法",
         footer: "このページは正式版 0.16.0 に基づきます。対応範囲と未検証の項目は GitHub の README をご確認ください。",
-        skip: "本文へスキップ", navApps: "対応アプリ", navFaq: "FAQ", otherMethods: "ほかのインストール方法",
+        skip: "本文へスキップ", navApps: "対応アプリ", navFaq: "FAQ", otherMethods: "他のインストール方法",
         ctaApps: "対応アプリを見る",
         qiFor: { mac: "macOS のターミナルでインストール", linux: "Linux のターミナルでインストール", windows: "Windows PowerShell でインストール", other: "npm でインストール · すべての OS" },
         appsTitle: "いつもの AI アプリのままで",
         appsLead: "Codex・Claude Code・Gemini Antigravity のうち複数のアプリを一度の設定で。アプリごとに、できることとまだ確認中のことをそのまま表示。",
-        worksHead: "できること", caveatHead: "確認中・注意点",
+        worksHead: "できること", caveatHead: "未検証・注意点",
         newsTitle: "最近のリリース", newsAll: "すべてのリリース →",
         faqTitle: "よくある質問",
         closingTitle: "プロジェクトを覚えている AI エージェントを、今すぐ",
@@ -970,43 +970,43 @@
         { name: "Codex", works: ["Hive Skill과 프로젝트 지식", "사용량 보호: 남은 % 기준, 30일 창은 주간 한도로 계산"],
           caveats: ["이 버전의 훅·작업자·교차 검토 동작은 미검증", "프로젝트 훅 적용 뒤 Codex에서 신뢰 승인 필요"] },
         { name: "Claude Code", works: ["`/aigent-hive:` Hive Skill", "요청마다 지식 자동 조회", "상태 표시줄 연결로 사용량 읽기: 사용한 % 기준"],
-          caveats: ["README 표기: Claude Code 구독 동작 미검증", "데스크톱 앱 Code 탭 미확인, 터미널에서 사용", "자동 모드에서 `hive msg` 차단 가능"] },
+          caveats: ["사용량 읽기는 Windows 터미널에서 확인, 그 밖의 Claude Code 구독 동작은 미검증", "데스크톱 앱 Code 탭 미확인, 터미널에서 사용", "자동 모드에서 `hive msg` 차단 가능"] },
         { name: "Gemini Antigravity", works: ["Hive Skill과 프로젝트 지식", "사용량 보호: 남은 % 기준, 기준값 하나"],
-          caveats: ["훅은 미리보기만", "사용량 연동: 1.1.18–2.0의 같은 자료 형식만, 1.2는 실제 앱 미검증", "프로젝트 Skill 경로 미검증"] }
+          caveats: ["훅은 미리보기만", "사용량 연동: 1.1.18 이후 1.x에서 같은 자료 형식일 때만, 1.2는 실제 앱 미검증", "프로젝트 Skill 경로 미검증: 에이전트가 새 Skill을 만들지 않고 알림"] }
       ],
       en: [
         { name: "Codex", works: ["Hive Skills and project knowledge", "Usage protection in percent remaining; the 30-day window counts as the weekly limit"],
-          caveats: ["Hook, worker and cross-review behaviour is not verified on this version", "Codex asks you to trust project hooks after they are applied"] },
-        { name: "Claude Code", works: ["Hive Skills under `/aigent-hive:`", "Automatic knowledge lookup on every request", "Usage read through the status line, in percent used"],
-          caveats: ["The README marks Claude Code subscription behaviour as unverified", "The desktop app's Code tab is not confirmed; use a terminal", "Auto mode can block `hive msg`"] },
+          caveats: ["Hook, worker and cross-review behavior is not verified on this version", "Codex asks you to trust project hooks after they are applied"] },
+        { name: "Claude Code", works: ["Hive Skills under `/aigent-hive:`", "Automatic knowledge lookup on every request", "Usage read through the status-line connection, in percent used"],
+          caveats: ["Usage reading was checked in a Windows terminal; other Claude Code subscription behavior is unverified", "The desktop app's Code tab is not confirmed; use a terminal", "Auto mode can block `hive msg`"] },
         { name: "Gemini Antigravity", works: ["Hive Skills and project knowledge", "Usage protection in percent remaining, with one threshold"],
-          caveats: ["Hooks are preview only", "Usage callbacks: 1.1.18 up to 2.0 with the same data shape; 1.2 not verified in the real app", "Project Skill path not verified"] }
+          caveats: ["Hooks are preview only", "Usage callbacks: accepted on 1.x after 1.1.18 only with the same data shape; 1.2 not verified in the real app", "Project Skill path not verified: agents report instead of creating a new Skill there"] }
       ],
       ja: [
         { name: "Codex", works: ["Hive の Skill とプロジェクトの知識", "使用量の保護: 残り % 基準、30 日の枠は週間上限として計算"],
-          caveats: ["このバージョンのフック・ワーカー・クロスレビューの動作は未検証", "プロジェクトのフック適用後、Codex で信頼の承認が必要"] },
+          caveats: ["このバージョンのフック・ワーカー・クロスレビューの動作は未検証", "プロジェクトのフックを適用した後、Codex でフックを信頼する操作が必要"] },
         { name: "Claude Code", works: ["`/aigent-hive:` の Hive Skill", "依頼のたびに知識を自動検索", "ステータスラインの接続で使用量を読み取り: 使用済み % 基準"],
-          caveats: ["README の表記: Claude Code のサブスクリプション動作は未検証", "デスクトップアプリの Code タブは未確認、ターミナルで使用", "自動モードでは `hive msg` がブロックされる場合あり"] },
+          caveats: ["使用量の読み取りは Windows のターミナルで確認済み、そのほかの Claude Code のサブスクリプション動作は未検証", "デスクトップアプリの Code タブは未確認、ターミナルで使用", "自動モードでは `hive msg` がブロックされる場合あり"] },
         { name: "Gemini Antigravity", works: ["Hive の Skill とプロジェクトの知識", "使用量の保護: 残り % 基準、しきい値は 1 つ"],
-          caveats: ["フックはプレビューのみ", "使用量の連携: 1.1.18〜2.0 の同じデータ形式のみ、1.2 は実際のアプリで未検証", "プロジェクト Skill のパスは未検証"] }
+          caveats: ["フックはプレビューのみ", "使用量の連携: 1.1.18 より後の 1.x で同じデータ形式の場合のみ、1.2 は実際のアプリで未検証", "プロジェクト Skill のパスは未検証: エージェントは新しい Skill を作らずに知らせる"] }
       ]
     };
 
     const REL = "https://github.com/gvm1229/aigent-hive/blob/main/docs/releases/";
     const NEWS = {
       ko: [
-        { v: "0.16.0", date: "2026-11-25", text: "바꾸기 전 자동 백업, 요청마다 지식 자동 조회, AI 간 작업 전달(실험)", href: REL + "0.16.0.subscriber.ko.md" },
+        { v: "0.16.0", date: "2026-11-25", text: "바꾸기 전 자동 백업, 요청마다 지식 자동 조회(Claude Code), AI 간 작업 전달(실험)", href: REL + "0.16.0.subscriber.ko.md" },
         { v: "0.15.3", date: "2026-11-20", text: "AI 에이전트에게 프로젝트 설정 요청, 사실 여러 개 한 번에 저장, 짧은 한국어 검색어 개선", href: REL + "0.15.3.subscriber.ko.md" },
         { v: "0.15.2", date: "2026-11-16", text: "Codex·Claude Code·Antigravity를 한 번의 설정으로 설치, Antigravity CLI 1.2.x 지원", href: REL + "0.15.2.subscriber.ko.md" }
       ],
       en: [
-        { v: "0.16.0", date: "2026-11-25", text: "Automatic backup before changes, knowledge lookup on every request, AI-to-AI work handoff (experimental)", href: REL + "0.16.0.md" },
-        { v: "0.15.3", date: "2026-11-20", text: "Ask your AI agent to set up a project, save several facts at once, better short Korean search terms", href: REL + "0.15.3.md" },
+        { v: "0.16.0", date: "2026-11-25", text: "Automatic backup before changes, automatic knowledge lookup on every request (Claude Code), AI-to-AI work handoff (experimental)", href: REL + "0.16.0.md" },
+        { v: "0.15.3", date: "2026-11-20", text: "Ask your AI agent to set up a project, save several facts at once, better matching for short Korean search terms", href: REL + "0.15.3.md" },
         { v: "0.15.2", date: "2026-11-16", text: "Install into Codex, Claude Code and Antigravity in one setup; Antigravity CLI 1.2.x supported", href: REL + "0.15.2.md" }
       ],
       ja: [
-        { v: "0.16.0", date: "2026-11-25", text: "変更前の自動バックアップ、依頼ごとの知識の自動検索、AI 間の作業の受け渡し (実験)", href: REL + "0.16.0.md" },
-        { v: "0.15.3", date: "2026-11-20", text: "AI エージェントにプロジェクト設定を依頼、複数の事実をまとめて保存、短い韓国語検索語の改善", href: REL + "0.15.3.md" },
+        { v: "0.16.0", date: "2026-11-25", text: "変更前の自動バックアップ、依頼ごとの知識の自動検索 (Claude Code)、AI 間の作業の受け渡し (実験)", href: REL + "0.16.0.md" },
+        { v: "0.15.3", date: "2026-11-20", text: "AI エージェントにプロジェクト設定を依頼、複数の事実をまとめて保存、短い韓国語の検索語での検索精度を改善", href: REL + "0.15.3.md" },
         { v: "0.15.2", date: "2026-11-16", text: "Codex・Claude Code・Antigravity を一度の設定でインストール、Antigravity CLI 1.2.x に対応", href: REL + "0.15.2.md" }
       ]
     };
@@ -1016,7 +1016,7 @@
         { q: "비용이 드나요?", a: "Apache-2.0 오픈 소스로 무료. 지금 쓰는 AI 앱 구독으로 동작하고, API 키를 묻거나 모델 회사 API를 부르지 않음." },
         { q: "어떤 AI 앱에서 쓸 수 있나요?", a: "Codex, Claude Code, Gemini Antigravity. 한 번의 설정으로 여러 앱을 함께 선택 가능. 앱별 확인 범위는 위의 지원 앱 구역 참고." },
         { q: "내 지식과 설정은 어디에 저장되나요?", a: "내 컴퓨터. 지식과 설정은 Markdown·YAML·TOML 텍스트 파일이고, 검색 색인은 언제든 다시 생성 가능. Discord 같은 외부 알림은 따로 동의할 때만 사용." },
-        { q: "Hive가 AI를 대신 실행하나요?", a: "아니요. 모델과 작업자 실행은 각 AI 앱 담당. Hive는 설정·지식·사용량 보호·작업 전달 기록만 관리하고, 자동 작업자 실행은 꺼져 있으며 켜는 방법도 없음." },
+        { q: "Hive가 AI를 대신 실행하나요?", a: "아니요. 모델과 작업자 실행은 각 AI 앱 담당. Hive는 설정·지식·사용량 보호·작업 전달 기록만 관리하고, 자동 작업자 실행은 꺼져 있으며 이 버전에는 켜는 방법도 없음." },
         { q: "설치에 무엇이 필요한가요?", a: "macOS·Windows·Linux 중 하나. npm 설치만 Node.js와 npm이 필요하고, curl·PowerShell·명령 프롬프트 설치는 필요 없음. 설치된 `hive`는 독립 실행 파일." },
         { q: "업데이트가 잘못되면 되돌릴 수 있나요?", a: "설치·갱신·제거 전에 설정·프로젝트 목록·바뀔 파일을 `~/hive-backups`에 복사. `hive storage backup list`로 확인하고 `hive storage backup restore --id <id>`로 복원 미리보기. 지식 전체와 `hive setup` 변경은 백업 범위 밖." },
         { q: "제거는 어떻게 하나요?", a: "`hive uninstall --dry-run`으로 먼저 미리보기. 프로그램을 제거해도 재설치를 위해 설정·지식·기록·프로젝트 자료는 남음." }
@@ -1025,19 +1025,19 @@
         { q: "Does it cost anything?", a: "No. Hive is free and open source under Apache-2.0. It works with your existing AI app subscriptions, never asks for API keys and never calls a model provider's API." },
         { q: "Which AI apps does it work with?", a: "Codex, Claude Code and Gemini Antigravity. You can select several in one setup. See the apps section above for what is verified in each." },
         { q: "Where are my knowledge and settings stored?", a: "On your computer. Knowledge and settings are Markdown, YAML and TOML text files, and the search index can be rebuilt at any time. External notices such as Discord are used only with your separate consent." },
-        { q: "Does Hive run the AI for me?", a: "No. Each AI app runs its own models and workers. Hive manages settings, knowledge, usage protection and handoff records. Automatic worker execution is off, and there is no way to turn it on." },
+        { q: "Does Hive run the AI for me?", a: "No. Each AI app runs its own models and workers. Hive only manages settings, knowledge, usage protection and handoff records. Automatic worker execution is off, and this release has no way to turn it on." },
         { q: "What do I need to install it?", a: "macOS, Windows or Linux. Only the npm method needs Node.js and npm; the curl, PowerShell and Command Prompt installers don't. The installed `hive` is a standalone binary." },
-        { q: "Can I roll back a bad update?", a: "Install, update and uninstall first copy your settings, project list and the files they change to `~/hive-backups`. List them with `hive storage backup list` and preview a restore with `hive storage backup restore --id <id>`. Your knowledge as a whole and `hive setup` changes are not included." },
+        { q: "Can I roll back a bad update?", a: "Before an install, update or uninstall, Hive copies your settings, the project list and the files about to change to `~/hive-backups`. List them with `hive storage backup list` and preview a restore with `hive storage backup restore --id <id>`. The backup does not cover your whole knowledge store or changes made with `hive setup`." },
         { q: "How do I uninstall it?", a: "Preview with `hive uninstall --dry-run` first. Removing the program keeps your settings, knowledge, history and project data for a later reinstall." }
       ],
       ja: [
         { q: "費用はかかりますか？", a: "かかりません。Hive は Apache-2.0 のオープンソースで無料です。いまの AI アプリのサブスクリプションで動き、API キーを求めることも、モデル提供元の API を呼び出すこともありません。" },
         { q: "どの AI アプリで使えますか？", a: "Codex、Claude Code、Gemini Antigravity です。一度の設定で複数のアプリを選べます。アプリごとの確認範囲は、上の対応アプリの欄をご覧ください。" },
-        { q: "知識や設定はどこに保存されますか？", a: "あなたのコンピューターです。知識と設定は Markdown・YAML・TOML のテキストファイルで、検索インデックスはいつでも作り直せます。Discord などの外部通知は、別途同意したときだけ使います。" },
-        { q: "Hive が AI を代わりに実行しますか？", a: "いいえ。モデルやワーカーの実行は各 AI アプリが担当します。Hive は設定・知識・使用量の保護・作業の受け渡し記録だけを管理します。ワーカーの自動実行はオフで、オンにする方法もありません。" },
-        { q: "インストールに何が必要ですか？", a: "macOS・Windows・Linux のいずれか。Node.js と npm が必要なのは npm でのインストールだけで、curl・PowerShell・コマンドプロンプトのインストーラーでは不要です。インストールされた `hive` は単体で動く実行ファイルです。" },
-        { q: "アップデートに失敗したら元に戻せますか？", a: "インストール・更新・削除の前に、設定・プロジェクト一覧・変更されるファイルを `~/hive-backups` にコピーします。`hive storage backup list` で確認し、`hive storage backup restore --id <id>` で復元をプレビューできます。知識全体と `hive setup` による変更は対象外です。" },
-        { q: "アンインストールの方法は？", a: "まず `hive uninstall --dry-run` でプレビューしてください。プログラムを削除しても、再インストールに備えて設定・知識・履歴・プロジェクトのデータは残ります。" }
+        { q: "知識や設定はどこに保存されますか？", a: "お使いのコンピューター上です。知識と設定は Markdown・YAML・TOML のテキストファイルで、検索インデックスはいつでも作り直せます。Discord などの外部通知は、別途同意したときだけ使います。" },
+        { q: "Hive が AI を代わりに実行しますか？", a: "いいえ。モデルやワーカーの実行は各 AI アプリが担当します。Hive は設定・知識・使用量の保護・作業の受け渡し記録だけを管理します。ワーカーの自動実行はオフで、このバージョンにはオンにする方法もありません。" },
+        { q: "インストールに何が必要ですか？", a: "macOS・Windows・Linux のいずれかが必要です。Node.js と npm が必要なのは npm でのインストールだけで、curl・PowerShell・コマンドプロンプトのインストーラーでは不要です。インストールされた `hive` は単体で動く実行ファイルです。" },
+        { q: "アップデートに失敗したら元に戻せますか？", a: "インストール・更新・アンインストールの前に、設定・プロジェクト一覧・変更されるファイルを `~/hive-backups` にコピーします。`hive storage backup list` で確認し、`hive storage backup restore --id <id>` で復元をプレビューできます。知識全体と `hive setup` による変更は対象外です。" },
+        { q: "アンインストールするにはどうすればよいですか？", a: "まず `hive uninstall --dry-run` でプレビューしてください。プログラムを削除しても、再インストールに備えて設定・知識・履歴・プロジェクトのデータは残ります。" }
       ]
     };
 
