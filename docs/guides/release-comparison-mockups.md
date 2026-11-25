@@ -44,16 +44,23 @@
 | AI 간 검토 전달(실험) | 창 사이 수동 복사 반복 | 프로젝트 수신 상자 전달과 Discord 완료 알림 | `hive msg` |
 | Skill 정리 | 8개 Skill, 한 호스트 폴더에만 새 Skill | 3개로 통합, 선택한 모든 호스트에 같은 Skill | Skill 통합, 여러 호스트 Skill |
 
+## 언어
+
+- 장면 문구: 한국어·영어·일본어 세 벌, 같은 `id`와 같은 순서
+- 번역 범위: 대화·설명·결과 한 줄·주의 사항. 명령·경로·옵션 이름은 원문 유지
+- 제품 고정 문구: 제품 출력 언어 그대로 표시. 예: Discord 완료 알림은 한국어 원문과 언어별 안내 한 줄
+- 예시 선호는 언어별 독자에 맞게 조정 가능. 단, 이전·새 버전의 차이와 근거 기능은 세 언어 동일
+
 ## 글꼴
 
-- 기본 글꼴: Pretendard Variable, 모든 HTML 결과물에 적용하는 유지관리자 선호
+- 기본 글꼴: Pretendard Variable, 모든 HTML 결과물에 적용하는 유지관리자 선호. 일본어는 Pretendard JP Variable 우선
 - 불러오기: Pretendard 공식 안내의 jsDelivr 동적 부분 집합 링크(`pretendard@v1.3.9`), 이후 시스템 글꼴 대체 순서
 - 확인: 화면 확인 때 본문 계산 글꼴이 `Pretendard Variable`인지 점검
 
 ## 새 버전 반영 절차
 
 1. 새 릴리스 노트에서 사용자 경험이 달라진 항목 선택
-2. 항목마다 위 규칙으로 장면 작성: `website/src/index.html`의 `SCENARIOS` 배열
+2. 항목마다 위 규칙으로 장면 작성: `website/src/index.html`의 `SCENES` 언어별 배열 세 곳
 3. 명령과 고정 문구를 코드에서 확인
 4. `python3 website/build.py` 실행 뒤 desktop `1280px`·mobile `390px` 화면 확인
 5. 이전 버전 장면은 버전 표기만 바꿔 보관할지, 새 장면으로 교체할지 결정

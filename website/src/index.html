@@ -212,6 +212,28 @@
       html { scroll-behavior: auto; }
       .msg, .outcome { transition: none; }
     }
+    /* Language menu */
+    .lang-pick { display: flex; align-items: center; gap: 6px; margin-left: 18px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 4px 3px 9px; background: var(--white); }
+    .lang-pick:focus-within { outline: 3px solid rgba(245,166,35,.45); outline-offset: 1px; border-color: var(--gold); }
+    .lang-pick .globe { font-size: 13px; }
+    .lang-pick select { font: 600 13.5px var(--sans); color: var(--navy); background: transparent; border: 0; padding: 3px 2px; cursor: pointer; outline: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    .discord-note { font-size: 12px; color: var(--gray); margin: 0 2px 5px; }
+    /* Japanese: Pretendard JP first, loaded only for this language */
+    :root:lang(ja) {
+      --sans: "Pretendard JP Variable", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, "Noto Sans JP", sans-serif;
+    }
+    :root:lang(ja) body, :root:lang(en) body { word-break: normal; }
+    :root:lang(ja) body { line-break: strict; }
+    .logo, .nav-links a { white-space: nowrap; }
+    @media (max-width: 760px) {
+      .lang-pick { margin-left: 10px; padding-left: 6px; }
+      .lang-pick .globe { display: none; }
+    }
+    @media (max-width: 520px) {
+      .nav-links { display: none; }
+      .lang-pick { margin-left: auto; }
+    }
   </style>
 </head>
 <body>
@@ -219,12 +241,21 @@
   <header class="nav">
     <div class="wrap">
       <a class="logo" href="#top"><img data-logo alt="" aria-hidden="true">Aigent Hive</a>
-      <nav class="nav-links" aria-label="페이지 탐색">
-        <a href="#whats-new">0.16.0 비교</a>
-        <a href="#why" class="hide-sm">특징</a>
-        <a href="#install">설치</a>
+      <nav class="nav-links" data-i18n-attr="aria-label:navLabel">
+        <a href="#whats-new" data-i18n="navNew"></a>
+        <a href="#why" class="hide-sm" data-i18n="navWhy"></a>
+        <a href="#install" data-i18n="navInstall"></a>
         <a href="https://github.com/gvm1229/aigent-hive" class="hide-sm">GitHub</a>
       </nav>
+      <label class="lang-pick">
+        <span class="sr-only" data-i18n="langLabel"></span>
+        <span aria-hidden="true" class="globe">🌐</span>
+        <select id="lang-select">
+          <option value="ko" lang="ko">한국어</option>
+          <option value="en" lang="en">English</option>
+          <option value="ja" lang="ja">日本語</option>
+        </select>
+      </label>
     </div>
   </header>
 
@@ -232,18 +263,18 @@
     <section class="hero">
       <div class="wrap">
         <div>
-          <span class="eyebrow"><span class="dot" aria-hidden="true"></span>정식 0.16.0 · 2026-11-25</span>
-          <h1>AI 에이전트에게<br><em>프로젝트의 기억</em>과 안전장치를</h1>
-          <p class="lead">쓰고 있는 AI 코딩 앱 위에 한 번 설치. 프로젝트 지식, 내 선호, 사용량 보호, 안전한 업데이트를 모든 앱에 같은 방식으로 적용. API 키나 추가 요금 없이 지금 구독 그대로 사용.</p>
-          <div class="hosts" aria-label="지원 앱">
+          <span class="eyebrow"><span class="dot" aria-hidden="true"></span><span data-i18n="eyebrow"></span></span>
+          <h1 data-i18n-html="heroTitle"></h1>
+          <p class="lead" data-i18n="heroLead"></p>
+          <div class="hosts" data-i18n-attr="aria-label:hostsLabel">
             <span>Codex</span><span>Claude Code</span><span>Gemini Antigravity</span>
           </div>
           <div class="cta">
-            <a class="btn primary" href="#whats-new">업데이트 전후 비교 보기</a>
-            <a class="btn ghost" href="#install">설치 방법</a>
+            <a class="btn primary" href="#whats-new" data-i18n="ctaCompare"></a>
+            <a class="btn ghost" href="#install" data-i18n="ctaInstall"></a>
           </div>
         </div>
-        <div class="hero-mark"><img data-logo alt="Aigent Hive 로고"></div>
+        <div class="hero-mark"><img data-logo data-i18n-attr="alt:logoAlt"></div>
       </div>
     </section>
 
@@ -251,13 +282,12 @@
       <div class="wrap">
         <div class="sec-head">
           <div class="num">01 · WHAT'S NEW</div>
-          <h2>0.16.0에서 달라진 대화</h2>
-          <p>같은 요청, 다른 결과. 업데이트 전과 후의 AI 에이전트 대화를 나란히 비교.</p>
+          <h2 data-i18n="newTitle"></h2>
+          <p data-i18n="newLead"></p>
         </div>
-
-        <div class="tabs" role="tablist" aria-label="비교 장면" id="tabs"></div>
+        <div class="tabs" role="tablist" id="tabs" data-i18n-attr="aria-label:tabsLabel"></div>
         <article class="scenario" id="scenario" role="tabpanel" aria-live="polite"></article>
-        <p class="disclaimer">대화는 기능 설명을 위한 연출 예시. 터미널 출력은 요약 표시이며 실제 문구·모델·시간은 환경에 따라 다름.</p>
+        <p class="disclaimer" data-i18n="disclaimer"></p>
       </div>
     </section>
 
@@ -265,14 +295,14 @@
       <div class="wrap">
         <div class="sec-head">
           <div class="num">02 · WHY HIVE</div>
-          <h2>바꾸지 않는 것까지 약속</h2>
-          <p>AI 앱의 실행은 그 앱에 맡기고, Hive는 기억·설정·안전 경계만 담당.</p>
+          <h2 data-i18n="whyTitle"></h2>
+          <p data-i18n="whyLead"></p>
         </div>
         <div class="cards">
-          <div class="card"><h3>API 키 요청 없음</h3><p>모델 회사 API를 부르지 않고 지금 쓰는 구독 로그인 그대로 사용.</p></div>
-          <div class="card"><h3>내 컴퓨터의 텍스트</h3><p>지식과 설정은 읽을 수 있는 Markdown·YAML 파일. 검색 색인은 언제든 다시 생성.</p></div>
-          <div class="card"><h3>바꾸기 전 백업</h3><p>설치·갱신·제거 전에 설정과 바뀔 파일을 복사. 복원은 미리보기부터.</p></div>
-          <div class="card"><h3>동의 뒤 적용</h3><p>추가 Skill, 훅, 상태 표시줄 연결은 미리 보여 준 뒤 승인할 때만 적용.</p></div>
+          <div class="card"><h3 data-i18n="card1t"></h3><p data-i18n="card1p"></p></div>
+          <div class="card"><h3 data-i18n="card2t"></h3><p data-i18n="card2p"></p></div>
+          <div class="card"><h3 data-i18n="card3t"></h3><p data-i18n="card3p"></p></div>
+          <div class="card"><h3 data-i18n="card4t"></h3><p data-i18n="card4p"></p></div>
         </div>
       </div>
     </section>
@@ -281,19 +311,19 @@
       <div class="wrap">
         <div class="sec-head">
           <div class="num">03 · INSTALL</div>
-          <h2>설치와 첫 설정</h2>
-          <p>설치 프로그램만 Node.js·npm이 필요하고, 설치된 <code>hive</code>는 독립 실행 파일.</p>
+          <h2 data-i18n="installTitle"></h2>
+          <p data-i18n-html="installLead"></p>
         </div>
         <div class="install">
           <ol class="steps">
-            <li><b>설치</b><br>오른쪽 명령 중 하나를 터미널에서 실행</li>
-            <li><b>버전 확인</b><br><code>hive --version</code> → <code>AIgent Hive v0.16.0 (released 2026-11-25)</code></li>
-            <li><b>앱 연결</b><br><code>hive update</code> 실행 뒤 쓰는 AI 앱 선택</li>
-            <li><b>프로젝트 설정</b><br>AI 에이전트에게 프로젝트 설정 Skill 요청. 빈 폴더는 질문부터, 기존 프로젝트는 파일 확인 뒤 제안 하나</li>
+            <li><b data-i18n="step1t"></b><br><span data-i18n="step1p"></span></li>
+            <li><b data-i18n="step2t"></b><br><code>hive --version</code> → <code>AIgent Hive v0.16.0 (released 2026-11-25)</code></li>
+            <li><b data-i18n="step3t"></b><br><span data-i18n-html="step3p"></span></li>
+            <li><b data-i18n="step4t"></b><br><span data-i18n="step4p"></span></li>
           </ol>
           <div class="code-tabs" id="install-tabs">
-            <div role="tablist" aria-label="설치 방법"></div>
-            <div class="panel" role="tabpanel"><small></small><pre></pre><button class="copy" type="button">복사</button></div>
+            <div role="tablist" data-i18n-attr="aria-label:installTabsLabel"></div>
+            <div class="panel" role="tabpanel"><small></small><pre></pre><button class="copy" type="button"></button></div>
           </div>
         </div>
       </div>
@@ -303,241 +333,554 @@
   <footer>
     <div class="wrap">
       <span>Aigent Hive · Apache-2.0</span>
-      <span>이 페이지 기준: 정식 0.16.0. 지원 범위와 미검증 항목은 GitHub README 기준.</span>
+      <span data-i18n="footer"></span>
     </div>
   </footer>
 
   <script>
   (() => {
     const LOGO = "{{HIVE_LOGO}}";
+    const LANGS = ["ko", "en", "ja"];
+    const STORE_KEY = "aigent-hive-lang";
+    const JP_FONT = "https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css";
+    document.querySelectorAll("img[data-logo]").forEach((img) => { img.src = LOGO; });
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     // Inline markup inside scenario text: `code` only. Everything else is escaped.
-    document.querySelectorAll("img[data-logo]").forEach((img) => { img.src = LOGO; });
     const fmt = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
 
+    /* Interface text. Keys with HTML are used only through data-i18n-html and hold trusted markup. */
+    const T = {
+      ko: {
+        title: "Aigent Hive",
+        description: "Aigent Hive 소개와 0.16.0 업데이트 전후 대화 비교",
+        navLabel: "페이지 탐색", navNew: "0.16.0 비교", navWhy: "특징", navInstall: "설치", langLabel: "언어",
+        eyebrow: "정식 0.16.0 · 2026-11-25",
+        heroTitle: "AI 에이전트에게<br><em>프로젝트의 기억</em>과 안전장치를",
+        heroLead: "쓰고 있는 AI 코딩 앱 위에 한 번 설치. 프로젝트 지식, 내 선호, 사용량 보호, 안전한 업데이트를 모든 앱에 같은 방식으로 적용. API 키나 추가 요금 없이 지금 구독 그대로 사용.",
+        hostsLabel: "지원 앱", ctaCompare: "업데이트 전후 비교 보기", ctaInstall: "설치 방법", logoAlt: "Aigent Hive 로고",
+        newTitle: "0.16.0에서 달라진 대화",
+        newLead: "같은 요청, 다른 결과. 업데이트 전과 후의 AI 에이전트 대화를 나란히 비교.",
+        tabsLabel: "비교 장면",
+        disclaimer: "대화는 기능 설명을 위한 연출 예시. 터미널 출력은 요약 표시이며 실제 문구·모델·시간은 환경에 따라 다름.",
+        whyTitle: "바꾸지 않는 것까지 약속",
+        whyLead: "AI 앱의 실행은 그 앱에 맡기고, Hive는 기억·설정·안전 경계만 담당.",
+        card1t: "API 키 요청 없음", card1p: "모델 회사 API를 부르지 않고 지금 쓰는 구독 로그인 그대로 사용.",
+        card2t: "내 컴퓨터의 텍스트", card2p: "지식과 설정은 읽을 수 있는 Markdown·YAML 파일. 검색 색인은 언제든 다시 생성.",
+        card3t: "바꾸기 전 백업", card3p: "설치·갱신·제거 전에 설정과 바뀔 파일을 복사. 복원은 미리보기부터.",
+        card4t: "동의 뒤 적용", card4p: "추가 Skill, 훅, 상태 표시줄 연결은 미리 보여 준 뒤 승인할 때만 적용.",
+        installTitle: "설치와 첫 설정",
+        installLead: "설치 프로그램만 Node.js·npm이 필요하고, 설치된 <code>hive</code>는 독립 실행 파일.",
+        step1t: "설치", step1p: "오른쪽 명령 중 하나를 터미널에서 실행",
+        step2t: "버전 확인",
+        step3t: "앱 연결", step3p: "<code>hive update</code> 실행 뒤 쓰는 AI 앱 선택",
+        step4t: "프로젝트 설정", step4p: "AI 에이전트에게 프로젝트 설정 Skill 요청. 빈 폴더는 질문부터, 기존 프로젝트는 파일 확인 뒤 제안 하나",
+        installTabsLabel: "설치 방법",
+        footer: "이 페이지 기준: 정식 0.16.0. 지원 범위와 미검증 항목은 GitHub README 기준.",
+        replay: "↻ 다시 보기", notesHead: "알아 둘 점", memoryHead: "저장된 지식", memorySame: "· 두 화면 모두 같은 상태에서 시작",
+        before: "이전 (0.15.x)", me: "나", agent: "AI 에이전트", exp: "실험",
+        copy: "복사", copied: "복사됨", copyFail: "직접 선택",
+        discordNote: "",
+        install: { npm: ["npm", "모든 OS · Node.js·npm 필요"], curl: ["macOS · Linux", "터미널"], ps: ["Windows PowerShell", "PowerShell 5.1 이상"], cmd: ["Windows 명령 프롬프트", "cmd.exe"] }
+      },
+      en: {
+        title: "Aigent Hive",
+        description: "Aigent Hive overview and before/after conversations for the 0.16.0 update",
+        navLabel: "Page navigation", navNew: "0.16.0 compared", navWhy: "Why Hive", navInstall: "Install", langLabel: "Language",
+        eyebrow: "Stable 0.16.0 · 2026-11-25",
+        heroTitle: "Give your AI agent<br><em>project memory</em> and guardrails",
+        heroLead: "Install once on top of the AI coding apps you already use. Project knowledge, your preferences, usage protection and safe updates work the same way in every app. No API keys or extra fees: your current subscription is all it uses.",
+        hostsLabel: "Supported apps", ctaCompare: "See before and after", ctaInstall: "How to install", logoAlt: "Aigent Hive logo",
+        newTitle: "How conversations changed in 0.16.0",
+        newLead: "Same request, different result. Conversations with an AI agent before and after the update, side by side.",
+        tabsLabel: "Comparison scenes",
+        disclaimer: "Conversations are illustrative examples. Terminal output is abridged; actual wording, models and times vary by setup.",
+        whyTitle: "Clear promises, including what Hive leaves alone",
+        whyLead: "Your AI app keeps running the AI. Hive only handles memory, settings and safety boundaries.",
+        card1t: "No API keys", card1p: "Hive never calls a model provider's API. It works with the subscription login you already have.",
+        card2t: "Plain text on your computer", card2p: "Knowledge and settings are readable Markdown and YAML files. The search index can be rebuilt at any time.",
+        card3t: "Backup before changes", card3p: "Install, update and uninstall copy your settings and the files they change first. Restores start with a preview.",
+        card4t: "Applied only with consent", card4p: "Extra Skills, hooks and the status-line hookup are shown first and applied only after you approve.",
+        installTitle: "Install and first setup",
+        installLead: "Only the installer needs Node.js and npm. The installed <code>hive</code> is a standalone binary.",
+        step1t: "Install", step1p: "Run one of the commands on the right in a terminal",
+        step2t: "Check the version",
+        step3t: "Connect your apps", step3p: "Run <code>hive update</code> and choose the AI apps you use",
+        step4t: "Set up a project", step4p: "Ask your AI agent for the project-setup Skill. In an empty folder it asks questions first; in an existing project it scans the files and shows one proposal.",
+        installTabsLabel: "Install methods",
+        footer: "This page reflects stable 0.16.0. See the GitHub README for supported platforms and unverified items.",
+        replay: "↻ Replay", notesHead: "Good to know", memoryHead: "Saved knowledge", memorySame: "· Both sides start from the same state",
+        before: "Before (0.15.x)", me: "You", agent: "AI agent", exp: "Beta",
+        copy: "Copy", copied: "Copied", copyFail: "Select it",
+        discordNote: "Hive sends Discord notices in Korean; this is the actual format.",
+        install: { npm: ["npm", "Any OS · needs Node.js and npm"], curl: ["macOS · Linux", "Terminal"], ps: ["Windows PowerShell", "PowerShell 5.1 or later"], cmd: ["Windows Command Prompt", "cmd.exe"] }
+      },
+      ja: {
+        title: "Aigent Hive",
+        description: "Aigent Hive の紹介と 0.16.0 アップデート前後の会話比較",
+        navLabel: "ページ内ナビゲーション", navNew: "0.16.0 の比較", navWhy: "特長", navInstall: "インストール", langLabel: "言語",
+        eyebrow: "正式版 0.16.0 · 2026-11-25",
+        heroTitle: "AI エージェントに<br><em>プロジェクトの記憶</em>と安全装置を",
+        heroLead: "いま使っている AI コーディングアプリに一度入れるだけ。プロジェクトの知識、あなたの好み、使用量の保護、安全なアップデートを、どのアプリでも同じように。API キーも追加料金も不要で、今のサブスクリプションのまま使えます。",
+        hostsLabel: "対応アプリ", ctaCompare: "アップデート前後を比べる", ctaInstall: "インストール方法", logoAlt: "Aigent Hive のロゴ",
+        newTitle: "0.16.0 で変わった会話",
+        newLead: "同じ依頼でも結果が違う。アップデート前と後の AI エージェントとの会話を並べて比較。",
+        tabsLabel: "比較シーン",
+        disclaimer: "会話は機能説明のための演出例です。ターミナル出力は要約表示で、実際の文言・モデル・所要時間は環境によって異なります。",
+        whyTitle: "しないことまで約束",
+        whyLead: "AI の実行はそのアプリに任せ、Hive は記憶・設定・安全の境界だけを担当。",
+        card1t: "API キー不要", card1p: "モデル提供元の API は呼び出さず、いまのサブスクリプションのログインのまま使います。",
+        card2t: "手元のテキストファイル", card2p: "知識と設定は読める Markdown・YAML ファイル。検索インデックスはいつでも作り直せます。",
+        card3t: "変更前にバックアップ", card3p: "インストール・更新・削除の前に、設定と変更されるファイルをコピー。復元はプレビューから。",
+        card4t: "同意してから適用", card4p: "追加の Skill、フック、ステータスラインの接続は、内容を見せて承認されたときだけ適用。",
+        installTitle: "インストールと初期設定",
+        installLead: "Node.js と npm が必要なのはインストーラーだけ。インストールされた <code>hive</code> は単体で動く実行ファイルです。",
+        step1t: "インストール", step1p: "右のコマンドのどれかをターミナルで実行",
+        step2t: "バージョン確認",
+        step3t: "アプリと接続", step3p: "<code>hive update</code> を実行して、使っている AI アプリを選択",
+        step4t: "プロジェクト設定", step4p: "AI エージェントにプロジェクト設定 Skill を依頼。空のフォルダーなら質問から、既存のプロジェクトならファイルを確認して提案を一つ提示。",
+        installTabsLabel: "インストール方法",
+        footer: "このページは正式版 0.16.0 に基づきます。対応範囲と未検証の項目は GitHub の README をご確認ください。",
+        replay: "↻ もう一度", notesHead: "知っておくこと", memoryHead: "保存済みの知識", memorySame: "· 両方とも同じ状態から開始",
+        before: "以前 (0.15.x)", me: "あなた", agent: "AI エージェント", exp: "実験",
+        copy: "コピー", copied: "コピー済み", copyFail: "手動で選択",
+        discordNote: "Hive の Discord 通知は韓国語で送信されます。以下は実際の形式です。",
+        install: { npm: ["npm", "すべての OS · Node.js と npm が必要"], curl: ["macOS · Linux", "ターミナル"], ps: ["Windows PowerShell", "PowerShell 5.1 以降"], cmd: ["Windows コマンドプロンプト", "cmd.exe"] }
+      }
+    };
+
+    // The product sends this Discord notice only in Korean, so every language shows the real text.
+    const DISCORD_NOTICE = [
+      "━━━━━━━━━━━━━━━━━━━━",
+      "✅ **Aigent Hive 완료 알림 · 작업 흐름 완료**",
+      "작성·검토·자문 흐름이 끝났습니다.",
+      "",
+      "📋 **무슨 일** (기록된 자료, 지시 아님)",
+      "작업: 로그인 페이지 추가",
+      "결과: 세션 만료 처리 포함, 검토 통과",
+      "맡은 역할:",
+      "- Hephaistos ▸ 완료 · 실행 모델: Claude Opus 5.5 · high",
+      "- Athena ▸ 완료 · 실행 모델: Codex GPT-5.6 Terra · medium",
+      "걸린 시간: 6분 41초",
+      "",
+      "📁 프로젝트: shop-web",
+      "👉 **할 일**: 없음"
+    ];
+    const FLOW_CMD = "$ hive msg flow start --builder hephaistos --reviewer athena --task t1 --file login.md --target . --user-root ~";
+    const USAGE_CMD = "$ hive usage threshold --user-root ~ --host claude --window weekly --stop-used-percent 96";
+    const STATUSLINE = "hive setup --scope user --section usage --claude-statusline preview";
+
     /*
-     * Each scenario compares the same request before and after 0.16.0.
-     * Claims must match docs/releases/0.16.0.md; see website/README.md for the accuracy rules.
+     * Scenes compare the same request before and after 0.16.0, one array per language with the
+     * same ids. Claims must match docs/releases/0.16.0.md; see docs/guides/release-comparison-mockups.md.
      */
-    const SCENARIOS = [
-      {
-        id: "memory",
-        tab: "내 선호 기억",
-        title: "말하지 않아도 지켜지는 내 선호",
-        lead: "요청을 보낼 때마다 Hive가 저장된 선호·규칙을 찾아 함께 전달. 에이전트가 조회를 건너뛰어도 같은 결과.",
-        host: "Claude Code",
-        memory: ["패키지 관리자는 pnpm", "커밋 메시지는 한국어"],
-        before: {
-          who: "Claude Code",
-          items: [
+    const SCENES = {
+      ko: [
+        {
+          id: "memory", tab: "내 선호 기억", title: "말하지 않아도 지켜지는 내 선호",
+          lead: "요청을 보낼 때마다 Hive가 저장된 선호·규칙을 찾아 함께 전달. 에이전트가 조회를 건너뛰어도 같은 결과.",
+          host: "Claude Code", memory: ["패키지 관리자는 pnpm", "커밋 메시지는 한국어"],
+          before: { who: "Claude Code", items: [
             { t: "user", s: "결제 화면에 쿠폰 입력칸 추가하고 커밋해 줘." },
             { t: "agent", s: "쿠폰 입력칸을 추가하고 커밋했습니다." },
             { t: "term", lines: ["$ npm install react-hook-form", "$ git commit -m \"feat: add coupon field to checkout\""] },
             { t: "user", s: "우리 pnpm 쓰고, 커밋은 한국어로 쓰기로 했잖아." },
             { t: "agent", s: "죄송합니다. 저장된 선호를 확인하지 않았습니다. 되돌리고 다시 하겠습니다." }
-          ],
-          outcome: "저장해 둔 선호를 다시 설명하고 작업 되돌리기"
-        },
-        after: {
-          who: "Claude Code",
-          items: [
+          ], outcome: "저장해 둔 선호를 다시 설명하고 작업 되돌리기" },
+          after: { who: "Claude Code", items: [
             { t: "user", s: "결제 화면에 쿠폰 입력칸 추가하고 커밋해 줘." },
             { t: "hive", title: "Hive 지식 자동 조회 · 일치 2건", list: ["[preference] 패키지 관리자는 pnpm", "[preference] 커밋 메시지는 한국어"] },
             { t: "agent", s: "저장된 선호에 맞춰 추가하고 커밋했습니다." },
             { t: "term", lines: ["$ pnpm add react-hook-form", "$ git commit -m \"feat: 결제 화면에 쿠폰 입력칸 추가\""] }
-          ],
-          outcome: "첫 요청에서 바로 원하는 방식"
+          ], outcome: "첫 요청에서 바로 원하는 방식" },
+          notes: ["Claude Code 전용 기능", "읽기만 하고 저장·변경 없음. 일치하는 지식이 없으면 아무것도 추가하지 않음", "끄기: 환경 변수 `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`"]
         },
-        notes: [
-          "Claude Code 전용 기능",
-          "읽기만 하고 저장·변경 없음. 일치하는 지식이 없으면 아무것도 추가하지 않음",
-          "끄기: 환경 변수 `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`"
-        ]
-      },
-      {
-        id: "coauthor",
-        tab: "깔끔한 커밋",
-        title: "커밋에 AI 공동 작성자 줄 없이",
-        lead: "사용자 지침의 기본 규칙으로 커밋과 PR에서 AI 공동 작성자 표시 제외. 매번 지울 필요 없음.",
-        host: "Hive 사용자 지침",
-        before: {
-          who: "AI 에이전트",
-          items: [
+        {
+          id: "coauthor", tab: "깔끔한 커밋", title: "커밋에 AI 공동 작성자 줄 없이",
+          lead: "사용자 지침의 기본 규칙으로 커밋과 PR에서 AI 공동 작성자 표시 제외. 매번 지울 필요 없음.",
+          host: "Hive 사용자 지침",
+          before: { who: "AI 에이전트", items: [
             { t: "user", s: "로그인 오류 고친 거 커밋해 줘." },
             { t: "agent", s: "커밋했습니다." },
             { t: "term", lines: ["$ git log -1 --format=%B", "fix: 로그인 세션 만료 오류 수정", "", "!Co-Authored-By: Claude <noreply@anthropic.com>"] },
             { t: "user", s: "이 줄은 매번 지워야 해서 번거로워." }
-          ],
-          outcome: "커밋·PR마다 직접 정리"
-        },
-        after: {
-          who: "AI 에이전트",
-          items: [
+          ], outcome: "커밋·PR마다 직접 정리" },
+          after: { who: "AI 에이전트", items: [
             { t: "user", s: "로그인 오류 고친 거 커밋해 줘." },
             { t: "agent", s: "커밋했습니다. 사용자 설정에 따라 AI 공동 작성자 줄은 넣지 않았습니다." },
             { t: "term", lines: ["$ git log -1 --format=%B", "fix: 로그인 세션 만료 오류 수정"] }
-          ],
-          outcome: "처음부터 내 이름만 남는 기록"
+          ], outcome: "처음부터 내 이름만 남는 기록" },
+          notes: ["기본값: 켜짐. 커밋과 PR 모두 적용", "허용으로 바꾸기: `hive setup --scope user --section review`"]
         },
-        notes: [
-          "기본값: 켜짐. 커밋과 PR 모두 적용",
-          "허용으로 바꾸기: `hive setup --scope user --section review`"
-        ]
-      },
-      {
-        id: "backup",
-        tab: "안전한 업데이트",
-        title: "업데이트 뒤에도 그대로인 프로젝트와 설정",
-        lead: "0.15.x에서 올라와도 기존 설치를 그대로 인식. 바꾸기 전에 설정·프로젝트 목록·바뀔 파일을 먼저 복사.",
-        host: "Claude Code · Antigravity",
-        before: {
-          who: "AI 에이전트",
-          items: [
+        {
+          id: "backup", tab: "안전한 업데이트", title: "업데이트 뒤에도 그대로인 프로젝트와 설정",
+          lead: "0.15.x에서 올라와도 기존 설치를 그대로 인식. 바꾸기 전에 설정·프로젝트 목록·바뀔 파일을 먼저 복사.",
+          host: "Claude Code · Antigravity",
+          before: { who: "AI 에이전트", items: [
             { t: "user", s: "hive update 했더니 등록한 프로젝트가 안 보여." },
             { t: "agent", s: "업데이트 중 다시 설치되면서 프로젝트 목록이 비었습니다. 프로젝트를 하나씩 다시 등록해야 합니다." },
             { t: "user", s: "프로젝트가 열 개가 넘는데…" }
-          ],
-          outcome: "프로젝트를 하나씩 다시 등록"
-        },
-        after: {
-          who: "AI 에이전트",
-          items: [
+          ], outcome: "프로젝트를 하나씩 다시 등록" },
+          after: { who: "AI 에이전트", items: [
             { t: "user", s: "hive update 해 줘." },
             { t: "term", lines: ["$ hive update", "#바꾸기 전 사본 저장: ~/hive-backups/<id>", "  설정 · 프로젝트 목록 · ~/.claude/settings.json", "#갱신 완료 · 프로젝트 목록과 실행 상태 유지"] },
             { t: "user", s: "혹시 모르니 이전 상태로 돌릴 수 있어?" },
             { t: "term", lines: ["$ hive storage backup list", "$ hive storage backup restore --id <id>", "#복원 미리보기 · 아직 아무것도 바꾸지 않음"] }
-          ],
-          outcome: "목록은 그대로, 되돌릴 사본까지 확보"
+          ], outcome: "목록은 그대로, 되돌릴 사본까지 확보" },
+          notes: ["지식 전체와 `hive setup` 변경은 백업 범위 밖", "백업 사본은 자동 삭제 없음", "0.15.x로 내리기 전에는 Claude 상태 표시줄 연결부터 되돌리기"]
         },
-        notes: [
-          "지식 전체와 `hive setup` 변경은 백업 범위 밖",
-          "백업 사본은 자동 삭제 없음",
-          "0.15.x로 내리기 전에는 Claude 상태 표시줄 연결부터 되돌리기"
-        ]
-      },
-      {
-        id: "usage",
-        tab: "사용량 표시",
-        title: "Claude 화면과 같은 숫자로 보는 사용량",
-        lead: "Claude는 사용한 %, Codex·Antigravity는 남은 %로 각 앱과 같은 기준. 읽지 못하면 원인과 해결 방법을 알리고 작업 계속.",
-        host: "사용량 보호",
-        before: {
-          who: "AI 에이전트",
-          items: [
+        {
+          id: "usage", tab: "사용량 표시", title: "Claude 화면과 같은 숫자로 보는 사용량",
+          lead: "Claude는 사용한 %, Codex·Antigravity는 남은 %로 각 앱과 같은 기준. 읽지 못하면 원인과 해결 방법을 알리고 작업 계속.",
+          host: "사용량 보호",
+          before: { who: "AI 에이전트", items: [
             { t: "user", s: "Claude 주간 사용량 96%에서 멈추게 해 줘." },
             { t: "agent", s: "Hive는 남은 비율로 받기 때문에 4%로 입력해야 합니다. Claude 화면의 숫자와 반대로 계산해 주세요." },
             { t: "aside", s: "며칠 뒤, 사용량을 읽지 못한 상황" },
             { t: "warn", title: "Discord 알림", lines: ["사용량이 회복되면 다시 시작하라는 안내"] },
             { t: "user", s: "아직 여유 있는데 왜 기다리라는 거지?" }
-          ],
-          outcome: "숫자를 머릿속으로 뒤집고, 원인 모를 대기"
-        },
-        after: {
-          who: "AI 에이전트",
-          items: [
+          ], outcome: "숫자를 머릿속으로 뒤집고, 원인 모를 대기" },
+          after: { who: "AI 에이전트", items: [
             { t: "user", s: "Claude 주간 사용량 96%에서 멈추게 해 줘." },
-            { t: "term", lines: ["$ hive usage threshold --user-root ~ --host claude --window weekly --stop-used-percent 96", "#Claude 주간: 사용 96%에서 중지"] },
+            { t: "term", lines: [USAGE_CMD, "#Claude 주간: 사용 96%에서 중지"] },
             { t: "aside", s: "며칠 뒤, 사용량을 읽지 못한 상황" },
-            { t: "warn", title: "사용량을 읽지 못함 · Claude 주간 한도", lines: ["원인: 상태 표시줄 연결 없음", "해결: `hive setup --scope user --section usage --claude-statusline preview`", "작업은 경고와 함께 계속"] }
-          ],
-          outcome: "화면과 같은 숫자, 막히지 않는 작업"
+            { t: "warn", title: "사용량을 읽지 못함 · Claude 주간 한도", lines: ["원인: 상태 표시줄 연결 없음", "해결: `" + STATUSLINE + "`", "작업은 경고와 함께 계속"] }
+          ], outcome: "화면과 같은 숫자, 막히지 않는 작업" },
+          notes: ["상태 표시줄 연결은 미리보기 뒤 승인. 기존 표시줄 유지, 되돌리기 가능", "터미널의 Claude Code에서 사용. 데스크톱 앱 Code 탭은 미확인"]
         },
-        notes: [
-          "상태 표시줄 연결은 미리보기 뒤 승인. 기존 표시줄 유지, 되돌리기 가능",
-          "터미널의 Claude Code에서 사용. 데스크톱 앱 Code 탭은 미확인"
-        ]
-      },
-      {
-        id: "msg",
-        tab: "AI 간 검토 전달",
-        experimental: true,
-        title: "창을 오가며 복사하지 않는 작성·검토 흐름",
-        lead: "작성·검토·자문 역할 사이에 일과 결과를 프로젝트 수신함으로 전달. 끝나면 Discord에 작업·결과·역할·실제 모델·걸린 시간 알림.",
-        host: "실험 기능",
-        before: {
-          who: "Claude 창 ↔ Codex 창",
-          items: [
+        {
+          id: "msg", tab: "AI 간 검토 전달", experimental: true, title: "창을 오가며 복사하지 않는 작성·검토 흐름",
+          lead: "작성·검토·자문 역할 사이에 일과 결과를 프로젝트 수신함으로 전달. 끝나면 Discord에 작업·결과·역할·실제 모델·걸린 시간 알림.",
+          host: "실험 기능",
+          before: { who: "Claude 창 ↔ Codex 창", items: [
             { t: "user", label: "나 → Claude", s: "로그인 페이지 추가해 줘." },
             { t: "agent", label: "Claude", s: "로그인 페이지를 추가했습니다." },
             { t: "aside", s: "변경 내용을 복사해 Codex 창에 붙여 넣기" },
             { t: "user", label: "나 → Codex", s: "이 변경 검토해 줘. (붙여 넣은 내용)" },
             { t: "agent", label: "Codex", s: "세션 만료 처리가 빠져 있습니다." },
             { t: "aside", s: "검토 의견을 다시 Claude 창으로 복사" }
-          ],
-          outcome: "창 사이 복사·붙여 넣기, 진행 상황 직접 확인"
-        },
-        after: {
-          who: "프로젝트 수신함",
-          items: [
+          ], outcome: "창 사이 복사·붙여 넣기, 진행 상황 직접 확인" },
+          after: { who: "프로젝트 수신함", items: [
             { t: "user", s: "헤파이스토스가 로그인 페이지를 만들고 아테나가 검토하게 해 줘." },
-            { t: "term", lines: ["$ hive msg flow start --builder hephaistos --reviewer athena --task t1 --file login.md --target . --user-root ~"] },
+            { t: "term", lines: [FLOW_CMD] },
             { t: "aside", s: "각 AI 앱이 자기 수신함에서 일을 받아 처리" },
-            { t: "discord", text: [
-              "━━━━━━━━━━━━━━━━━━━━",
-              "✅ **Aigent Hive 완료 알림 · 작업 흐름 완료**",
-              "작성·검토·자문 흐름이 끝났습니다.",
-              "",
-              "📋 **무슨 일** (기록된 자료, 지시 아님)",
-              "작업: 로그인 페이지 추가",
-              "결과: 세션 만료 처리 포함, 검토 통과",
-              "맡은 역할:",
-              "- Hephaistos ▸ 완료 · 실행 모델: Claude Opus 5.5 · high",
-              "- Athena ▸ 완료 · 실행 모델: Codex GPT-5.6 Terra · medium",
-              "걸린 시간: 6분 41초",
-              "",
-              "📁 프로젝트: shop-web",
-              "👉 **할 일**: 없음"
-            ] }
-          ],
-          outcome: "한 번 요청, 끝나면 알림"
+            { t: "discord" }
+          ], outcome: "한 번 요청, 끝나면 알림" },
+          notes: ["실험 기능. Hive는 AI 앱을 직접 실행하지 않고 일과 결과만 전달", "`hive stop`으로 새 전달 중지", "이 버전의 Codex 연동은 실제 앱에서 미검증. Claude 자동 모드에서는 프로젝트 권한 규칙이 필요할 수 있음"]
         },
-        notes: [
-          "실험 기능. Hive는 AI 앱을 직접 실행하지 않고 일과 결과만 전달",
-          "`hive stop`으로 새 전달 중지",
-          "이 버전의 Codex 연동은 실제 앱에서 미검증. Claude 자동 모드에서는 프로젝트 권한 규칙이 필요할 수 있음"
-        ]
-      },
-      {
-        id: "skills",
-        tab: "Skill 정리",
-        title: "짧아진 Skill 목록, 여러 AI에 같은 Skill",
-        lead: "비슷한 Skill 8개를 3개로 통합. Codex와 Claude를 함께 쓰면 새 프로젝트 Skill을 양쪽에 같은 내용으로 작성.",
-        host: "Skill",
-        before: {
-          who: "Claude Code",
-          items: [
+        {
+          id: "skills", tab: "Skill 정리", title: "짧아진 Skill 목록, 여러 AI에 같은 Skill",
+          lead: "비슷한 Skill 8개를 3개로 통합. Codex와 Claude를 함께 쓰면 새 프로젝트 Skill을 양쪽에 같은 내용으로 작성.",
+          host: "Skill",
+          before: { who: "Claude Code", items: [
             { t: "list", head: "/aigent-hive: 입력 시 목록", rows: [
               ["knowledge-maintain", "지식 점검"], ["knowledge-promote", "지식 공유"], ["knowledge-transfer", "지식 이동"],
               ["run-checkpoint", "진행 저장"], ["run-handoff", "역할 넘기기"], ["run-resume", "이어 하기"],
-              ["adversarial-judge", "독립 판정 요청"], ["judge-evidence", "판정 근거 확인"]
-            ] },
+              ["adversarial-judge", "독립 판정 요청"], ["judge-evidence", "판정 근거 확인"]] },
             { t: "user", s: "배포 점검 Skill 하나 만들어 줘. Codex에서도 쓸 거야." },
             { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "#Codex 폴더에는 없음"] }
-          ],
-          outcome: "고를 Skill이 많고, 다른 AI에서는 안 보이는 새 Skill"
-        },
-        after: {
-          who: "Claude Code",
-          items: [
+          ], outcome: "고를 Skill이 많고, 다른 AI에서는 안 보이는 새 Skill" },
+          after: { who: "Claude Code", items: [
             { t: "list", head: "/aigent-hive: 입력 시 목록", rows: [
-              ["knowledge-manage", "지식 점검·정리·공유·이동"], ["run", "진행 저장·넘기기·이어 하기"], ["judge", "독립 판정 요청과 근거 확인"]
-            ] },
+              ["knowledge-manage", "지식 점검·정리·공유·이동"], ["run", "진행 저장·넘기기·이어 하기"], ["judge", "독립 판정 요청과 근거 확인"]] },
             { t: "user", s: "배포 점검 Skill 하나 만들어 줘. Codex에서도 쓸 거야." },
             { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "+ .agents/skills/deploy-check/SKILL.md", "#두 파일 같은 내용"] }
-          ],
-          outcome: "짧은 목록, 모든 AI에서 같은 Skill"
+          ], outcome: "짧은 목록, 모든 AI에서 같은 Skill" },
+          notes: ["Claude Code에서 옛 `/aigent-hive:...` 이름은 실행되지 않으므로 새 이름 사용", "직접 고친 Skill 파일은 유지. 한 AI에만 설치했다면 그 AI용만 작성"]
+        }
+      ],
+      en: [
+        {
+          id: "memory", tab: "Remembered preferences", title: "Your preferences, kept without reminding",
+          lead: "With every request, Hive looks up your saved preferences and rules and passes them along. Even if the agent skips its own lookup, the result is the same.",
+          host: "Claude Code", memory: ["Package manager: pnpm", "Commit messages: Conventional Commits with a scope"],
+          before: { who: "Claude Code", items: [
+            { t: "user", s: "Add a coupon field to the checkout page and commit it." },
+            { t: "agent", s: "I added the coupon field and committed it." },
+            { t: "term", lines: ["$ npm install react-hook-form", "$ git commit -m \"added coupon field\""] },
+            { t: "user", s: "We use pnpm, and commits follow Conventional Commits with a scope. We agreed on this." },
+            { t: "agent", s: "Sorry, I didn't check your saved preferences. I'll revert and redo it." }
+          ], outcome: "Explain your preferences again and undo the work" },
+          after: { who: "Claude Code", items: [
+            { t: "user", s: "Add a coupon field to the checkout page and commit it." },
+            { t: "hive", title: "Hive knowledge lookup · 2 matches", list: ["[preference] Package manager: pnpm", "[preference] Commit messages: Conventional Commits with a scope"] },
+            { t: "agent", s: "Done, following your saved preferences." },
+            { t: "term", lines: ["$ pnpm add react-hook-form", "$ git commit -m \"feat(checkout): add coupon field\""] }
+          ], outcome: "Done your way on the first request" },
+          notes: ["Claude Code only", "Read-only: nothing is saved or changed. If no knowledge matches, nothing is added", "Turn off: environment variable `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`"]
         },
-        notes: [
-          "Claude Code에서 옛 `/aigent-hive:...` 이름은 실행되지 않으므로 새 이름 사용",
-          "직접 고친 Skill 파일은 유지. 한 AI에만 설치했다면 그 AI용만 작성"
-        ]
-      }
+        {
+          id: "coauthor", tab: "Clean commits", title: "Commits without an AI co-author line",
+          lead: "A default rule in your user guidance keeps AI co-author lines out of commits and pull requests. No more deleting them by hand.",
+          host: "Hive user guidance",
+          before: { who: "AI agent", items: [
+            { t: "user", s: "Commit the login bug fix." },
+            { t: "agent", s: "Committed." },
+            { t: "term", lines: ["$ git log -1 --format=%B", "fix: handle expired login sessions", "", "!Co-Authored-By: Claude <noreply@anthropic.com>"] },
+            { t: "user", s: "I have to delete this line every time." }
+          ], outcome: "Clean up every commit and PR yourself" },
+          after: { who: "AI agent", items: [
+            { t: "user", s: "Commit the login bug fix." },
+            { t: "agent", s: "Committed. Per your settings, I left out the AI co-author line." },
+            { t: "term", lines: ["$ git log -1 --format=%B", "fix: handle expired login sessions"] }
+          ], outcome: "Only your name in the history, from the start" },
+          notes: ["On by default, for both commits and PRs", "To allow the line: `hive setup --scope user --section review`"]
+        },
+        {
+          id: "backup", tab: "Safe updates", title: "Projects and settings intact after an update",
+          lead: "Updating from 0.15.x recognizes your existing install. Settings, the project list and files about to change are copied first.",
+          host: "Claude Code · Antigravity",
+          before: { who: "AI agent", items: [
+            { t: "user", s: "After hive update, my registered projects are gone." },
+            { t: "agent", s: "The update reinstalled Hive and the project list came back empty. You'll need to register each project again." },
+            { t: "user", s: "I have more than ten projects…" }
+          ], outcome: "Register every project again by hand" },
+          after: { who: "AI agent", items: [
+            { t: "user", s: "Run hive update." },
+            { t: "term", lines: ["$ hive update", "#Copied before changes: ~/hive-backups/<id>", "  settings · project list · ~/.claude/settings.json", "#Update complete · project list and run state kept"] },
+            { t: "user", s: "Just in case, can I go back to the previous state?" },
+            { t: "term", lines: ["$ hive storage backup list", "$ hive storage backup restore --id <id>", "#Restore preview · nothing changed yet"] }
+          ], outcome: "List intact, plus a copy to roll back to" },
+          notes: ["Knowledge as a whole and `hive setup` changes are outside the backup", "Backup copies are never deleted automatically", "Before downgrading to 0.15.x, revert the Claude status-line hookup first"]
+        },
+        {
+          id: "usage", tab: "Usage display", title: "Usage in the same numbers Claude shows",
+          lead: "Claude uses percent used; Codex and Antigravity use percent remaining, matching each app. If usage can't be read, Hive names the cause and fix and keeps working.",
+          host: "Usage protection",
+          before: { who: "AI agent", items: [
+            { t: "user", s: "Stop at 96% of my weekly Claude usage." },
+            { t: "agent", s: "Hive takes the remaining percentage, so enter 4%. Please invert the number Claude shows." },
+            { t: "aside", s: "A few days later, usage can't be read" },
+            { t: "warn", title: "Discord notice", lines: ["Says to restart once usage recovers"] },
+            { t: "user", s: "I still have room. Why is it telling me to wait?" }
+          ], outcome: "Flip numbers in your head, then wait without knowing why" },
+          after: { who: "AI agent", items: [
+            { t: "user", s: "Stop at 96% of my weekly Claude usage." },
+            { t: "term", lines: [USAGE_CMD, "#Claude weekly: stop at 96% used"] },
+            { t: "aside", s: "A few days later, usage can't be read" },
+            { t: "warn", title: "Usage unreadable · Claude weekly limit", lines: ["Cause: status line not connected", "Fix: `" + STATUSLINE + "`", "Work continues with a warning"] }
+          ], outcome: "Same numbers as your app, and work keeps going" },
+          notes: ["The status-line hookup is previewed and needs your approval. Your existing status line keeps working and the change can be reverted", "For Claude Code in a terminal. The desktop app's Code tab is not confirmed"]
+        },
+        {
+          id: "msg", tab: "AI-to-AI review", experimental: true, title: "Build and review without copying between windows",
+          lead: "Work and results move between builder, reviewer and advisor roles through a project inbox. When done, Discord shows the task, result, roles, actual model and time taken.",
+          host: "Beta feature",
+          before: { who: "Claude window ↔ Codex window", items: [
+            { t: "user", label: "You → Claude", s: "Add a login page." },
+            { t: "agent", label: "Claude", s: "I added the login page." },
+            { t: "aside", s: "Copy the change and paste it into the Codex window" },
+            { t: "user", label: "You → Codex", s: "Review this change. (pasted)" },
+            { t: "agent", label: "Codex", s: "Session expiry handling is missing." },
+            { t: "aside", s: "Copy the review back into the Claude window" }
+          ], outcome: "Copy and paste between windows, track progress yourself" },
+          after: { who: "Project inbox", items: [
+            { t: "user", s: "Have Hephaistos build the login page and Athena review it." },
+            { t: "term", lines: [FLOW_CMD] },
+            { t: "aside", s: "Each AI app picks up its work from its own inbox" },
+            { t: "discord" }
+          ], outcome: "One request, a notice when it's done" },
+          notes: ["Beta. Hive doesn't launch AI apps; it only passes work and results", "`hive stop` stops new messages", "Codex integration in this version is not verified in the real app. Claude's auto mode may need a project permission rule"]
+        },
+        {
+          id: "skills", tab: "Fewer Skills", title: "A shorter Skill list, the same Skill in every AI",
+          lead: "Eight similar Skills merged into three. If you use Codex and Claude together, a new project Skill is written for both with the same content.",
+          host: "Skills",
+          before: { who: "Claude Code", items: [
+            { t: "list", head: "List after typing /aigent-hive:", rows: [
+              ["knowledge-maintain", "Check knowledge"], ["knowledge-promote", "Share knowledge"], ["knowledge-transfer", "Move knowledge"],
+              ["run-checkpoint", "Save progress"], ["run-handoff", "Hand off a role"], ["run-resume", "Resume"],
+              ["adversarial-judge", "Request an independent verdict"], ["judge-evidence", "Check verdict evidence"]] },
+            { t: "user", s: "Make a deploy-check Skill. I'll use it in Codex too." },
+            { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "#Nothing in the Codex folder"] }
+          ], outcome: "Too many Skills to pick from, and the new one is missing in other AIs" },
+          after: { who: "Claude Code", items: [
+            { t: "list", head: "List after typing /aigent-hive:", rows: [
+              ["knowledge-manage", "Check, clean up, share and move knowledge"], ["run", "Save, hand off and resume"], ["judge", "Request a verdict and check evidence"]] },
+            { t: "user", s: "Make a deploy-check Skill. I'll use it in Codex too." },
+            { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "+ .agents/skills/deploy-check/SKILL.md", "#Both files have the same content"] }
+          ], outcome: "A short list, and the same Skill in every AI" },
+          notes: ["Claude Code no longer runs the old `/aigent-hive:...` names; use the new ones", "Skill files you edited are kept. With only one AI installed, only its copy is written"]
+        }
+      ],
+      ja: [
+        {
+          id: "memory", tab: "好みを記憶", title: "言わなくても守られるあなたの好み",
+          lead: "依頼を送るたびに、Hive が保存済みの好みやルールを探して一緒に渡します。エージェントが確認を飛ばしても結果は同じ。",
+          host: "Claude Code", memory: ["パッケージマネージャーは pnpm", "コミットメッセージは日本語"],
+          before: { who: "Claude Code", items: [
+            { t: "user", s: "決済画面にクーポン入力欄を追加してコミットして。" },
+            { t: "agent", s: "クーポン入力欄を追加してコミットしました。" },
+            { t: "term", lines: ["$ npm install react-hook-form", "$ git commit -m \"feat: add coupon field to checkout\""] },
+            { t: "user", s: "うちは pnpm で、コミットは日本語って決めたよね。" },
+            { t: "agent", s: "申し訳ありません。保存済みの好みを確認していませんでした。元に戻してやり直します。" }
+          ], outcome: "保存した好みを説明し直して、作業を元に戻す" },
+          after: { who: "Claude Code", items: [
+            { t: "user", s: "決済画面にクーポン入力欄を追加してコミットして。" },
+            { t: "hive", title: "Hive 知識の自動検索 · 一致 2 件", list: ["[preference] パッケージマネージャーは pnpm", "[preference] コミットメッセージは日本語"] },
+            { t: "agent", s: "保存済みの好みに合わせて追加し、コミットしました。" },
+            { t: "term", lines: ["$ pnpm add react-hook-form", "$ git commit -m \"feat: 決済画面にクーポン入力欄を追加\""] }
+          ], outcome: "最初の依頼から思いどおりに" },
+          notes: ["Claude Code 専用の機能", "読み取りだけで、保存も変更もしません。一致する知識がなければ何も追加しません", "オフにする: 環境変数 `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`"]
+        },
+        {
+          id: "coauthor", tab: "きれいなコミット", title: "AI 共同作成者の行がないコミット",
+          lead: "ユーザー指示のデフォルトルールで、コミットと PR から AI 共同作成者の表示を除外。毎回消す必要はありません。",
+          host: "Hive ユーザー指示",
+          before: { who: "AI エージェント", items: [
+            { t: "user", s: "ログインの不具合修正をコミットして。" },
+            { t: "agent", s: "コミットしました。" },
+            { t: "term", lines: ["$ git log -1 --format=%B", "fix: ログインのセッション切れ不具合を修正", "", "!Co-Authored-By: Claude <noreply@anthropic.com>"] },
+            { t: "user", s: "この行を毎回消すのが面倒なんだけど。" }
+          ], outcome: "コミットや PR のたびに手作業で整理" },
+          after: { who: "AI エージェント", items: [
+            { t: "user", s: "ログインの不具合修正をコミットして。" },
+            { t: "agent", s: "コミットしました。ユーザー設定に従い、AI 共同作成者の行は入れていません。" },
+            { t: "term", lines: ["$ git log -1 --format=%B", "fix: ログインのセッション切れ不具合を修正"] }
+          ], outcome: "最初から自分の名前だけが残る履歴" },
+          notes: ["デフォルトでオン。コミットと PR の両方に適用", "許可に変える: `hive setup --scope user --section review`"]
+        },
+        {
+          id: "backup", tab: "安全なアップデート", title: "アップデート後もそのままのプロジェクトと設定",
+          lead: "0.15.x からの更新でも既存のインストールをそのまま認識。変更前に設定・プロジェクト一覧・変更されるファイルを先にコピー。",
+          host: "Claude Code · Antigravity",
+          before: { who: "AI エージェント", items: [
+            { t: "user", s: "hive update したら、登録したプロジェクトが見えなくなった。" },
+            { t: "agent", s: "更新中に再インストールされ、プロジェクト一覧が空になりました。プロジェクトを一つずつ登録し直す必要があります。" },
+            { t: "user", s: "プロジェクトが十個以上あるんだけど…" }
+          ], outcome: "プロジェクトを一つずつ登録し直し" },
+          after: { who: "AI エージェント", items: [
+            { t: "user", s: "hive update して。" },
+            { t: "term", lines: ["$ hive update", "#変更前のコピーを保存: ~/hive-backups/<id>", "  設定 · プロジェクト一覧 · ~/.claude/settings.json", "#更新完了 · プロジェクト一覧と実行状態を維持"] },
+            { t: "user", s: "念のため、前の状態に戻せる？" },
+            { t: "term", lines: ["$ hive storage backup list", "$ hive storage backup restore --id <id>", "#復元プレビュー · まだ何も変更していません"] }
+          ], outcome: "一覧はそのまま、戻せるコピーも確保" },
+          notes: ["知識全体と `hive setup` による変更はバックアップの対象外", "バックアップのコピーは自動削除されません", "0.15.x に戻す前に、Claude のステータスライン接続を先に元に戻すこと"]
+        },
+        {
+          id: "usage", tab: "使用量の表示", title: "Claude の画面と同じ数字で見る使用量",
+          lead: "Claude は使用済み %、Codex・Antigravity は残り % で、各アプリと同じ基準。読み取れないときは原因と対処法を知らせて作業を続行。",
+          host: "使用量の保護",
+          before: { who: "AI エージェント", items: [
+            { t: "user", s: "Claude の週間使用量が 96% になったら止めて。" },
+            { t: "agent", s: "Hive は残りの割合で受け取るので、4% と入力してください。Claude の画面の数字とは逆に計算してください。" },
+            { t: "aside", s: "数日後、使用量を読み取れない状況" },
+            { t: "warn", title: "Discord 通知", lines: ["使用量が回復したら再開するようにという案内"] },
+            { t: "user", s: "まだ余裕があるのに、なんで待てって言うの？" }
+          ], outcome: "数字を頭の中で反転し、理由のわからない待機" },
+          after: { who: "AI エージェント", items: [
+            { t: "user", s: "Claude の週間使用量が 96% になったら止めて。" },
+            { t: "term", lines: [USAGE_CMD, "#Claude 週間: 使用 96% で停止"] },
+            { t: "aside", s: "数日後、使用量を読み取れない状況" },
+            { t: "warn", title: "使用量を読み取れません · Claude 週間上限", lines: ["原因: ステータスラインが未接続", "対処: `" + STATUSLINE + "`", "警告を出しつつ作業は続行"] }
+          ], outcome: "画面と同じ数字で、作業も止まらない" },
+          notes: ["ステータスラインの接続はプレビューしてから承認。既存の表示はそのまま使え、元に戻すことも可能", "ターミナルの Claude Code で使用。デスクトップアプリの Code タブは未確認"]
+        },
+        {
+          id: "msg", tab: "AI 間のレビュー受け渡し", experimental: true, title: "ウィンドウ間でコピーしない作成・レビューの流れ",
+          lead: "作成・レビュー・助言の役割の間で、仕事と結果をプロジェクトの受信箱で受け渡し。終わると Discord に作業・結果・役割・実際のモデル・所要時間を通知。",
+          host: "実験的な機能",
+          before: { who: "Claude ウィンドウ ↔ Codex ウィンドウ", items: [
+            { t: "user", label: "あなた → Claude", s: "ログインページを追加して。" },
+            { t: "agent", label: "Claude", s: "ログインページを追加しました。" },
+            { t: "aside", s: "変更内容をコピーして Codex のウィンドウに貼り付け" },
+            { t: "user", label: "あなた → Codex", s: "この変更をレビューして。(貼り付けた内容)" },
+            { t: "agent", label: "Codex", s: "セッション切れの処理が抜けています。" },
+            { t: "aside", s: "レビュー結果を Claude のウィンドウにコピーし直し" }
+          ], outcome: "ウィンドウ間でコピー＆ペースト、進み具合も自分で確認" },
+          after: { who: "プロジェクトの受信箱", items: [
+            { t: "user", s: "ヘパイストスにログインページを作らせて、アテナにレビューさせて。" },
+            { t: "term", lines: [FLOW_CMD] },
+            { t: "aside", s: "各 AI アプリが自分の受信箱から仕事を受け取って処理" },
+            { t: "discord" }
+          ], outcome: "依頼は一度、終わったら通知" },
+          notes: ["実験的な機能。Hive は AI アプリを直接起動せず、仕事と結果を受け渡すだけ", "`hive stop` で新しい受け渡しを停止", "このバージョンの Codex 連携は実際のアプリで未検証。Claude の自動モードではプロジェクトの権限ルールが必要な場合あり"]
+        },
+        {
+          id: "skills", tab: "Skill の整理", title: "短くなった Skill 一覧、どの AI にも同じ Skill",
+          lead: "似た Skill 8 個を 3 個に統合。Codex と Claude を併用していれば、新しいプロジェクト Skill を両方に同じ内容で作成。",
+          host: "Skill",
+          before: { who: "Claude Code", items: [
+            { t: "list", head: "/aigent-hive: 入力時の一覧", rows: [
+              ["knowledge-maintain", "知識の点検"], ["knowledge-promote", "知識の共有"], ["knowledge-transfer", "知識の移動"],
+              ["run-checkpoint", "進行の保存"], ["run-handoff", "役割の引き継ぎ"], ["run-resume", "再開"],
+              ["adversarial-judge", "独立した判定の依頼"], ["judge-evidence", "判定根拠の確認"]] },
+            { t: "user", s: "デプロイ確認用の Skill を作って。Codex でも使うから。" },
+            { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "#Codex のフォルダーにはなし"] }
+          ], outcome: "選ぶ Skill が多く、新しい Skill は他の AI から見えない" },
+          after: { who: "Claude Code", items: [
+            { t: "list", head: "/aigent-hive: 入力時の一覧", rows: [
+              ["knowledge-manage", "知識の点検・整理・共有・移動"], ["run", "進行の保存・引き継ぎ・再開"], ["judge", "判定の依頼と根拠の確認"]] },
+            { t: "user", s: "デプロイ確認用の Skill を作って。Codex でも使うから。" },
+            { t: "term", lines: ["+ .claude/skills/deploy-check/SKILL.md", "+ .agents/skills/deploy-check/SKILL.md", "#2 つのファイルは同じ内容"] }
+          ], outcome: "短い一覧で、どの AI でも同じ Skill" },
+          notes: ["Claude Code では旧 `/aigent-hive:...` の名前は実行されないため、新しい名前を使用", "自分で編集した Skill ファイルは維持。一つの AI にだけ入れている場合は、その AI 用だけを作成"]
+        }
+      ]
+    };
+
+    const INSTALL = [
+      { id: "npm", cmd: "npm install -g aigent-hive@0.16.0" },
+      { id: "curl", cmd: "curl --proto '=https' --tlsv1.2 -LsSf \\\n  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh" },
+      { id: "ps", cmd: "irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex" },
+      { id: "cmd", cmd: "curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd" }
     ];
 
+    /* ---------- Language choice: ?lang= in the URL, then the saved choice, then the browser ---------- */
+    const safeGet = () => { try { return localStorage.getItem(STORE_KEY); } catch (e) { return null; } };
+    const safeSet = (v) => { try { localStorage.setItem(STORE_KEY, v); } catch (e) { /* storage blocked */ } };
+    function fromBrowser() {
+      const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+      for (const tag of list) {
+        const base = String(tag).toLowerCase().split("-")[0];
+        if (LANGS.includes(base)) return base;
+      }
+      return "en";
+    }
+    function initialLang() {
+      const param = new URLSearchParams(location.search).get("lang");
+      if (param && LANGS.includes(param.toLowerCase())) return param.toLowerCase();
+      const saved = safeGet();
+      if (saved && LANGS.includes(saved)) return saved;
+      return fromBrowser();
+    }
+    function setUrl(lang, sceneId) {
+      const params = new URLSearchParams(location.search);
+      if (lang) params.set("lang", lang);
+      const query = params.toString();
+      const hash = sceneId ? `#${sceneId}` : location.hash;
+      try { history.replaceState(null, "", `${location.pathname}${query ? "?" + query : ""}${hash}`); } catch (e) { /* file:// or sandbox */ }
+    }
+
+    let lang = initialLang();
+    let current = null;
+    let timers = [];
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const tabsEl = document.getElementById("tabs");
     const scEl = document.getElementById("scenario");
-    let timers = [];
+    const select = document.getElementById("lang-select");
+
+    function ensureJapaneseFont() {
+      if (lang !== "ja" || document.getElementById("font-jp")) return;
+      const link = document.createElement("link");
+      link.id = "font-jp"; link.rel = "stylesheet"; link.crossOrigin = "anonymous"; link.href = JP_FONT;
+      document.head.appendChild(link);
+    }
+
+    function applyStatic() {
+      const t = T[lang];
+      document.documentElement.lang = lang;
+      document.title = t.title;
+      document.querySelector('meta[name="description"]').setAttribute("content", t.description);
+      document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t[el.dataset.i18n]; });
+      document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t[el.dataset.i18nHtml]; });
+      document.querySelectorAll("[data-i18n-attr]").forEach((el) => {
+        const [attr, key] = el.dataset.i18nAttr.split(":");
+        el.setAttribute(attr, t[key]);
+      });
+      select.value = lang;
+      select.setAttribute("aria-label", t.langLabel);
+      ensureJapaneseFont();
+    }
 
     function termHtml(lines) {
       return lines.map((line) => {
@@ -548,41 +891,33 @@
         return `<span class="c">${esc(line)}</span>`;
       }).join("\n");
     }
+    const discordHtml = (lines) => lines.map((l) => esc(l).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")).join("\n");
 
-    function discordHtml(lines) {
-      return lines.map((l) => esc(l).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")).join("\n");
-    }
-
-    function itemHtml(it, side) {
+    function itemHtml(it) {
+      const t = T[lang];
       switch (it.t) {
-        case "user":
-          return `<div class="msg user"><div class="label">${esc(it.label || "나")}</div><div class="bubble">${fmt(it.s)}</div></div>`;
-        case "agent":
-          return `<div class="msg agent"><div class="label">${esc(it.label || "AI 에이전트")}</div><div class="bubble">${fmt(it.s)}</div></div>`;
-        case "term":
-          return `<div class="msg term"><pre>${termHtml(it.lines)}</pre></div>`;
-        case "hive":
-          return `<div class="msg hive"><div class="hive-card"><div class="t">⬡ ${esc(it.title)}</div><ul>${it.list.map((x) => `<li>${fmt(x)}</li>`).join("")}</ul></div></div>`;
-        case "warn":
-          return `<div class="msg warn"><div class="warn-card"><div class="t">${esc(it.title)}</div>${it.lines.map((x) => `<div>${fmt(x)}</div>`).join("")}</div></div>`;
-        case "aside":
-          return `<div class="msg aside"><div class="aside-txt">${esc(it.s)}</div></div>`;
-        case "discord":
-          return `<div class="msg discord"><div class="discord-card"><div class="bot"><img src="${LOGO}" alt=""><b>Aigent Hive</b><span>APP</span></div><pre>${discordHtml(it.text)}</pre></div></div>`;
-        case "list":
-          return `<div class="msg list"><div class="palette"><div class="row head">${esc(it.head)}</div>${it.rows.map(([n, d]) => `<div class="row"><code>${esc(n)}</code><span>${esc(d)}</span></div>`).join("")}</div></div>`;
-        default:
-          return "";
+        case "user": return `<div class="msg user"><div class="label">${esc(it.label || t.me)}</div><div class="bubble">${fmt(it.s)}</div></div>`;
+        case "agent": return `<div class="msg agent"><div class="label">${esc(it.label || t.agent)}</div><div class="bubble">${fmt(it.s)}</div></div>`;
+        case "term": return `<div class="msg term"><pre>${termHtml(it.lines)}</pre></div>`;
+        case "hive": return `<div class="msg hive"><div class="hive-card"><div class="t">⬡ ${esc(it.title)}</div><ul>${it.list.map((x) => `<li>${fmt(x)}</li>`).join("")}</ul></div></div>`;
+        case "warn": return `<div class="msg warn"><div class="warn-card"><div class="t">${esc(it.title)}</div>${it.lines.map((x) => `<div>${fmt(x)}</div>`).join("")}</div></div>`;
+        case "aside": return `<div class="msg aside"><div class="aside-txt">${esc(it.s)}</div></div>`;
+        case "discord": {
+          const note = t.discordNote ? `<div class="discord-note">${esc(t.discordNote)}</div>` : "";
+          return `<div class="msg discord">${note}<div class="discord-card" lang="ko"><div class="bot"><img src="${LOGO}" alt=""><b>Aigent Hive</b><span>APP</span></div><pre>${discordHtml(DISCORD_NOTICE)}</pre></div></div>`;
+        }
+        case "list": return `<div class="msg list"><div class="palette"><div class="row head">${esc(it.head)}</div>${it.rows.map(([n, d]) => `<div class="row"><code>${esc(n)}</code><span>${esc(d)}</span></div>`).join("")}</div></div>`;
+        default: return "";
       }
     }
 
-    function paneHtml(side, data, version) {
-      const mark = side === "before" ? "✕" : "✓";
-      const verLabel = side === "before" ? "이전 (0.15.x)" : "0.16.0";
-      return `<div class="pane ${side}" aria-label="${verLabel}">
-        <div class="pane-head"><span class="ver">${verLabel}</span><span class="who">${esc(data.who)}</span></div>
-        <div class="chat">${data.items.map((it) => itemHtml(it, side)).join("")}</div>
-        <div class="outcome"><span class="mark" aria-hidden="true">${mark}</span><span>${esc(data.outcome)}</span></div>
+    function paneHtml(side, data) {
+      const t = T[lang];
+      const verLabel = side === "before" ? t.before : "0.16.0";
+      return `<div class="pane ${side}" aria-label="${esc(verLabel)}">
+        <div class="pane-head"><span class="ver">${esc(verLabel)}</span><span class="who">${esc(data.who)}</span></div>
+        <div class="chat">${data.items.map(itemHtml).join("")}</div>
+        <div class="outcome"><span class="mark" aria-hidden="true">${side === "before" ? "✕" : "✓"}</span><span>${esc(data.outcome)}</span></div>
       </div>`;
     }
 
@@ -597,8 +932,24 @@
       });
     }
 
+    function renderTabs() {
+      const t = T[lang];
+      tabsEl.innerHTML = "";
+      SCENES[lang].forEach((sc) => {
+        const b = document.createElement("button");
+        b.className = "tab"; b.type = "button"; b.id = `tab-${sc.id}`; b.dataset.id = sc.id;
+        b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "scenario");
+        b.innerHTML = esc(sc.tab) + (sc.experimental ? `<span class="exp">${esc(t.exp)}</span>` : "");
+        b.addEventListener("click", () => show(sc.id));
+        tabsEl.appendChild(b);
+      });
+    }
+
     function show(id, focusTab) {
-      const sc = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
+      const list = SCENES[lang];
+      const sc = list.find((s) => s.id === id) || list[0];
+      const t = T[lang];
+      current = sc.id;
       tabsEl.querySelectorAll(".tab").forEach((b) => {
         const on = b.dataset.id === sc.id;
         b.setAttribute("aria-selected", on);
@@ -607,75 +958,81 @@
       });
       scEl.setAttribute("aria-labelledby", `tab-${sc.id}`);
       const memory = sc.memory
-        ? `<div class="memory-strip"><b>저장된 지식</b>${sc.memory.map((m) => `<code>${esc(m)}</code>`).join("")}<span>· 두 화면 모두 같은 상태에서 시작</span></div>`
+        ? `<div class="memory-strip"><b>${esc(t.memoryHead)}</b>${sc.memory.map((m) => `<code>${esc(m)}</code>`).join("")}<span>${esc(t.memorySame)}</span></div>`
         : "";
       scEl.innerHTML = `
         <div class="sc-top">
           <div><h3>${esc(sc.title)}</h3><p>${esc(sc.lead)}</p></div>
-          <div class="sc-meta"><span class="pill">${esc(sc.host)}</span><button class="replay" type="button">↻ 다시 보기</button></div>
+          <div class="sc-meta"><span class="pill">${esc(sc.host)}</span><button class="replay" type="button">${esc(t.replay)}</button></div>
         </div>
         ${memory}
         <div class="compare">${paneHtml("before", sc.before)}${paneHtml("after", sc.after)}</div>
-        <div class="notes"><span class="h">알아 둘 점</span><ul>${sc.notes.map((n) => `<li>${fmt(n)}</li>`).join("")}</ul></div>`;
+        <div class="notes"><span class="h">${esc(t.notesHead)}</span><ul>${sc.notes.map((n) => `<li>${fmt(n)}</li>`).join("")}</ul></div>`;
       scEl.querySelector(".replay").addEventListener("click", play);
-      try { history.replaceState(null, "", `#${sc.id}`); } catch (e) { /* file:// or sandbox */ }
+      setUrl(null, sc.id);
       play();
     }
 
-    SCENARIOS.forEach((sc) => {
-      const b = document.createElement("button");
-      b.className = "tab";
-      b.type = "button";
-      b.id = `tab-${sc.id}`;
-      b.dataset.id = sc.id;
-      b.setAttribute("role", "tab");
-      b.setAttribute("aria-controls", "scenario");
-      b.innerHTML = esc(sc.tab) + (sc.experimental ? '<span class="exp">실험</span>' : "");
-      b.addEventListener("click", () => show(sc.id));
-      tabsEl.appendChild(b);
-    });
     tabsEl.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      const i = SCENARIOS.findIndex((s) => tabsEl.querySelector(`[data-id="${s.id}"]`).getAttribute("aria-selected") === "true");
-      const n = (i + (e.key === "ArrowRight" ? 1 : -1) + SCENARIOS.length) % SCENARIOS.length;
-      show(SCENARIOS[n].id, true);
+      const list = SCENES[lang];
+      const i = list.findIndex((s) => s.id === current);
+      const n = (i + (e.key === "ArrowRight" ? 1 : -1) + list.length) % list.length;
+      show(list[n].id, true);
     });
-
     window.addEventListener("hashchange", () => {
       const id = location.hash.slice(1);
-      if (SCENARIOS.some((s) => s.id === id)) show(id);
+      if (SCENES[lang].some((s) => s.id === id)) show(id);
     });
-    const initial = location.hash.slice(1);
-    show(SCENARIOS.some((s) => s.id === initial) ? initial : SCENARIOS[0].id);
 
-    // Install commands: exact copies of the README stable install section.
-    const INSTALL = [
-      { id: "npm", tab: "npm", where: "모든 OS · Node.js·npm 필요", cmd: "npm install -g aigent-hive@0.16.0" },
-      { id: "curl", tab: "macOS · Linux", where: "터미널", cmd: "curl --proto '=https' --tlsv1.2 -LsSf \\\n  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh" },
-      { id: "ps", tab: "Windows PowerShell", where: "PowerShell 5.1 이상", cmd: "irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex" },
-      { id: "cmd", tab: "Windows 명령 프롬프트", where: "cmd.exe", cmd: "curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd" }
-    ];
+    // Install tabs
     const it = document.getElementById("install-tabs");
-    const list = it.querySelector("[role=tablist]");
+    const instList = it.querySelector("[role=tablist]");
     const panel = it.querySelector(".panel");
-    function showInstall(id) {
-      const x = INSTALL.find((i) => i.id === id);
-      list.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", b.dataset.id === id));
-      panel.querySelector("small").textContent = x.where;
+    const copyBtn = panel.querySelector(".copy");
+    let installId = "npm";
+    function renderInstall() {
+      const t = T[lang];
+      instList.innerHTML = "";
+      INSTALL.forEach((x) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.setAttribute("role", "tab"); b.dataset.id = x.id; b.textContent = t.install[x.id][0];
+        b.addEventListener("click", () => { installId = x.id; showInstall(); });
+        instList.appendChild(b);
+      });
+      copyBtn.textContent = t.copy;
+      showInstall();
+    }
+    function showInstall() {
+      const x = INSTALL.find((i) => i.id === installId);
+      instList.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", b.dataset.id === installId));
+      panel.querySelector("small").textContent = T[lang].install[installId][1];
       panel.querySelector("pre").textContent = x.cmd;
     }
-    INSTALL.forEach((x) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.setAttribute("role", "tab"); b.dataset.id = x.id; b.textContent = x.tab;
-      b.addEventListener("click", () => showInstall(x.id));
-      list.appendChild(b);
+    copyBtn.addEventListener("click", async () => {
+      const t = T[lang];
+      try { await navigator.clipboard.writeText(panel.querySelector("pre").textContent); copyBtn.textContent = t.copied; }
+      catch (err) { copyBtn.textContent = t.copyFail; }
+      setTimeout(() => { copyBtn.textContent = T[lang].copy; }, 1500);
     });
-    panel.querySelector(".copy").addEventListener("click", async (e) => {
-      try { await navigator.clipboard.writeText(panel.querySelector("pre").textContent); e.target.textContent = "복사됨"; }
-      catch (err) { e.target.textContent = "직접 선택"; }
-      setTimeout(() => { e.target.textContent = "복사"; }, 1500);
+
+    function render(sceneId) {
+      applyStatic();
+      renderTabs();
+      renderInstall();
+      show(sceneId);
+    }
+
+    select.addEventListener("change", () => {
+      if (!LANGS.includes(select.value)) return;
+      lang = select.value;
+      safeSet(lang);
+      setUrl(lang);
+      render(current);
     });
-    showInstall("npm");
+
+    const initialScene = location.hash.slice(1);
+    render(SCENES[lang].some((s) => s.id === initialScene) ? initialScene : SCENES[lang][0].id);
   })();
   </script>
 </body>
