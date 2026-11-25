@@ -212,6 +212,61 @@
       html { scroll-behavior: auto; }
       .msg, .outcome { transition: none; }
     }
+    /* Skip link */
+    .skip-link { position: absolute; left: 16px; top: -48px; z-index: 50; background: var(--navy); color: var(--white); font-weight: 700; padding: 8px 14px; border-radius: 8px; text-decoration: none; }
+    .skip-link:focus { top: 12px; outline: 3px solid var(--gold); }
+    main:focus { outline: none; }
+    /* Quick install line */
+    .hero .wrap > div { min-width: 0; }
+    .quick-install { margin: 0 0 22px; max-width: 34em; min-width: 0; }
+    .qi-label { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 13px; color: var(--gray); margin-bottom: 6px; }
+    .qi-label a { color: var(--gold-dark); font-weight: 600; text-decoration: none; }
+    .qi-label a:hover, .qi-label a:focus-visible { text-decoration: underline; outline: none; }
+    .qi-box { display: flex; align-items: center; gap: 10px; background: var(--navy); border-radius: 10px; padding: 10px 10px 10px 14px; }
+    .qi-box code { flex: 1; min-width: 0; color: #E6EAF0; font-size: 13.5px; white-space: nowrap; overflow-x: auto; scrollbar-width: thin; }
+    .qi-box code::before { content: "$ "; color: var(--gold); }
+    .qi-copy { flex: none; font: 600 12.5px var(--sans); color: var(--navy); background: var(--gold); border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+    .qi-copy:focus-visible { outline: 3px solid #FFD58A; }
+    /* Apps */
+    .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .app { border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: var(--white); display: flex; flex-direction: column; gap: 12px; }
+    .app h3 { margin: 0; font-size: 18px; color: var(--navy); }
+    .app .sub { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--gold-dark); margin: 0 0 4px; }
+    .app ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--charcoal); }
+    .app .caveats { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+    .app .caveats .sub { color: var(--gray); }
+    .app code { font-size: 12.5px; background: var(--soft); border-radius: 5px; padding: 0 4px; }
+    .app .caveats code { background: var(--white); }
+    /* News */
+    .news { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .news a.item { display: block; text-decoration: none; border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 12px; padding: 16px 18px; background: var(--white); }
+    .news a.item:hover, .news a.item:focus-visible { border-color: var(--gold); outline: none; box-shadow: 0 6px 20px rgba(11,27,49,.08); }
+    .news .meta { font: 700 12.5px var(--mono); color: var(--gold-dark); }
+    .news h3 { margin: 4px 0 6px; font-size: 17px; color: var(--navy); }
+    .news p { margin: 0; font-size: 14px; color: var(--charcoal); }
+    .text-link { color: var(--gold-dark); font-weight: 600; }
+    /* FAQ */
+    .faq { max-width: 52em; border-top: 1px solid var(--line); }
+    .faq details { border-bottom: 1px solid var(--line); }
+    .faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; padding: 16px 2px; font-weight: 700; color: var(--navy); font-size: 16px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: "+"; color: var(--gold-dark); font-weight: 800; }
+    .faq details[open] summary::after { content: "–"; }
+    .faq summary:focus-visible { outline: 3px solid rgba(245,166,35,.45); border-radius: 6px; }
+    .faq .a { padding: 0 2px 18px; color: var(--charcoal); }
+    .faq .a code { font-size: 13px; background: var(--soft); border-radius: 5px; padding: 0 5px; }
+    /* Closing band */
+    .closing { background: var(--navy); color: #E6EAF0; padding: 64px 0; }
+    .closing h2 { color: var(--white); font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -.02em; margin: 0 0 10px; }
+    .closing p { margin: 0 0 22px; max-width: 40em; color: #C4CEDC; }
+    .quick-install.dark .qi-label { color: #9FB0C6; }
+    .quick-install.dark .qi-label a { color: #FFD58A; }
+    .quick-install.dark .qi-box { background: #13294A; border: 1px solid #24406A; }
+    .btn.gold { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+    .btn.ghost-light { background: transparent; border-color: #4A6489; color: var(--white); }
+    @media (max-width: 900px) {
+      .apps, .news { grid-template-columns: 1fr; }
+    }
     /* Language menu */
     .lang-pick { display: flex; align-items: center; gap: 6px; margin-left: 18px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 4px 3px 9px; background: var(--white); }
     .lang-pick:focus-within { outline: 3px solid rgba(245,166,35,.45); outline-offset: 1px; border-color: var(--gold); }
@@ -237,14 +292,16 @@
   </style>
 </head>
 <body>
-  <div class="brand-bar" aria-hidden="true"></div>
+  <a class="skip-link" href="#main" data-i18n="skip"></a>
+  <div class="brand-bar" aria-hidden="true" id="top"></div>
   <header class="nav">
     <div class="wrap">
       <a class="logo" href="#top"><img data-logo alt="" aria-hidden="true">Aigent Hive</a>
       <nav class="nav-links" data-i18n-attr="aria-label:navLabel">
         <a href="#whats-new" data-i18n="navNew"></a>
-        <a href="#why" class="hide-sm" data-i18n="navWhy"></a>
+        <a href="#apps" class="hide-sm" data-i18n="navApps"></a>
         <a href="#install" data-i18n="navInstall"></a>
+        <a href="#faq" class="hide-sm" data-i18n="navFaq"></a>
         <a href="https://github.com/gvm1229/aigent-hive" class="hide-sm">GitHub</a>
       </nav>
       <label class="lang-pick">
@@ -259,7 +316,7 @@
     </div>
   </header>
 
-  <main id="top">
+  <main id="main" tabindex="-1">
     <section class="hero">
       <div class="wrap">
         <div>
@@ -269,9 +326,13 @@
           <div class="hosts" data-i18n-attr="aria-label:hostsLabel">
             <span>Codex</span><span>Claude Code</span><span>Gemini Antigravity</span>
           </div>
+          <div class="quick-install" data-quick-install>
+            <div class="qi-label"><span data-qi-label></span><a href="#install" data-i18n="otherMethods"></a></div>
+            <div class="qi-box"><code data-qi-cmd></code><button class="qi-copy" type="button" data-qi-copy></button></div>
+          </div>
           <div class="cta">
             <a class="btn primary" href="#whats-new" data-i18n="ctaCompare"></a>
-            <a class="btn ghost" href="#install" data-i18n="ctaInstall"></a>
+            <a class="btn ghost" href="#apps" data-i18n="ctaApps"></a>
           </div>
         </div>
         <div class="hero-mark"><img data-logo data-i18n-attr="alt:logoAlt"></div>
@@ -291,10 +352,21 @@
       </div>
     </section>
 
-    <section class="block" id="why">
+    <section class="block" id="apps">
       <div class="wrap">
         <div class="sec-head">
-          <div class="num">02 · WHY HIVE</div>
+          <div class="num">02 · APPS</div>
+          <h2 data-i18n="appsTitle"></h2>
+          <p data-i18n="appsLead"></p>
+        </div>
+        <div class="apps" id="apps-grid"></div>
+      </div>
+    </section>
+
+    <section class="block alt" id="why">
+      <div class="wrap">
+        <div class="sec-head">
+          <div class="num">03 · WHY HIVE</div>
           <h2 data-i18n="whyTitle"></h2>
           <p data-i18n="whyLead"></p>
         </div>
@@ -307,10 +379,21 @@
       </div>
     </section>
 
+    <section class="block" id="news">
+      <div class="wrap">
+        <div class="sec-head">
+          <div class="num">04 · RELEASES</div>
+          <h2 data-i18n="newsTitle"></h2>
+          <p><a class="text-link" href="https://github.com/gvm1229/aigent-hive/releases" data-i18n="newsAll"></a></p>
+        </div>
+        <div class="news" id="news-grid"></div>
+      </div>
+    </section>
+
     <section class="block alt" id="install">
       <div class="wrap">
         <div class="sec-head">
-          <div class="num">03 · INSTALL</div>
+          <div class="num">05 · INSTALL</div>
           <h2 data-i18n="installTitle"></h2>
           <p data-i18n-html="installLead"></p>
         </div>
@@ -325,6 +408,30 @@
             <div role="tablist" data-i18n-attr="aria-label:installTabsLabel"></div>
             <div class="panel" role="tabpanel"><small></small><pre></pre><button class="copy" type="button"></button></div>
           </div>
+        </div>
+      </div>
+    </section>
+    <section class="block" id="faq">
+      <div class="wrap">
+        <div class="sec-head">
+          <div class="num">06 · FAQ</div>
+          <h2 data-i18n="faqTitle"></h2>
+        </div>
+        <div class="faq" id="faq-list"></div>
+      </div>
+    </section>
+
+    <section class="closing">
+      <div class="wrap">
+        <h2 data-i18n="closingTitle"></h2>
+        <p data-i18n="closingLead"></p>
+        <div class="quick-install dark" data-quick-install>
+          <div class="qi-label"><span data-qi-label></span><a href="#install" data-i18n="otherMethods"></a></div>
+          <div class="qi-box"><code data-qi-cmd></code><button class="qi-copy" type="button" data-qi-copy></button></div>
+        </div>
+        <div class="cta">
+          <a class="btn gold" href="https://github.com/gvm1229/aigent-hive">GitHub</a>
+          <a class="btn ghost-light" href="#whats-new" data-i18n="ctaCompare"></a>
         </div>
       </div>
     </section>
@@ -376,6 +483,16 @@
         step4t: "프로젝트 설정", step4p: "AI 에이전트에게 프로젝트 설정 Skill 요청. 빈 폴더는 질문부터, 기존 프로젝트는 파일 확인 뒤 제안 하나",
         installTabsLabel: "설치 방법",
         footer: "이 페이지 기준: 정식 0.16.0. 지원 범위와 미검증 항목은 GitHub README 기준.",
+        skip: "본문으로 건너뛰기", navApps: "지원 앱", navFaq: "FAQ", otherMethods: "다른 설치 방법",
+        ctaApps: "지원 앱 보기",
+        qiFor: { mac: "macOS 터미널에서 설치", linux: "Linux 터미널에서 설치", windows: "Windows PowerShell에서 설치", other: "npm으로 설치 · 모든 OS" },
+        appsTitle: "쓰던 AI 앱 그대로",
+        appsLead: "Codex·Claude Code·Gemini Antigravity 중 여러 앱을 한 번의 설정으로. 앱마다 되는 것과 아직 확인 중인 것을 그대로 표시.",
+        worksHead: "되는 것", caveatHead: "확인 중·주의",
+        newsTitle: "최근 업데이트", newsAll: "전체 릴리스 보기 →",
+        faqTitle: "자주 묻는 질문",
+        closingTitle: "프로젝트를 기억하는 AI 에이전트, 지금 시작",
+        closingLead: "설치는 한 번, 쓰던 앱과 구독은 그대로. 바뀔 파일은 먼저 보여 주고 백업.",
         replay: "↻ 다시 보기", notesHead: "알아 둘 점", memoryHead: "저장된 지식", memorySame: "· 두 화면 모두 같은 상태에서 시작",
         before: "이전 (0.15.x)", me: "나", agent: "AI 에이전트", exp: "실험",
         copy: "복사", copied: "복사됨", copyFail: "직접 선택",
@@ -408,6 +525,16 @@
         step4t: "Set up a project", step4p: "Ask your AI agent for the project-setup Skill. In an empty folder it asks questions first; in an existing project it scans the files and shows one proposal",
         installTabsLabel: "Install methods",
         footer: "This page reflects stable 0.16.0. See the GitHub README for what is supported and what is not yet verified.",
+        skip: "Skip to content", navApps: "Apps", navFaq: "FAQ", otherMethods: "Other install methods",
+        ctaApps: "See supported apps",
+        qiFor: { mac: "Install in the macOS terminal", linux: "Install in a Linux terminal", windows: "Install in Windows PowerShell", other: "Install with npm · any OS" },
+        appsTitle: "Keep the AI apps you already use",
+        appsLead: "Set up several of Codex, Claude Code and Gemini Antigravity in one go. Each card shows what works and what is still being verified.",
+        worksHead: "What works", caveatHead: "Still verifying · caveats",
+        newsTitle: "Recent releases", newsAll: "All releases →",
+        faqTitle: "Frequently asked questions",
+        closingTitle: "Give your AI agent a memory of your project",
+        closingLead: "Install once and keep your apps and subscriptions. Files about to change are shown first and backed up.",
         replay: "↻ Replay", notesHead: "Good to know", memoryHead: "Saved knowledge", memorySame: "· Both sides start from the same state",
         before: "Before (0.15.x)", me: "You", agent: "AI agent", exp: "Experimental",
         copy: "Copy", copied: "Copied", copyFail: "Copy manually",
@@ -440,6 +567,16 @@
         step4t: "プロジェクト設定", step4p: "AI エージェントにプロジェクト設定 Skill を依頼。空のフォルダーなら質問から、既存のプロジェクトならファイルを確認して提案を 1 つ提示",
         installTabsLabel: "インストール方法",
         footer: "このページは正式版 0.16.0 に基づきます。対応範囲と未検証の項目は GitHub の README をご確認ください。",
+        skip: "本文へスキップ", navApps: "対応アプリ", navFaq: "FAQ", otherMethods: "ほかのインストール方法",
+        ctaApps: "対応アプリを見る",
+        qiFor: { mac: "macOS のターミナルでインストール", linux: "Linux のターミナルでインストール", windows: "Windows PowerShell でインストール", other: "npm でインストール · すべての OS" },
+        appsTitle: "いつもの AI アプリのままで",
+        appsLead: "Codex・Claude Code・Gemini Antigravity のうち複数のアプリを一度の設定で。アプリごとに、できることとまだ確認中のことをそのまま表示。",
+        worksHead: "できること", caveatHead: "確認中・注意点",
+        newsTitle: "最近のリリース", newsAll: "すべてのリリース →",
+        faqTitle: "よくある質問",
+        closingTitle: "プロジェクトを覚えている AI エージェントを、今すぐ",
+        closingLead: "インストールは一度だけ、アプリもサブスクリプションもそのまま。変更されるファイルは先に表示してバックアップ。",
         replay: "↻ もう一度", notesHead: "知っておきたいこと", memoryHead: "保存済みの知識", memorySame: "· 両方とも同じ状態から開始",
         before: "アップデート前 (0.15.x)", me: "あなた", agent: "AI エージェント", exp: "実験",
         copy: "コピー", copied: "コピー済み", copyFail: "手動で選択",
@@ -820,11 +957,102 @@
 
     const INSTALL = [
       { id: "npm", cmd: "npm install -g aigent-hive@0.16.0" },
-      { id: "curl", cmd: "curl --proto '=https' --tlsv1.2 -LsSf \\\n  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh" },
+      { id: "curl", cmd: "curl --proto '=https' --tlsv1.2 -LsSf \\\n  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh",
+        oneLine: "curl --proto '=https' --tlsv1.2 -LsSf https://unpkg.com/aigent-hive@0.16.0/install.sh | sh" },
       { id: "ps", cmd: "irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex" },
       { id: "cmd", cmd: "curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd" }
     ];
 
+
+    // App cards: facts from README "What changed in 0.16.0" and the 0.15.x notes. Keep caveats.
+    const APPS = {
+      ko: [
+        { name: "Codex", works: ["Hive Skill과 프로젝트 지식", "사용량 보호: 남은 % 기준, 30일 창은 주간 한도로 계산"],
+          caveats: ["이 버전의 훅·작업자·교차 검토 동작은 미검증", "프로젝트 훅 적용 뒤 Codex에서 신뢰 승인 필요"] },
+        { name: "Claude Code", works: ["`/aigent-hive:` Hive Skill", "요청마다 지식 자동 조회", "상태 표시줄 연결로 사용량 읽기: 사용한 % 기준"],
+          caveats: ["README 표기: Claude Code 구독 동작 미검증", "데스크톱 앱 Code 탭 미확인, 터미널에서 사용", "자동 모드에서 `hive msg` 차단 가능"] },
+        { name: "Gemini Antigravity", works: ["Hive Skill과 프로젝트 지식", "사용량 보호: 남은 % 기준, 기준값 하나"],
+          caveats: ["훅은 미리보기만", "사용량 연동: 1.1.18–2.0의 같은 자료 형식만, 1.2는 실제 앱 미검증", "프로젝트 Skill 경로 미검증"] }
+      ],
+      en: [
+        { name: "Codex", works: ["Hive Skills and project knowledge", "Usage protection in percent remaining; the 30-day window counts as the weekly limit"],
+          caveats: ["Hook, worker and cross-review behaviour is not verified on this version", "Codex asks you to trust project hooks after they are applied"] },
+        { name: "Claude Code", works: ["Hive Skills under `/aigent-hive:`", "Automatic knowledge lookup on every request", "Usage read through the status line, in percent used"],
+          caveats: ["The README marks Claude Code subscription behaviour as unverified", "The desktop app's Code tab is not confirmed; use a terminal", "Auto mode can block `hive msg`"] },
+        { name: "Gemini Antigravity", works: ["Hive Skills and project knowledge", "Usage protection in percent remaining, with one threshold"],
+          caveats: ["Hooks are preview only", "Usage callbacks: 1.1.18 up to 2.0 with the same data shape; 1.2 not verified in the real app", "Project Skill path not verified"] }
+      ],
+      ja: [
+        { name: "Codex", works: ["Hive の Skill とプロジェクトの知識", "使用量の保護: 残り % 基準、30 日の枠は週間上限として計算"],
+          caveats: ["このバージョンのフック・ワーカー・クロスレビューの動作は未検証", "プロジェクトのフック適用後、Codex で信頼の承認が必要"] },
+        { name: "Claude Code", works: ["`/aigent-hive:` の Hive Skill", "依頼のたびに知識を自動検索", "ステータスラインの接続で使用量を読み取り: 使用済み % 基準"],
+          caveats: ["README の表記: Claude Code のサブスクリプション動作は未検証", "デスクトップアプリの Code タブは未確認、ターミナルで使用", "自動モードでは `hive msg` がブロックされる場合あり"] },
+        { name: "Gemini Antigravity", works: ["Hive の Skill とプロジェクトの知識", "使用量の保護: 残り % 基準、しきい値は 1 つ"],
+          caveats: ["フックはプレビューのみ", "使用量の連携: 1.1.18〜2.0 の同じデータ形式のみ、1.2 は実際のアプリで未検証", "プロジェクト Skill のパスは未検証"] }
+      ]
+    };
+
+    const REL = "https://github.com/gvm1229/aigent-hive/blob/main/docs/releases/";
+    const NEWS = {
+      ko: [
+        { v: "0.16.0", date: "2026-11-25", text: "바꾸기 전 자동 백업, 요청마다 지식 자동 조회, AI 간 작업 전달(실험)", href: REL + "0.16.0.subscriber.ko.md" },
+        { v: "0.15.3", date: "2026-11-20", text: "AI 에이전트에게 프로젝트 설정 요청, 사실 여러 개 한 번에 저장, 짧은 한국어 검색어 개선", href: REL + "0.15.3.subscriber.ko.md" },
+        { v: "0.15.2", date: "2026-11-16", text: "Codex·Claude Code·Antigravity를 한 번의 설정으로 설치, Antigravity CLI 1.2.x 지원", href: REL + "0.15.2.subscriber.ko.md" }
+      ],
+      en: [
+        { v: "0.16.0", date: "2026-11-25", text: "Automatic backup before changes, knowledge lookup on every request, AI-to-AI work handoff (experimental)", href: REL + "0.16.0.md" },
+        { v: "0.15.3", date: "2026-11-20", text: "Ask your AI agent to set up a project, save several facts at once, better short Korean search terms", href: REL + "0.15.3.md" },
+        { v: "0.15.2", date: "2026-11-16", text: "Install into Codex, Claude Code and Antigravity in one setup; Antigravity CLI 1.2.x supported", href: REL + "0.15.2.md" }
+      ],
+      ja: [
+        { v: "0.16.0", date: "2026-11-25", text: "変更前の自動バックアップ、依頼ごとの知識の自動検索、AI 間の作業の受け渡し (実験)", href: REL + "0.16.0.md" },
+        { v: "0.15.3", date: "2026-11-20", text: "AI エージェントにプロジェクト設定を依頼、複数の事実をまとめて保存、短い韓国語検索語の改善", href: REL + "0.15.3.md" },
+        { v: "0.15.2", date: "2026-11-16", text: "Codex・Claude Code・Antigravity を一度の設定でインストール、Antigravity CLI 1.2.x に対応", href: REL + "0.15.2.md" }
+      ]
+    };
+
+    const FAQ = {
+      ko: [
+        { q: "비용이 드나요?", a: "Apache-2.0 오픈 소스로 무료. 지금 쓰는 AI 앱 구독으로 동작하고, API 키를 묻거나 모델 회사 API를 부르지 않음." },
+        { q: "어떤 AI 앱에서 쓸 수 있나요?", a: "Codex, Claude Code, Gemini Antigravity. 한 번의 설정으로 여러 앱을 함께 선택 가능. 앱별 확인 범위는 위의 지원 앱 구역 참고." },
+        { q: "내 지식과 설정은 어디에 저장되나요?", a: "내 컴퓨터. 지식과 설정은 Markdown·YAML·TOML 텍스트 파일이고, 검색 색인은 언제든 다시 생성 가능. Discord 같은 외부 알림은 따로 동의할 때만 사용." },
+        { q: "Hive가 AI를 대신 실행하나요?", a: "아니요. 모델과 작업자 실행은 각 AI 앱 담당. Hive는 설정·지식·사용량 보호·작업 전달 기록만 관리하고, 자동 작업자 실행은 꺼져 있으며 켜는 방법도 없음." },
+        { q: "설치에 무엇이 필요한가요?", a: "macOS·Windows·Linux 중 하나. npm 설치만 Node.js와 npm이 필요하고, curl·PowerShell·명령 프롬프트 설치는 필요 없음. 설치된 `hive`는 독립 실행 파일." },
+        { q: "업데이트가 잘못되면 되돌릴 수 있나요?", a: "설치·갱신·제거 전에 설정·프로젝트 목록·바뀔 파일을 `~/hive-backups`에 복사. `hive storage backup list`로 확인하고 `hive storage backup restore --id <id>`로 복원 미리보기. 지식 전체와 `hive setup` 변경은 백업 범위 밖." },
+        { q: "제거는 어떻게 하나요?", a: "`hive uninstall --dry-run`으로 먼저 미리보기. 프로그램을 제거해도 재설치를 위해 설정·지식·기록·프로젝트 자료는 남음." }
+      ],
+      en: [
+        { q: "Does it cost anything?", a: "No. Hive is free and open source under Apache-2.0. It works with your existing AI app subscriptions, never asks for API keys and never calls a model provider's API." },
+        { q: "Which AI apps does it work with?", a: "Codex, Claude Code and Gemini Antigravity. You can select several in one setup. See the apps section above for what is verified in each." },
+        { q: "Where are my knowledge and settings stored?", a: "On your computer. Knowledge and settings are Markdown, YAML and TOML text files, and the search index can be rebuilt at any time. External notices such as Discord are used only with your separate consent." },
+        { q: "Does Hive run the AI for me?", a: "No. Each AI app runs its own models and workers. Hive manages settings, knowledge, usage protection and handoff records. Automatic worker execution is off, and there is no way to turn it on." },
+        { q: "What do I need to install it?", a: "macOS, Windows or Linux. Only the npm method needs Node.js and npm; the curl, PowerShell and Command Prompt installers don't. The installed `hive` is a standalone binary." },
+        { q: "Can I roll back a bad update?", a: "Install, update and uninstall first copy your settings, project list and the files they change to `~/hive-backups`. List them with `hive storage backup list` and preview a restore with `hive storage backup restore --id <id>`. Your knowledge as a whole and `hive setup` changes are not included." },
+        { q: "How do I uninstall it?", a: "Preview with `hive uninstall --dry-run` first. Removing the program keeps your settings, knowledge, history and project data for a later reinstall." }
+      ],
+      ja: [
+        { q: "費用はかかりますか？", a: "かかりません。Hive は Apache-2.0 のオープンソースで無料です。いまの AI アプリのサブスクリプションで動き、API キーを求めることも、モデル提供元の API を呼び出すこともありません。" },
+        { q: "どの AI アプリで使えますか？", a: "Codex、Claude Code、Gemini Antigravity です。一度の設定で複数のアプリを選べます。アプリごとの確認範囲は、上の対応アプリの欄をご覧ください。" },
+        { q: "知識や設定はどこに保存されますか？", a: "あなたのコンピューターです。知識と設定は Markdown・YAML・TOML のテキストファイルで、検索インデックスはいつでも作り直せます。Discord などの外部通知は、別途同意したときだけ使います。" },
+        { q: "Hive が AI を代わりに実行しますか？", a: "いいえ。モデルやワーカーの実行は各 AI アプリが担当します。Hive は設定・知識・使用量の保護・作業の受け渡し記録だけを管理します。ワーカーの自動実行はオフで、オンにする方法もありません。" },
+        { q: "インストールに何が必要ですか？", a: "macOS・Windows・Linux のいずれか。Node.js と npm が必要なのは npm でのインストールだけで、curl・PowerShell・コマンドプロンプトのインストーラーでは不要です。インストールされた `hive` は単体で動く実行ファイルです。" },
+        { q: "アップデートに失敗したら元に戻せますか？", a: "インストール・更新・削除の前に、設定・プロジェクト一覧・変更されるファイルを `~/hive-backups` にコピーします。`hive storage backup list` で確認し、`hive storage backup restore --id <id>` で復元をプレビューできます。知識全体と `hive setup` による変更は対象外です。" },
+        { q: "アンインストールの方法は？", a: "まず `hive uninstall --dry-run` でプレビューしてください。プログラムを削除しても、再インストールに備えて設定・知識・履歴・プロジェクトのデータは残ります。" }
+      ]
+    };
+
+    // Detect the visitor's OS to pick the install command. Unknown or mobile falls back to npm.
+    function detectOS() {
+      const ua = navigator.userAgent || "";
+      const plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+      if (/Android|iPhone|iPad|iPod/i.test(ua)) return "other";
+      if (/win/i.test(plat) || /Windows/i.test(ua)) return "windows";
+      if (/mac/i.test(plat) || /Mac OS X/i.test(ua)) return "mac";
+      if (/linux/i.test(plat) || /Linux|X11/i.test(ua)) return "linux";
+      return "other";
+    }
+    const OS = detectOS();
+    const OS_INSTALL = { mac: "curl", linux: "curl", windows: "ps", other: "npm" };
     /* ---------- Language choice: ?lang= in the URL, then the saved choice, then the browser ---------- */
     const safeGet = () => { try { return localStorage.getItem(STORE_KEY); } catch (e) { return null; } };
     const safeSet = (v) => { try { localStorage.setItem(STORE_KEY, v); } catch (e) { /* storage blocked */ } };
@@ -969,7 +1197,9 @@
         <div class="compare">${paneHtml("before", sc.before)}${paneHtml("after", sc.after)}</div>
         <div class="notes"><span class="h">${esc(t.notesHead)}</span><ul>${sc.notes.map((n) => `<li>${fmt(n)}</li>`).join("")}</ul></div>`;
       scEl.querySelector(".replay").addEventListener("click", play);
-      setUrl(null, sc.id);
+      // Only own the hash when it is empty or already a scene, so section links like #faq survive.
+      const hash = location.hash.slice(1);
+      if (!hash || list.some((x) => x.id === hash)) setUrl(null, sc.id);
       play();
     }
 
@@ -990,7 +1220,7 @@
     const instList = it.querySelector("[role=tablist]");
     const panel = it.querySelector(".panel");
     const copyBtn = panel.querySelector(".copy");
-    let installId = "npm";
+    let installId = OS_INSTALL[OS];
     function renderInstall() {
       const t = T[lang];
       instList.innerHTML = "";
@@ -1016,10 +1246,48 @@
       setTimeout(() => { copyBtn.textContent = T[lang].copy; }, 1500);
     });
 
+    function renderApps() {
+      const t = T[lang];
+      const list = (items) => `<ul>${items.map((x) => `<li>${fmt(x)}</li>`).join("")}</ul>`;
+      document.getElementById("apps-grid").innerHTML = APPS[lang].map((a) => `
+        <article class="app"><h3>${esc(a.name)}</h3>
+          <div><p class="sub">${esc(t.worksHead)}</p>${list(a.works)}</div>
+          <div class="caveats"><p class="sub">${esc(t.caveatHead)}</p>${list(a.caveats)}</div>
+        </article>`).join("");
+    }
+    function renderNews() {
+      document.getElementById("news-grid").innerHTML = NEWS[lang].map((n) => `
+        <a class="item" href="${esc(n.href)}"><div class="meta">${esc(n.date)}</div><h3>Aigent Hive ${esc(n.v)}</h3><p>${esc(n.text)}</p></a>`).join("");
+    }
+    function renderFaq() {
+      document.getElementById("faq-list").innerHTML = FAQ[lang].map((f, i) => `
+        <details${i === 0 ? " open" : ""}><summary>${esc(f.q)}</summary><div class="a">${fmt(f.a)}</div></details>`).join("");
+    }
+    function renderQuick() {
+      const t = T[lang];
+      const x = INSTALL.find((i) => i.id === OS_INSTALL[OS]);
+      const cmd = x.oneLine || x.cmd;
+      document.querySelectorAll("[data-quick-install]").forEach((box) => {
+        box.querySelector("[data-qi-label]").textContent = t.qiFor[OS];
+        box.querySelector("[data-qi-cmd]").textContent = cmd;
+        const btn = box.querySelector("[data-qi-copy]");
+        btn.textContent = t.copy;
+        btn.onclick = async () => {
+          try { await navigator.clipboard.writeText(cmd); btn.textContent = T[lang].copied; }
+          catch (err) { btn.textContent = T[lang].copyFail; }
+          setTimeout(() => { btn.textContent = T[lang].copy; }, 1500);
+        };
+      });
+    }
+
     function render(sceneId) {
       applyStatic();
+      renderQuick();
       renderTabs();
+      renderApps();
+      renderNews();
       renderInstall();
+      renderFaq();
       show(sceneId);
     }
 
