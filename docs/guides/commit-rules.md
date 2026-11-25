@@ -12,6 +12,8 @@
 - 필요한 파일만 명시적으로 stage
 - 제목은 한국어 Conventional Commits
 - AI·bot·agent `Co-Authored-By` trailer 금지
+- 작성자·커밋한 사람 고정: `Hojin Jeong <hojini1229@gmail.com>`. 다른 이름·이메일, 컨테이너 기본값(`Claude <noreply@anthropic.com>` 등) 금지. 다른 모든 규칙보다 우선
+- AI 작업 환경의 첫 커밋 전 저장소 `git config user.name`·`user.email` 설정과 `git log -1 --format='%an <%ae> | %cn <%ce>'` 확인
 - 제목 끝 문장 부호 금지
 
 ## 제목 형식
