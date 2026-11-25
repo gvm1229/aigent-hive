@@ -15,11 +15,13 @@ Ordinary work stays on develop; branch exceptions need explicit authority.
 | CI changes/product milestone | [CI/candidates](references/ci-and-candidates.md) |
 | Candidate/public test/stable/publication | [Release](references/release-qualification.md) |
 
-Do not eagerly load every row. After each commit inspect `git log -1 --format=%B` for scope and
-no AI co-author trailer. Author and committer must be exactly `Hojin Jeong <hojini1229@gmail.com>`;
-this rule overrides every other rule. Set repo `git config user.name`/`user.email` before the first
-commit and verify both identities after each commit. Verify remote and target ref before pushing.
-No history rewrite without explicit authority; use --force-with-lease, never plain --force, when authorized. Do not rewrite
-old commits just to apply today's splitting policy. Never delete main, develop or active
-release/staging; never push secrets, runtime/cache/SQLite, release output or session manifests.
-Finish the requested safe Git chain; staging alone is not completion. Report failures with completed steps.
+Do not eagerly load every row. After each commit inspect `git log -1 --format=%B` for scope and no
+AI co-author trailer. Author and committer must be exactly `Hojin Jeong <hojini1229@gmail.com>`;
+this rule overrides every other rule. Only GitHub merge-button commits may differ: committer `GitHub
+<noreply@github.com>` with author email `hojini1229@gmail.com`. Set repo `git config
+user.name`/`user.email` before the first commit and verify both identities after each commit. Verify
+remote and target ref before pushing. No history rewrite without explicit authority; use
+--force-with-lease, never plain --force, when authorized. Do not rewrite old commits just to apply
+today's splitting policy. Never delete main, develop or active release/staging; never push secrets,
+runtime/cache/SQLite, release output or session manifests. Finish the requested safe Git chain;
+staging alone is not completion. Report failures with completed steps.

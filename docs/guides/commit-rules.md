@@ -13,6 +13,8 @@
 - 제목은 한국어 Conventional Commits
 - AI·bot·agent `Co-Authored-By` trailer 금지
 - 작성자·커밋한 사람 고정: `Hojin Jeong <hojini1229@gmail.com>`. 다른 이름·이메일, 컨테이너 기본값(`Claude <noreply@anthropic.com>` 등) 금지. 다른 모든 규칙보다 우선
+- 예외: GitHub 병합 버튼 커밋. 커밋한 사람 `GitHub <noreply@github.com>`, 작성자 이메일 `hojini1229@gmail.com`일 때만 허용
+- 강제: `scripts/branch-policy.py commits`와 Branch policy CI에서 다른 작성자·커밋한 사람 거부
 - AI 작업 환경의 첫 커밋 전 저장소 `git config user.name`·`user.email` 설정과 `git log -1 --format='%an <%ae> | %cn <%ce>'` 확인
 - 제목 끝 문장 부호 금지
 

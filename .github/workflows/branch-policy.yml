@@ -42,7 +42,7 @@ jobs:
             python scripts/branch-policy.py check "$BRANCH"
           fi
           python scripts/branch-policy.py ruleset --check
-      - name: Reject AI commit identity, co-author and session links
+      - name: Require maintainer commit identity and reject AI co-author and session links
         env:
           EVENT: ${{ github.event_name }}
           BRANCH: ${{ github.ref_name }}
