@@ -160,23 +160,27 @@ fn entry(
     ) {
         return Ok(());
     }
+    // A running monitor rewrites or removes its observations at any time, so they stay out of
+    // the confirmed inventory and its digest; apply removes them by name.
+    if MONITOR_VOLATILE.contains(&name.as_str()) {
+        return Ok(());
+    }
     if entries.len() >= 16_384 {
         return Err(InstallError::Conflict(
             "removal inventory exceeds its entry limit".into(),
         ));
     }
-    let Some(bytes) = read_optional_regular(root, path, 128 * 1024 * 1024)? else {
-        return Ok(());
+    let bytes = match read_optional_regular(root, path, 128 * 1024 * 1024) {
+        Ok(Some(bytes)) => bytes,
+        Ok(None) => return Ok(()),
+        Err(_) if vanished(root, path) => return Ok(()),
+        Err(error) => return Err(error),
     };
     let after = if kind == "marker" {
         Some(sha256_digest(&deactivation::without_marker(&bytes)?))
     } else {
         None
     };
-    let volatile = matches!(
-        name.as_str(),
-        ".hive/runtime/usage-monitor/state.json" | ".hive/runtime/usage-monitor/startup.json"
-    );
     let kind = if matches!(
         name.as_str(),
         ".hive/runtime/usage-monitor/config.json" | ".hive/runtime/usage-monitor/disable.json"
@@ -185,16 +189,39 @@ fn entry(
     } else {
         kind
     };
+    let permissions = match file_permissions(root, path) {
+        Ok(value) => value,
+        Err(_) if vanished(root, path) => return Ok(()),
+        Err(error) => return Err(error),
+    };
     entries.insert(
         name,
         Entry {
             kind: kind.into(),
-            digest: (!volatile).then(|| sha256_digest(&bytes)),
+            digest: Some(sha256_digest(&bytes)),
             after_digest: after,
-            permissions: Some(file_permissions(root, path)?),
+            permissions: Some(permissions),
         },
     );
     Ok(())
+}
+
+/// Monitor observations that the running monitor may replace or remove at any time.
+pub(super) const MONITOR_VOLATILE: [&str; 2] = [
+    ".hive/runtime/usage-monitor/state.json",
+    ".hive/runtime/usage-monitor/startup.json",
+];
+
+/// True when an entry disappeared after it was listed; there is nothing left to remove.
+fn vanished(root: &Dir, path: &Path) -> bool {
+    match capability_parent(root, path, false) {
+        Ok(None) => true,
+        Ok(Some((parent, name))) => matches!(
+            parent.symlink_metadata(&name),
+            Err(error) if error.kind() == io::ErrorKind::NotFound
+        ),
+        Err(_) => false,
+    }
 }
 
 fn tree(
@@ -221,6 +248,11 @@ fn tree(
             "removal inventory exceeds its entry limit".into(),
         ));
     }
+    let directory = match parent.open_dir_nofollow(&name) {
+        Ok(value) => value,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(io_internal("pin removal directory", path, e)),
+    };
     entries.insert(
         portable(path),
         Entry {
@@ -230,14 +262,6 @@ fn tree(
             permissions: None,
         },
     );
-    let directory = match parent.open_dir_nofollow(&name) {
-        Ok(value) => value,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            entries.remove(&portable(path));
-            return Ok(());
-        }
-        Err(e) => return Err(io_internal("pin removal directory", path, e)),
-    };
     for child in directory
         .entries()
         .map_err(|e| io_internal("list removal directory", path, e))?
