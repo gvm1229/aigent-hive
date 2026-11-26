@@ -790,13 +790,15 @@ fn promote_with_projection(
                     &dirty,
                     CapabilityKnowledgeLock::acquire(&user_root.dir),
                 )?;
-                abort_external_on_error(
-                    shared.store,
-                    &dirty,
-                    plan.snapshots[0]
-                        .verify_current(&user_root.dir)
-                        .and_then(|()| plan.snapshots[1].verify_current(&user_root.dir)),
-                )?;
+                if let Err(error) = plan.snapshots[0]
+                    .verify_current(&user_root.dir)
+                    .and_then(|()| plan.snapshots[1].verify_current(&user_root.dir))
+                {
+                    // The journal cleanup takes the same lock, so release it first.
+                    drop(canonical_lock);
+                    abort_external_after_rollback(shared.store, &dirty, &error)?;
+                    return Err(error);
+                }
                 let commit = commit_promotion_canonical(
                     &user_root,
                     &mut plan.snapshots[..2],
@@ -1433,7 +1435,12 @@ fn delete_page_with_projection(
         let canonical_lock =
             abort_external_on_error(shared.store, &dirty, KnowledgeLock::acquire(target))?;
         for snapshot in &snapshots {
-            abort_external_on_error(shared.store, &dirty, snapshot.verify_current())?;
+            if let Err(error) = snapshot.verify_current() {
+                // The journal cleanup may need the same lock, so release it first.
+                drop(canonical_lock);
+                abort_external_after_rollback(shared.store, &dirty, &error)?;
+                return Err(error);
+            }
         }
         let commit = transactional(&snapshots, || {
             fs::remove_file(&absolute).map_err(|error| {
@@ -2571,7 +2578,12 @@ fn commit_shared_suppression(
     bytes: &[u8],
 ) -> Result<(), WikiError> {
     let canonical_lock = abort_external_on_error(store, dirty, KnowledgeLock::acquire(target))?;
-    abort_external_on_error(store, dirty, snapshot.verify_current())?;
+    if let Err(error) = snapshot.verify_current() {
+        // The journal cleanup may need the same lock, so release it first.
+        drop(canonical_lock);
+        abort_external_after_rollback(store, dirty, &error)?;
+        return Err(error);
+    }
     let commit = transactional(std::slice::from_ref(snapshot), || {
         write_atomic(&target.join(SUPPRESSION_RELATIVE), bytes)?;
         if cfg!(debug_assertions)
