@@ -6495,6 +6495,64 @@ mod tests {
     }
 
     #[test]
+    fn a_stale_subject_lead_takes_its_members_with_it() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let unregistered = temp_root();
+        for index in 0..3 {
+            remember_fact(
+                user.path(),
+                &format!("Palette rule number {index} keeps contrast high."),
+                &format!("palette-{index}"),
+                Some("design/palette"),
+            );
+        }
+        remember_fact(
+            user.path(),
+            "Palette rule number lookups use a fresh index.",
+            "palette-lookup",
+            None,
+        );
+        let arguments = [
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            unregistered.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "auto".to_owned(),
+            "--query".to_owned(),
+            "palette rule number 1 keeps contrast".to_owned(),
+            "--top-k".to_owned(),
+            "1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let data = run_retrieve(&arguments).expect("fresh").data.expect("data");
+        assert_eq!(data["hits"][0]["subject"], "design/palette");
+        let lead_locator = data["hits"][0]["locator"]
+            .as_str()
+            .expect("locator")
+            .split('#')
+            .next()
+            .expect("path")
+            .to_owned();
+        fs::write(user.path().join(&lead_locator), b"edited after indexing").expect("edit lead");
+
+        let data = run_retrieve(&arguments)
+            .expect("stale lead")
+            .data
+            .expect("data");
+        let hits = data["hits"].as_array().expect("hits");
+        assert_eq!(hits.len(), 1, "the next fresh group fills the place");
+        assert!(
+            hits[0]["subject"].is_null(),
+            "no orphaned subject member: {hits:?}"
+        );
+        assert_eq!(data["stale_hits_dropped"], 1);
+    }
+
+    #[test]
     fn subject_groups_flag_truncation_and_never_expose_confidential_members() {
         let user = temp_root();
         write_user_setup(user.path(), true);

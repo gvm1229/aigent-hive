@@ -2047,8 +2047,18 @@ impl RagStore {
     ) {
         let by_id = registry.by_id();
         let mut checked = BTreeMap::new();
-        let before = result.hits.len();
+        let mut stale = 0_usize;
+        let mut lead_dropped = false;
         result.hits.retain_mut(|hit| {
+            // Subject members belong to their lead hit: when the lead is stale, its group
+            // goes with it so members never take the place of the next fresh result.
+            if hit.matched_field == "subject" {
+                if lead_dropped {
+                    return false;
+                }
+            } else {
+                lead_dropped = false;
+            }
             let key = (
                 hit.collection_id.clone(),
                 hit.item_kind.clone(),
@@ -2068,10 +2078,12 @@ impl RagStore {
                 hit.source_freshness = freshness;
                 true
             } else {
+                stale += 1;
+                lead_dropped = hit.matched_field != "subject";
                 false
             }
         });
-        result.stale_hits_dropped += before - result.hits.len();
+        result.stale_hits_dropped += stale;
         result.returned_bytes = result.hits.iter().map(|hit| hit.text.len()).sum();
     }
 

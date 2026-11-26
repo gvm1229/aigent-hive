@@ -30,7 +30,7 @@
       "maximum": 1048576
     },
     "insufficient_budget": { "type": "boolean" },
-    "stale_hits_dropped": { "type": "integer", "minimum": 1, "maximum": 300 },
+    "stale_hits_dropped": { "type": "integer", "minimum": 1, "maximum": 1700 },
     "search": {
       "type": "object",
       "additionalProperties": false,
