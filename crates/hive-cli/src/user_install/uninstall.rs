@@ -230,18 +230,27 @@ fn tree(
             permissions: None,
         },
     );
-    let directory = parent
-        .open_dir_nofollow(&name)
-        .map_err(|e| io_internal("pin removal directory", path, e))?;
+    let directory = match parent.open_dir_nofollow(&name) {
+        Ok(value) => value,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            entries.remove(&portable(path));
+            return Ok(());
+        }
+        Err(e) => return Err(io_internal("pin removal directory", path, e)),
+    };
     for child in directory
         .entries()
         .map_err(|e| io_internal("list removal directory", path, e))?
     {
         let child = child.map_err(|e| io_internal("read removal entry", path, e))?;
         let relative = path.join(child.file_name());
-        let metadata = directory
-            .symlink_metadata(child.file_name())
-            .map_err(|e| io_internal("inspect removal entry", &relative, e))?;
+        // A running usage monitor may replace or remove its own runtime files
+        // between listing and inspection; a vanished entry has nothing to remove.
+        let metadata = match directory.symlink_metadata(child.file_name()) {
+            Ok(value) => value,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(io_internal("inspect removal entry", &relative, e)),
+        };
         if metadata.file_type().is_symlink() {
             return Err(InstallError::Conflict(format!(
                 "removal entry is a symlink: {}",
