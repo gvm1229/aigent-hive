@@ -5788,7 +5788,16 @@ mod tests {
         let index_path = user.path().join(SHARED_INDEX_RELATIVE);
         let before_index = fs::read(&index_path).expect("index");
         fs::write(&claim_path, b"changed canonical evidence").expect("missed change event");
-        assert!(run_retrieve(&retrieve_arguments).is_err());
+        // The changed claim is dropped from results; stale text is never returned and the
+        // retrieval itself still succeeds for every other source.
+        let stale = run_retrieve(&retrieve_arguments).expect("stale hit dropped");
+        assert_eq!(
+            stale.data.expect("retrieval data")["hits"]
+                .as_array()
+                .expect("hits")
+                .len(),
+            0
+        );
         assert_eq!(
             fs::read(&index_path).expect("unchanged index"),
             before_index

@@ -1827,12 +1827,7 @@ impl RagStore {
             let mut result = crate::rag::semantic_matches_serialized(
                 bytes, manifest, registry, request, matches,
             )?;
-            self.validate_semantic_hits(registry, &mut result.hits)
-                .map_err(|_| {
-                    RagError::RepairRequired(
-                        "canonical semantic citations changed or are unavailable".to_owned(),
-                    )
-                })?;
+            self.retain_current_hits(registry, &mut result);
             Ok(result)
         })
     }
@@ -1905,12 +1900,7 @@ impl RagStore {
     ) -> Result<RetrievalResult, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
             let mut result = retrieve_serialized(bytes, manifest, registry, request)?;
-            self.validate_semantic_hits(registry, &mut result.hits)
-                .map_err(|_| {
-                    RagError::RepairRequired(
-                        "canonical retrieval citations or source evidence changed; explicitly review current sources and rebuild the index before reuse".to_owned(),
-                    )
-                })?;
+            self.retain_current_hits(registry, &mut result);
             Ok(result)
         })
     }
@@ -1952,12 +1942,7 @@ impl RagStore {
         let semantic = prepared.semantic_matches(&expanded, matches)?;
         let mut result =
             crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
-        self.validate_semantic_hits(registry, &mut result.result.hits)
-            .map_err(|_| {
-                RagError::RepairRequired(
-                    "canonical hybrid citations changed or are unavailable".to_owned(),
-                )
-            })?;
+        self.retain_current_hits(registry, &mut result.result);
         Ok(result)
     }
 
@@ -2034,19 +2019,51 @@ impl RagStore {
         ))
     }
 
-    fn validate_semantic_hits(
+    /// Keep only hits whose canonical source still matches the index.
+    ///
+    /// A changed, moved, or deleted source drops that one hit instead of failing the whole
+    /// retrieval, so one stale page never empties recall for every other source. Stale text
+    /// is never returned.
+    fn retain_current_hits(
         &self,
         registry: &CollectionRegistry,
-        hits: &mut [crate::rag::RetrievalHit],
-    ) -> Result<(), WikiError> {
+        result: &mut crate::rag::RetrievalResult,
+    ) {
         let by_id = registry.by_id();
         let mut checked = BTreeMap::new();
-        for hit in hits {
-            let key = (&hit.collection_id, &hit.item_kind, &hit.item_id);
-            if let Some(freshness) = checked.get(&key) {
-                hit.source_freshness = *freshness;
-                continue;
+        result.hits.retain_mut(|hit| {
+            let key = (
+                hit.collection_id.clone(),
+                hit.item_kind.clone(),
+                hit.item_id.clone(),
+            );
+            let outcome = if let Some(outcome) = checked.get(&key) {
+                *outcome
+            } else {
+                let outcome = self
+                    .validate_semantic_hit(registry, &by_id, hit)
+                    .ok()
+                    .map(|()| hit.source_freshness);
+                checked.insert(key, outcome);
+                outcome
+            };
+            if let Some(freshness) = outcome {
+                hit.source_freshness = freshness;
+                true
+            } else {
+                false
             }
+        });
+        result.returned_bytes = result.hits.iter().map(|hit| hit.text.len()).sum();
+    }
+
+    fn validate_semantic_hit(
+        &self,
+        registry: &CollectionRegistry,
+        by_id: &BTreeMap<&str, &CollectionRecord>,
+        hit: &mut crate::rag::RetrievalHit,
+    ) -> Result<(), WikiError> {
+        {
             hit.source_freshness = None;
             let collection = by_id.get(hit.collection_id.as_str()).ok_or_else(|| {
                 WikiError::Verification("canonical collection is absent".to_owned())
@@ -2129,7 +2146,6 @@ impl RagStore {
                     "unknown canonical item kind".to_owned(),
                 ));
             }
-            checked.insert(key, hit.source_freshness);
         }
         Ok(())
     }
@@ -6215,7 +6231,7 @@ mod tests {
                 .expect("change registry");
             } else {
                 let path = match changed {
-                    "canonical" => canonical,
+                    "canonical" => canonical.clone(),
                     "sqlite" => temporary.path().join(SHARED_INDEX_RELATIVE),
                     "dirty" => temporary.path().join(RAG_DIRTY_RELATIVE),
                     "manifest" => temporary.path().join(RAG_MANIFEST_RELATIVE),
@@ -6223,7 +6239,15 @@ mod tests {
                 };
                 std::fs::write(path, b"external change").expect("mutation");
             }
-            assert!(frame.finish(&matches).is_err(), "{changed}");
+            if changed == "canonical" {
+                // One changed page drops only its own hit; it never fails the whole query.
+                let result = frame.finish(&matches).expect("other hits survive");
+                assert!(!result.hits.iter().any(|hit| {
+                    canonical.ends_with(hit.locator.split('#').next().unwrap_or(""))
+                }));
+            } else {
+                assert!(frame.finish(&matches).is_err(), "{changed}");
+            }
         }
     }
 
@@ -6420,10 +6444,23 @@ mod tests {
             )
             .is_err());
         assert!(!published);
-        assert!(store
-            .semantic_matches(&request, &retrieved.manifest_digest, &matches)
-            .is_err());
-        assert!(store.checked_retrieve(&request).is_err());
+        // The externally edited claim is dropped from results instead of failing retrieval.
+        assert_eq!(
+            store
+                .semantic_matches(&request, &retrieved.manifest_digest, &matches)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
     }
 
     #[test]
@@ -6619,7 +6656,14 @@ mod tests {
             )
             .expect("same partition may publish");
         std::fs::write(&first_file, b"changed selected page").expect("selected corruption");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         assert!(store
             .semantic_corpus(&request, RagVisibility::ProjectPrivate)
             .is_err());
@@ -6702,6 +6746,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn checked_scan_retrieval_detects_missed_edits_without_writes() {
         let (temporary, store) = store();
         let scanned = tempfile::tempdir().expect("source root");
@@ -6762,7 +6807,14 @@ mod tests {
             initial.hits
         );
         std::fs::write(&path, b"changed code or policy").expect("missed edit event");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         std::fs::write(&path, b"reviewed evidence\n").expect("same content restored");
         assert!(store.checked_retrieve(&request).is_ok());
         let moved = scanned.path().join("renamed.md");
@@ -6775,7 +6827,11 @@ mod tests {
                 == Some(crate::rag::SourceFreshness::HistoricalUnverified)));
         std::fs::write(&second, b"changed second evidence\n").expect("changed evidence");
         assert!(
-            store.checked_retrieve(&request).is_err(),
+            store
+                .checked_retrieve(&request)
+                .expect("mismatched hit dropped")
+                .hits
+                .is_empty(),
             "missing evidence must not hide a later source mismatch"
         );
         std::fs::write(&second, b"second evidence\n").expect("restore second evidence");
@@ -7199,7 +7255,14 @@ mod tests {
             1
         );
         std::fs::write(&evidence, b"new source decision").expect("source edit");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         std::fs::write(&evidence, b"promotion evidence\n").expect("restore source");
         assert_eq!(
             promoted.promoted_claims[0].collection_id,
