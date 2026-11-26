@@ -99,6 +99,10 @@ const PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS: &[(&str, &str)] = &[
         "0.15.3",
         "sha256:1d6d0940307f9d379a25a12d1ff8f7e94e8e10563044cc0b0dadd471552b7d69",
     ),
+    (
+        "0.16.0",
+        "sha256:75e98af52458a52eb2868ad1e2cdc9cde4663ae3f2613e466e13c2a50976b82c",
+    ),
 ];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
@@ -10989,10 +10993,21 @@ mod tests {
 
     #[test]
     fn prior_0_15_3_user_install_updates_without_reinstall() {
+        prior_published_user_install_updates_without_reinstall("0.15.3");
+    }
+
+    #[test]
+    fn prior_0_16_0_user_install_updates_without_reinstall() {
+        // Every published stable needs its frozen Claude marketplace digest, or updating a real
+        // installation of it fails authentication (found on the maintainer PC with 0.16.1-test.1).
+        prior_published_user_install_updates_without_reinstall("0.16.0");
+    }
+
+    fn prior_published_user_install_updates_without_reinstall(version: &str) {
         let temporary = tempdir().expect("tempdir");
         write_operational_setup(temporary.path(), &["codex", "claude", "antigravity"]);
         for host in [UserHost::Codex, UserHost::Claude, UserHost::Antigravity] {
-            seed_historical_09x_user_install(temporary.path(), "0.15.3", host);
+            seed_historical_09x_user_install(temporary.path(), version, host);
         }
 
         let manifest_path = temporary.path().join(".hive/install/claude.json");
@@ -11000,11 +11015,11 @@ mod tests {
             serde_json::from_slice(&fs::read(&manifest_path).expect("Claude manifest"))
                 .expect("Claude manifest JSON");
         let marketplace_path = ".hive/marketplaces/claude/.claude-plugin/marketplace.json";
-        let marketplace = render_claude_marketplace_for("0.15.3");
+        let marketplace = render_claude_marketplace_for(version);
         assert_eq!(
             sha256_digest(&marketplace),
-            published_claude_marketplace_digest("0.15.3"),
-            "the seed must be the published 0.15.3 bytes"
+            published_claude_marketplace_digest(version),
+            "the seed must be the published {version} bytes"
         );
         fs::create_dir_all(
             temporary
@@ -11042,7 +11057,7 @@ mod tests {
         .expect("Claude manifest");
 
         let hosts = authenticated_saved_projection_hosts(temporary.path())
-            .expect("0.15.3 projections authenticate for update");
+            .expect("prior published projections authenticate for update");
         assert_eq!(hosts, ["codex", "claude", "antigravity"]);
 
         let runner = StatefulHostRunner::new(temporary.path(), HostSabotage::None);
