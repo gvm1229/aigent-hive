@@ -66,6 +66,21 @@ class PublicStableDocsTest(unittest.TestCase):
         result = self.run_check(root)
         self.assertIn("stable-marker", {item["code"] for item in result["failures"]})
 
+    def test_readmes_reject_release_history(self) -> None:
+        for relative, heading in (
+            ("README.md", "## What changed in 9.9.9"),
+            ("README.md", "## Earlier changes in 9.9.8"),
+            ("docs/readme/README.ko.md", "## 9.9.9 주요 변경"),
+            ("docs/readme/README.ko.md", "## 이전 9.9.8 변경"),
+        ):
+            with self.subTest(relative=relative, heading=heading):
+                root = self.copy_fixture()
+                path = root / relative
+                path.write_text(path.read_text(encoding="utf-8") + f"\n{heading}\n", encoding="utf-8")
+                result = self.run_check(root)
+                self.assertEqual(result["exit_code"], 1)
+                self.assertIn("readme-release-history", {item["code"] for item in result["failures"]})
+
     def test_coverage_and_channel_boundaries_fail_closed(self) -> None:
         root = self.copy_fixture()
         manifest_path = root / "docs/public-stable-release.json"

@@ -6,7 +6,7 @@ use super::super::{
     remove_regular_if_exists, replace_user_setup_file, valid_sha256, validate_relative,
     write_atomic, InstallError, UserUninstallArguments, UNINSTALL_FILES, UNINSTALL_TREES,
 };
-use super::{digest, root_identity, tree, verify, Preview, PRESERVED};
+use super::{digest, root_identity, tree, verify, Preview, MONITOR_VOLATILE, PRESERVED};
 use crate::{usage::SystemCommandRunner, ActionResult};
 use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
@@ -449,6 +449,26 @@ fn remove_monitor_payload(
         remove_regular_if_exists(&target.root_cap, path, Some(&bytes), Some(permissions))?;
         changed.push(name.clone());
     }
+    // Observations are outside the confirmed inventory because the monitor may rewrite them;
+    // remove whatever is left by name. A file the monitor is still rewriting is only residue.
+    for name in MONITOR_VOLATILE {
+        let path = Path::new(name);
+        for _ in 0..3 {
+            let Ok(Some(bytes)) = read_optional_regular(&target.root_cap, path, 128 * 1024 * 1024)
+            else {
+                break;
+            };
+            let Ok(permissions) = file_permissions(&target.root_cap, path) else {
+                break;
+            };
+            if remove_regular_if_exists(&target.root_cap, path, Some(&bytes), Some(permissions))
+                .is_ok()
+            {
+                changed.push(name.to_owned());
+                break;
+            }
+        }
+    }
     changed.sort();
     changed.dedup();
     Ok(())
@@ -651,6 +671,43 @@ mod tests {
     use super::*;
     use crate::user_install::open_user_root;
     use std::fs;
+
+    #[test]
+    fn monitor_observations_changing_or_vanishing_do_not_change_the_confirmed_inventory() {
+        let root = tempfile::tempdir().unwrap();
+        let user_root = root.path().canonicalize().unwrap();
+        let monitor = user_root.join(".hive/runtime/usage-monitor");
+        fs::create_dir_all(&monitor).unwrap();
+        fs::write(monitor.join("program.bin"), b"monitor program").unwrap();
+        fs::write(monitor.join("state.json"), b"{\"observed\":1}").unwrap();
+        let cap = open_user_root(&user_root).unwrap();
+        let inventory = || {
+            let mut entries = BTreeMap::new();
+            tree(&cap, Path::new(".hive/runtime"), &mut entries).unwrap();
+            serde_json::to_string(&entries).unwrap()
+        };
+        let before = inventory();
+        assert!(before.contains(".hive/runtime/usage-monitor/program.bin"));
+        assert!(!before.contains("state.json"));
+        fs::write(
+            monitor.join("state.json"),
+            b"{\"observed\":2,\"longer\":true}",
+        )
+        .unwrap();
+        fs::write(monitor.join("startup.json"), b"{}").unwrap();
+        assert_eq!(inventory(), before);
+        fs::remove_file(monitor.join("state.json")).unwrap();
+        fs::remove_file(monitor.join("startup.json")).unwrap();
+        assert_eq!(inventory(), before);
+        assert!(super::super::vanished(
+            &cap,
+            Path::new(".hive/runtime/usage-monitor/state.json")
+        ));
+        assert!(!super::super::vanished(
+            &cap,
+            Path::new(".hive/runtime/usage-monitor/program.bin")
+        ));
+    }
 
     #[test]
     fn resumed_removal_refuses_a_changed_program_before_stopping_or_deleting_files() {

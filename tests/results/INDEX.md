@@ -1585,3 +1585,9 @@
 | [passed](runs/20261121T073941-e057a306ce05.md) | OV160-014a CI 계약 및 Windows 레거시 지문 최종 회귀 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261121T074108-a6115b2a5758.md) | OV160-014a 최종 0.15.3 렌더 기반 회귀 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261122T203937-e93826e71316.md) | OV160-014 Claude 갱신 인증 회귀 | 9eebf8203f782f3a515c3bfb26ed90653e130068 | Windows-11-10.0.26300-SP0 |
+| [passed](runs/20261125T155238-264fda72537e.md) | Python conformance: documentation | 39a16c57ff897c38ad831b219fd0994f295a9d5f | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [passed](runs/20261126T050747-8b7067aa0a6e.md) | Python conformance: documentation | 655b4fbfcba19773916ae5213f3cb9e02babedd2 | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [failed](runs/20261126T050800-44ad861c09ee.md) | Python conformance: release | 655b4fbfcba19773916ae5213f3cb9e02babedd2 | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [passed](runs/20261126T183516-b82626c74de4.md) | Python conformance: documentation | 832c06023cfb312a7e2e30ed9abdbc4d04f0a93f | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [passed](runs/20261126T184034-3040a3bf7bbe.md) | Python conformance: documentation | 832c06023cfb312a7e2e30ed9abdbc4d04f0a93f | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [passed](runs/20261126T184428-0bac1fa7bef0.md) | Python conformance: documentation | 751512183dce8a8096bd6927c0656df0031e0441 | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |

@@ -17,3 +17,4 @@
 | [npm Trusted Publisher](npm-trusted-publisher.md) | six npm package OIDC 연결·test·stable publication |
 | [출시 검증용 빌드](release-verification-builds.md) | Developer test version의 목적·설치·수용 기준 |
 | [공개 HTML 디자인 원칙](public-html-design-principles.md) | Hive 안내 HTML의 브랜드·정보 구조·반응형·명령 정확성 기준 |
+| [업데이트 전후 대화 비교](release-comparison-mockups.md) | 소개 사이트의 버전 전후 대화 장면 작성·정확성 기준 |

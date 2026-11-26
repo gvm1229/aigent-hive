@@ -76,6 +76,30 @@ SESSION_LINK = re.compile(
 )
 
 
+# The only permitted commit identity. This rule overrides every other commit rule.
+REQUIRED_IDENTITY = "Hojin Jeong <hojini1229@gmail.com>"
+REQUIRED_EMAIL = "hojini1229@gmail.com"
+# GitHub merge-button commits: GitHub is the committer and the author name is the account's
+# display name. They pass only with this exact committer and the required author email.
+GITHUB_WEB_COMMITTER = "GitHub <noreply@github.com>"
+
+
+def identity_email(identity: str) -> str:
+    _, _, rest = identity.partition("<")
+    return rest.rstrip().removesuffix(">")
+
+
+def required_identity_violations(author: str, committer: str) -> list[str]:
+    """Return findings when author or committer is not the required maintainer identity."""
+    if committer == GITHUB_WEB_COMMITTER and identity_email(author) == REQUIRED_EMAIL:
+        return []
+    found = []
+    for role, identity in (("author", author), ("committer", committer)):
+        if identity != REQUIRED_IDENTITY:
+            found.append(f"{role} must be {REQUIRED_IDENTITY}: {identity}")
+    return found
+
+
 def ai_identity(identity: str) -> bool:
     """Match AI words in the name part only, plus known AI addresses."""
     name, _, email = identity.partition("<")
@@ -83,8 +107,8 @@ def ai_identity(identity: str) -> bool:
 
 
 def commit_violations(author: str, committer: str, message: str) -> list[str]:
-    """Return AI authorship, AI co-author and session-link findings for one commit."""
-    found = []
+    """Return identity, AI authorship, AI co-author and session-link findings for one commit."""
+    found = required_identity_violations(author, committer)
     for role, identity in (("author", author), ("committer", committer)):
         if ai_identity(identity):
             found.append(f"AI {role}: {identity}")
@@ -96,7 +120,7 @@ def commit_violations(author: str, committer: str, message: str) -> list[str]:
 
 
 def check_commits(revisions: list[str], repo: Path) -> int:
-    """Reject AI author/committer identities, AI co-author trailers and session links."""
+    """Reject non-maintainer or AI identities, AI co-author trailers and session links."""
     listed = git(repo, "rev-list", *revisions).stdout.split()
     offenders = []
     for oid in listed:
@@ -107,7 +131,9 @@ def check_commits(revisions: list[str], repo: Path) -> int:
         if found:
             offenders.append(f"{oid[:12]}: {found[0]}")
     if offenders:
-        raise PolicyError("AI commit identity or session link is prohibited:\n" + "\n".join(offenders))
+        raise PolicyError(
+            "commit identity, AI co-author or session link is prohibited:\n" + "\n".join(offenders)
+        )
     return len(listed)
 
 
@@ -278,7 +304,8 @@ def main(argv: list[str] | None = None) -> int:
             validate_pr(args.head, args.base, args.head_repo, args.base_repo, args.repo)
         elif args.command == "commits":
             count = check_commits(args.revisions, args.repo)
-            print(f"branch-policy: {count} commits without AI identity, co-author or session link")
+            print(f"branch-policy: {count} commits with the maintainer identity "
+                  "and no AI co-author or session link")
         elif args.command == "install-hooks":
             print(json.dumps({"apply": args.apply, "paths": install_hooks(args.repo, args.apply)}))
         elif args.command == "ruleset":
