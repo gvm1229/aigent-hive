@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stable_version": "0.16.0",
-  "release_date": "2026-11-25",
-  "previous_stable_version": "0.15.3",
-  "release_notes": "docs/releases/0.16.0.md",
+  "stable_version": "0.16.1",
+  "release_date": "2026-11-26",
+  "previous_stable_version": "0.16.0",
+  "release_notes": "docs/releases/0.16.1.md",
   "public_surfaces": [
     "README.md",
     "docs/readme/README.ko.md",
@@ -15,137 +15,42 @@
     "SCOPE-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "SCOPE-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "SCOPE-03": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "SCOPE-04": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "SCOPE-05": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "SCOPE-06": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-07": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-08": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-09": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-10": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-11": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-12": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-13": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-14": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-15": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "COMPAT-01": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     },
     "COMPAT-02": {
       "status": "documented",
       "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-03": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-04": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-05": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-06": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-07": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-08": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-09": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "COMPAT-10": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-16": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
-    },
-    "SCOPE-17": {
-      "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0160"
+      "anchor": "what-changed-in-0161"
     }
   }
 }
