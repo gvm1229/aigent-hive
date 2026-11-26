@@ -31,5 +31,5 @@
 
 ## 이전 근거
 
-- [재정비 순서](overhaul/README.md)·[정식 0.16.0 근거](../research/overhaul/OV160-011.md)
+- [재정비 순서](overhaul/README.md)·[정식 0.16.0 근거](../research/overhaul/OV160-011.md)·[정식 0.15.3 근거](../research/overhaul/OV153-010.md)·[단계 5 근거 색인](../research/overhaul/stage-5-closeout.md)
 - [이전 활성 계획 색인](../archive/plans/0.16.0-closeout.md)
