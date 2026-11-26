@@ -2833,9 +2833,9 @@ impl RagStore {
                     continue;
                 }
                 if path.extension().and_then(|extension| extension.to_str()) != Some("md") {
-                    return Err(WikiError::Verification(
-                        "claim collection contains a non-Markdown entry".to_owned(),
-                    ));
+                    // Stray non-claim files (for example `.DS_Store`, `Thumbs.db`, or
+                    // `desktop.ini`) are never read and must not block every operation.
+                    continue;
                 }
                 let bytes = read_named_file(&collection_dir, &file_name, MAX_CLAIM_BYTES, "claim")?;
                 crate::reject_likely_credentials(&bytes).map_err(|error| {
@@ -3519,13 +3519,10 @@ fn load_wiki_documents(
         let metadata = wiki.symlink_metadata(&file_name).map_err(|error| {
             WikiError::Io(format!("cannot inspect collection Wiki entry: {error}"))
         })?;
-        if metadata.is_dir() {
-            continue;
-        }
+        // Subfolders, symlinks, and special files are never followed or read; skipping them
+        // keeps one stray entry from blocking knowledge work for every source.
         if !metadata.is_file() {
-            return Err(WikiError::Verification(
-                "collection Wiki contains a symlink or special file".to_owned(),
-            ));
+            continue;
         }
         let path = Path::new(&file_name);
         if path.extension().and_then(|extension| extension.to_str()) != Some("md")
@@ -5202,6 +5199,27 @@ mod tests {
             .contains("explicit hive index rebuild"));
         assert!(!root.path().join(PROJECT_REGISTRY_RELATIVE).exists());
         assert!(!root.path().join(SHARED_INDEX_RELATIVE).exists());
+    }
+
+    #[test]
+    fn deleted_attached_directory_and_stray_files_do_not_block_rebuild() {
+        let (root, store) = store();
+        let directory = tempfile::tempdir().unwrap();
+        store
+            .register_collection(registration(directory.path(), "deleted-directory"))
+            .unwrap();
+        directory.close().unwrap();
+        let claims = root
+            .path()
+            .join(CLAIMS_RELATIVE)
+            .join(USER_ROOT_COLLECTION_ID);
+        std::fs::create_dir_all(&claims).unwrap();
+        std::fs::write(claims.join("Thumbs.db"), b"os metadata").unwrap();
+        std::fs::write(claims.join("desktop.ini"), b"os metadata").unwrap();
+        store
+            .rebuild()
+            .expect("a deleted attached folder and stray OS files do not block rebuild");
+        store.validate_current().expect("rebuilt index is current");
     }
 
     #[test]
