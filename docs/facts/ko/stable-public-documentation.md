@@ -11,8 +11,8 @@ aliases: ["공개 안정판 문서"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:.github/workflows/release.yml#sha256:6fa640b5ce08594bdcbccd28530846ff7a34f7dfd6f918f4b62a860555ed7567"
-  - "repo:README.md#sha256:cfdd9e02efef5feba18f2ccd3594a2aaa60fdfc73bbc687b949ddde9eed09f0a"
-  - "repo:docs/public-stable-release.json#sha256:42b25a5294c4d945f8bad57fec402f6afec0e50ef39d4820a5e1f1fe63601346"
+  - "repo:README.md#sha256:9d2067a6075b7b224cd5b928904eb906e464ddddeb1ca5227116ad811ce2dc8f"
+  - "repo:docs/public-stable-release.json#sha256:5372ae7c19cce45bdac8640ed646ae035f5f5f44e5b1a89a0b1ebeebe9f0aa97"
   - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
   - "repo:tests/conformance/release/test_release_notes.py#sha256:0e6e4201c7c3369ea787c956b7022add3aae86f1331894787331e955a4c9a63c"
 links: [product-purpose, release-verification]

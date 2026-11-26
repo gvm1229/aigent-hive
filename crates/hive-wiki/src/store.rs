@@ -54,6 +54,9 @@ const MAX_WIKI_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 128 * 1024;
 pub(crate) const MAX_RAG_TRUST_BYTES: usize = 16 * 1024;
 const MAX_DIRTY_BYTES: usize = 1024 * 1024;
+/// A journal with no target written yet that is older than this was left by an interrupted
+/// write: lock waits last a few seconds, so no live write keeps such a journal this long.
+const ABANDONED_DIRTY_JOURNAL_AGE: std::time::Duration = std::time::Duration::from_mins(1);
 const MAX_EXTERNAL_CANONICAL_BYTES: usize = 16 * 1024 * 1024;
 const DIRTY_SCHEMA_VERSION: u32 = 2;
 const RAG_TRUST_SCHEMA_VERSION: u32 = 1;
@@ -1827,12 +1830,7 @@ impl RagStore {
             let mut result = crate::rag::semantic_matches_serialized(
                 bytes, manifest, registry, request, matches,
             )?;
-            self.validate_semantic_hits(registry, &mut result.hits)
-                .map_err(|_| {
-                    RagError::RepairRequired(
-                        "canonical semantic citations changed or are unavailable".to_owned(),
-                    )
-                })?;
+            self.retain_current_hits(registry, &mut result);
             Ok(result)
         })
     }
@@ -1904,13 +1902,16 @@ impl RagStore {
         request: &RetrievalRequest,
     ) -> Result<RetrievalResult, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
-            let mut result = retrieve_serialized(bytes, manifest, registry, request)?;
-            self.validate_semantic_hits(registry, &mut result.hits)
-                .map_err(|_| {
-                    RagError::RepairRequired(
-                        "canonical retrieval citations or source evidence changed; explicitly review current sources and rebuild the index before reuse".to_owned(),
-                    )
-                })?;
+            // Fetch extra candidates so fresh results can fill places left by stale ones.
+            let mut wider = request.clone();
+            wider.top_k = request.top_k.saturating_mul(3).clamp(request.top_k, 100);
+            wider.byte_budget = request
+                .byte_budget
+                .saturating_mul(3)
+                .clamp(request.byte_budget, 1024 * 1024);
+            let mut result = retrieve_serialized(bytes, manifest, registry, &wider)?;
+            self.retain_current_hits(registry, &mut result);
+            crate::rag::limit_to_request(&mut result, request);
             Ok(result)
         })
     }
@@ -1948,16 +1949,16 @@ impl RagStore {
         let mut expanded = request.clone();
         expanded.top_k = 100;
         expanded.byte_budget = 1024 * 1024;
-        let lexical = prepared.retrieve(&expanded)?;
-        let semantic = prepared.semantic_matches(&expanded, matches)?;
+        let mut lexical = prepared.retrieve(&expanded)?;
+        let mut semantic = prepared.semantic_matches(&expanded, matches)?;
+        // Drop stale candidates before fusion so fresh ones fill the requested places.
+        self.retain_current_hits(registry, &mut lexical);
+        self.retain_current_hits(registry, &mut semantic);
+        let dropped = lexical.stale_hits_dropped.max(semantic.stale_hits_dropped);
         let mut result =
             crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
-        self.validate_semantic_hits(registry, &mut result.result.hits)
-            .map_err(|_| {
-                RagError::RepairRequired(
-                    "canonical hybrid citations changed or are unavailable".to_owned(),
-                )
-            })?;
+        self.retain_current_hits(registry, &mut result.result);
+        result.result.stale_hits_dropped = result.result.stale_hits_dropped.max(dropped);
         Ok(result)
     }
 
@@ -2034,19 +2035,65 @@ impl RagStore {
         ))
     }
 
-    fn validate_semantic_hits(
+    /// Keep only hits whose canonical source still matches the index.
+    ///
+    /// A changed, moved, or deleted source drops that one hit instead of failing the whole
+    /// retrieval, so one stale page never empties recall for every other source. Stale text
+    /// is never returned.
+    fn retain_current_hits(
         &self,
         registry: &CollectionRegistry,
-        hits: &mut [crate::rag::RetrievalHit],
-    ) -> Result<(), WikiError> {
+        result: &mut crate::rag::RetrievalResult,
+    ) {
         let by_id = registry.by_id();
         let mut checked = BTreeMap::new();
-        for hit in hits {
-            let key = (&hit.collection_id, &hit.item_kind, &hit.item_id);
-            if let Some(freshness) = checked.get(&key) {
-                hit.source_freshness = *freshness;
-                continue;
+        let mut stale = 0_usize;
+        let mut lead_dropped = false;
+        result.hits.retain_mut(|hit| {
+            // Subject members belong to their lead hit: when the lead is stale, its group
+            // goes with it so members never take the place of the next fresh result.
+            if hit.matched_field == "subject" {
+                if lead_dropped {
+                    return false;
+                }
+            } else {
+                lead_dropped = false;
             }
+            let key = (
+                hit.collection_id.clone(),
+                hit.item_kind.clone(),
+                hit.item_id.clone(),
+            );
+            let outcome = if let Some(outcome) = checked.get(&key) {
+                *outcome
+            } else {
+                let outcome = self
+                    .validate_semantic_hit(registry, &by_id, hit)
+                    .ok()
+                    .map(|()| hit.source_freshness);
+                checked.insert(key, outcome);
+                outcome
+            };
+            if let Some(freshness) = outcome {
+                hit.source_freshness = freshness;
+                true
+            } else {
+                stale += 1;
+                lead_dropped = hit.matched_field != "subject";
+                false
+            }
+        });
+        result.stale_hits_dropped += stale;
+        result.returned_bytes = result.hits.iter().map(|hit| hit.text.len()).sum();
+    }
+
+    fn validate_semantic_hit(
+        &self,
+        registry: &CollectionRegistry,
+        by_id: &BTreeMap<&str, &CollectionRecord>,
+        hit: &mut crate::rag::RetrievalHit,
+    ) -> Result<(), WikiError> {
+        {
             hit.source_freshness = None;
             let collection = by_id.get(hit.collection_id.as_str()).ok_or_else(|| {
                 WikiError::Verification("canonical collection is absent".to_owned())
@@ -2129,7 +2176,6 @@ impl RagStore {
                     "unknown canonical item kind".to_owned(),
                 ));
             }
-            checked.insert(key, hit.source_freshness);
         }
         Ok(())
     }
@@ -2517,10 +2563,19 @@ impl RagStore {
         inspect_roots: bool,
     ) -> Result<CollectionRegistry, WikiError> {
         let mut registry = prior.unwrap_or(self.default_registry()?);
-        let active_ids = projects
+        // A registered folder that was deleted, moved, or made unsafe is detached automatically
+        // (not explicitly), so it reattaches on its own once the folder is usable again.
+        let live_projects = projects
             .projects
             .iter()
-            .filter(|project| project.enabled)
+            .filter(|project| {
+                project.enabled
+                    && (!inspect_roots
+                        || crate::shared::usable_registered_root(&project.root).is_some())
+            })
+            .collect::<Vec<_>>();
+        let active_ids = live_projects
+            .iter()
             .map(|project| project.id.as_str())
             .collect::<BTreeSet<_>>();
         for collection in &mut registry.collections {
@@ -2534,7 +2589,7 @@ impl RagStore {
                 collection.local_locator = None;
             }
         }
-        for project in projects.projects.iter().filter(|project| project.enabled) {
+        for project in live_projects {
             let canonical = if inspect_roots {
                 let canonical = crate::shared::canonical_root(&project.root)?;
                 let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
@@ -2773,14 +2828,6 @@ impl RagStore {
             if selected.is_some_and(|id| collection_name != OsStr::new(id)) {
                 continue;
             }
-            let collection_id = collection_name.to_str().ok_or_else(|| {
-                WikiError::Verification("claim collection directory is not UTF-8".to_owned())
-            })?;
-            if !known.contains(collection_id) {
-                return Err(WikiError::Verification(format!(
-                    "canonical claims reference unknown collection `{collection_id}`"
-                )));
-            }
             let metadata = claims_root
                 .symlink_metadata(&collection_name)
                 .map_err(|error| {
@@ -2789,9 +2836,17 @@ impl RagStore {
                     ))
                 })?;
             if !metadata.is_dir() {
-                return Err(WikiError::Verification(
-                    "Claims entries must be no-follow collection directories".to_owned(),
-                ));
+                // Stray files (for example `.DS_Store` or `Thumbs.db`) and links directly
+                // under Claims are never read or followed and must not block every operation.
+                continue;
+            }
+            let collection_id = collection_name.to_str().ok_or_else(|| {
+                WikiError::Verification("claim collection directory is not UTF-8".to_owned())
+            })?;
+            if !known.contains(collection_id) {
+                return Err(WikiError::Verification(format!(
+                    "canonical claims reference unknown collection `{collection_id}`"
+                )));
             }
             let collection_dir =
                 claims_root
@@ -2808,9 +2863,9 @@ impl RagStore {
                     continue;
                 }
                 if path.extension().and_then(|extension| extension.to_str()) != Some("md") {
-                    return Err(WikiError::Verification(
-                        "claim collection contains a non-Markdown entry".to_owned(),
-                    ));
+                    // Stray non-claim files (for example `.DS_Store`, `Thumbs.db`, or
+                    // `desktop.ini`) are never read and must not block every operation.
+                    continue;
                 }
                 let bytes = read_named_file(&collection_dir, &file_name, MAX_CLAIM_BYTES, "claim")?;
                 crate::reject_likely_credentials(&bytes).map_err(|error| {
@@ -2881,6 +2936,10 @@ impl RagStore {
                 self.root.try_clone().map_err(|error| {
                     WikiError::Io(format!("cannot clone pinned user root: {error}"))
                 })?
+            } else if crate::shared::usable_registered_root(Path::new(locator)).is_none() {
+                // A deleted, moved, or unsafe attached folder contributes no pages and is
+                // never opened; it must not block knowledge work for every other source.
+                continue;
             } else {
                 pin_absolute_directory(Path::new(locator), "collection root")?
             };
@@ -3206,8 +3265,17 @@ impl RagStore {
         Ok(next.max(dirty.target_generation))
     }
 
+    /// Allow recovery when the journaled write set fully landed or never landed at all.
+    ///
+    /// Only a partial write set (some targets written, others not) stays blocked, because
+    /// rebuilding then would legitimize an inconsistent canonical state. A write that never
+    /// started (crash, Ctrl+C, or a lock timeout right after the journal was published) left
+    /// the canonical files in their prior consistent state, so rebuilding from disk is safe and
+    /// must not leave the user blocked until a manual cleanup.
     fn verify_dirty_targets(&self, dirty: &PersistentDirtyState) -> Result<(), WikiError> {
         let registry = self.load_registry()?;
+        let mut pending = None;
+        let mut landed = 0_usize;
         for entry in &dirty.entries {
             let (target_root, path) = self.resolve_dirty_target(&registry, &entry.locator)?;
             let actual = read_bounded_optional(
@@ -3216,23 +3284,48 @@ impl RagStore {
                 MAX_EXTERNAL_CANONICAL_BYTES,
                 "dirty-journal canonical target",
             )?;
-            if entry.delete {
-                if actual.is_some() {
-                    return Err(WikiError::Verification(format!(
-                        "RAG recovery is blocked until deletion completes: {}",
-                        entry.locator
-                    )));
-                }
-            } else if actual.as_deref().map(sha256_digest).as_deref()
-                != Some(entry.target_digest.as_str())
-            {
-                return Err(WikiError::Verification(format!(
-                    "RAG recovery is blocked until the exact canonical write completes: {}",
-                    entry.locator
-                )));
+            let complete = if entry.delete {
+                actual.is_none()
+            } else {
+                actual.as_deref().map(sha256_digest).as_deref()
+                    == Some(entry.target_digest.as_str())
+            };
+            if complete {
+                landed += 1;
+            } else if pending.is_none() {
+                pending = Some(entry);
             }
         }
-        Ok(())
+        // A journal with nothing written yet may belong to a write that is still waiting for
+        // its lock (at most a few seconds). Only an older one is treated as abandoned.
+        if pending.is_some() && landed == 0 && !self.dirty_journal_is_abandoned() {
+            return Err(WikiError::Verification(
+                "a knowledge write is still starting; retry the rebuild in a minute".to_owned(),
+            ));
+        }
+        match pending {
+            Some(entry) if landed > 0 => Err(WikiError::Verification(if entry.delete {
+                format!(
+                    "RAG recovery is blocked until deletion completes: {}",
+                    entry.locator
+                )
+            } else {
+                format!(
+                    "RAG recovery is blocked until the exact canonical write completes: {}",
+                    entry.locator
+                )
+            })),
+            _ => Ok(()),
+        }
+    }
+
+    fn dirty_journal_is_abandoned(&self) -> bool {
+        self.root
+            .symlink_metadata(RAG_DIRTY_RELATIVE)
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(|modified| modified.into_std().elapsed().ok())
+            .is_some_and(|age| age >= ABANDONED_DIRTY_JOURNAL_AGE)
     }
 
     fn resolve_dirty_target(
@@ -3472,13 +3565,10 @@ fn load_wiki_documents(
         let metadata = wiki.symlink_metadata(&file_name).map_err(|error| {
             WikiError::Io(format!("cannot inspect collection Wiki entry: {error}"))
         })?;
-        if metadata.is_dir() {
-            continue;
-        }
+        // Subfolders, symlinks, and special files are never followed or read; skipping them
+        // keeps one stray entry from blocking knowledge work for every source.
         if !metadata.is_file() {
-            return Err(WikiError::Verification(
-                "collection Wiki contains a symlink or special file".to_owned(),
-            ));
+            continue;
         }
         let path = Path::new(&file_name);
         if path.extension().and_then(|extension| extension.to_str()) != Some("md")
@@ -5158,6 +5248,75 @@ mod tests {
     }
 
     #[test]
+    fn a_stale_hit_is_replaced_by_the_next_fresh_hit_and_counted() {
+        let (root, store) = store();
+        let wiki = root.path().join(WIKI_RELATIVE);
+        std::fs::create_dir_all(&wiki).unwrap();
+        std::fs::write(
+            wiki.join("alpha.md"),
+            wiki_bytes("alpha", "zebracorn zebracorn zebracorn alpha"),
+        )
+        .unwrap();
+        std::fs::write(wiki.join("beta.md"), wiki_bytes("beta", "zebracorn beta")).unwrap();
+        store.rebuild().unwrap();
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "zebracorn".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 1,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let fresh = store.checked_retrieve(&request).expect("fresh retrieval");
+        assert_eq!(fresh.hits.len(), 1);
+        assert_eq!(fresh.stale_hits_dropped, 0);
+        let first = fresh.hits[0].locator.clone();
+        let (edited, other) = if first.contains("alpha.md") {
+            ("alpha", "beta")
+        } else {
+            ("beta", "alpha")
+        };
+        std::fs::write(
+            wiki.join(format!("{edited}.md")),
+            wiki_bytes(edited, "edited after indexing"),
+        )
+        .unwrap();
+
+        let result = store.checked_retrieve(&request).expect("stale hit dropped");
+        assert_eq!(result.hits.len(), 1, "the next fresh hit fills the place");
+        assert!(result.hits[0].locator.contains(&format!("{other}.md")));
+        assert_eq!(result.stale_hits_dropped, 1);
+        assert_eq!(result.returned_bytes, result.hits[0].text.len());
+    }
+
+    #[test]
+    fn deleted_attached_directory_and_stray_files_do_not_block_rebuild() {
+        let (root, store) = store();
+        let directory = tempfile::tempdir().unwrap();
+        store
+            .register_collection(registration(directory.path(), "deleted-directory"))
+            .unwrap();
+        directory.close().unwrap();
+        let claims = root
+            .path()
+            .join(CLAIMS_RELATIVE)
+            .join(USER_ROOT_COLLECTION_ID);
+        std::fs::create_dir_all(&claims).unwrap();
+        std::fs::write(claims.join("Thumbs.db"), b"os metadata").unwrap();
+        std::fs::write(claims.join("desktop.ini"), b"os metadata").unwrap();
+        std::fs::write(
+            root.path().join(CLAIMS_RELATIVE).join(".DS_Store"),
+            b"os metadata",
+        )
+        .unwrap();
+        store
+            .rebuild()
+            .expect("a deleted attached folder and stray OS files do not block rebuild");
+        store.validate_current().expect("rebuilt index is current");
+    }
+
+    #[test]
     fn user_setup_index_preserves_a_registry_changed_after_its_scope_snapshot() {
         let root = tempfile::tempdir().unwrap();
         let store = RagStore::open(root.path()).unwrap();
@@ -5488,6 +5647,75 @@ mod tests {
         assert_eq!(
             project_collection(&store, "project-auto").state,
             CollectionState::Attached
+        );
+    }
+
+    #[test]
+    fn deleted_project_folder_is_detached_without_blocking_knowledge_operations() {
+        let (_temporary, store) = store();
+        let kept = tempfile::tempdir().expect("kept root");
+        let deleted = tempfile::tempdir().expect("deleted root");
+        let deleted_path = deleted.path().to_path_buf();
+        store
+            .register_project_atomic(registered("project-kept", kept.path(), true))
+            .expect("register kept");
+        store
+            .register_project_atomic(registered("project-gone", &deleted_path, true))
+            .expect("register deleted");
+        drop(deleted);
+        assert!(!deleted_path.exists());
+
+        let projects = crate::shared::load_project_registry(&store.root_path)
+            .expect("a deleted project folder does not invalidate the registry");
+        assert_eq!(
+            projects.projects.len(),
+            2,
+            "the registration itself is preserved"
+        );
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync succeeds with a deleted project folder");
+        crate::shared::rebuild_shared_index(&store.root_path).expect("rebuild succeeds");
+        let gone = project_collection(&store, "project-gone");
+        assert_eq!(gone.state, CollectionState::Detached);
+        assert!(!gone.explicitly_detached);
+        assert!(gone.local_locator.is_none());
+        assert_eq!(
+            project_collection(&store, "project-kept").state,
+            CollectionState::Attached
+        );
+
+        let another = tempfile::tempdir().expect("another root");
+        store
+            .register_project_atomic(registered("project-new", another.path(), true))
+            .expect("registering another project is not blocked");
+
+        std::fs::create_dir(&deleted_path).expect("folder comes back");
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync after the folder returns");
+        assert_eq!(
+            project_collection(&store, "project-gone").state,
+            CollectionState::Attached
+        );
+        std::fs::remove_dir(&deleted_path).expect("cleanup");
+    }
+
+    #[test]
+    fn project_folder_replaced_by_a_file_is_detached_without_blocking() {
+        let (_temporary, store) = store();
+        let parent = tempfile::tempdir().expect("parent");
+        let root = parent.path().join("project");
+        std::fs::create_dir(&root).expect("project dir");
+        store
+            .register_project_atomic(registered("project-file", &root, true))
+            .expect("register");
+        std::fs::remove_dir(&root).expect("remove dir");
+        std::fs::write(&root, b"not a folder").expect("replace with file");
+
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync succeeds when the folder became a file");
+        assert_eq!(
+            project_collection(&store, "project-file").state,
+            CollectionState::Detached
         );
     }
 
@@ -6133,7 +6361,7 @@ mod tests {
                 .expect("change registry");
             } else {
                 let path = match changed {
-                    "canonical" => canonical,
+                    "canonical" => canonical.clone(),
                     "sqlite" => temporary.path().join(SHARED_INDEX_RELATIVE),
                     "dirty" => temporary.path().join(RAG_DIRTY_RELATIVE),
                     "manifest" => temporary.path().join(RAG_MANIFEST_RELATIVE),
@@ -6141,7 +6369,15 @@ mod tests {
                 };
                 std::fs::write(path, b"external change").expect("mutation");
             }
-            assert!(frame.finish(&matches).is_err(), "{changed}");
+            if changed == "canonical" {
+                // One changed page drops only its own hit; it never fails the whole query.
+                let result = frame.finish(&matches).expect("other hits survive");
+                assert!(!result.hits.iter().any(|hit| {
+                    canonical.ends_with(hit.locator.split('#').next().unwrap_or(""))
+                }));
+            } else {
+                assert!(frame.finish(&matches).is_err(), "{changed}");
+            }
         }
     }
 
@@ -6338,10 +6574,23 @@ mod tests {
             )
             .is_err());
         assert!(!published);
-        assert!(store
-            .semantic_matches(&request, &retrieved.manifest_digest, &matches)
-            .is_err());
-        assert!(store.checked_retrieve(&request).is_err());
+        // The externally edited claim is dropped from results instead of failing retrieval.
+        assert_eq!(
+            store
+                .semantic_matches(&request, &retrieved.manifest_digest, &matches)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
     }
 
     #[test]
@@ -6537,7 +6786,14 @@ mod tests {
             )
             .expect("same partition may publish");
         std::fs::write(&first_file, b"changed selected page").expect("selected corruption");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         assert!(store
             .semantic_corpus(&request, RagVisibility::ProjectPrivate)
             .is_err());
@@ -6620,6 +6876,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn checked_scan_retrieval_detects_missed_edits_without_writes() {
         let (temporary, store) = store();
         let scanned = tempfile::tempdir().expect("source root");
@@ -6680,7 +6937,14 @@ mod tests {
             initial.hits
         );
         std::fs::write(&path, b"changed code or policy").expect("missed edit event");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         std::fs::write(&path, b"reviewed evidence\n").expect("same content restored");
         assert!(store.checked_retrieve(&request).is_ok());
         let moved = scanned.path().join("renamed.md");
@@ -6693,7 +6957,11 @@ mod tests {
                 == Some(crate::rag::SourceFreshness::HistoricalUnverified)));
         std::fs::write(&second, b"changed second evidence\n").expect("changed evidence");
         assert!(
-            store.checked_retrieve(&request).is_err(),
+            store
+                .checked_retrieve(&request)
+                .expect("mismatched hit dropped")
+                .hits
+                .is_empty(),
             "missing evidence must not hide a later source mismatch"
         );
         std::fs::write(&second, b"second evidence\n").expect("restore second evidence");
@@ -7117,7 +7385,14 @@ mod tests {
             1
         );
         std::fs::write(&evidence, b"new source decision").expect("source edit");
-        assert!(store.checked_retrieve(&request).is_err());
+        assert_eq!(
+            store
+                .checked_retrieve(&request)
+                .expect("stale hit dropped")
+                .hits
+                .len(),
+            0
+        );
         std::fs::write(&evidence, b"promotion evidence\n").expect("restore source");
         assert_eq!(
             promoted.promoted_claims[0].collection_id,
@@ -7672,14 +7947,48 @@ mod tests {
         )
         .expect("canonical page");
         store.rebuild().expect("index canonical page");
+        let other_relative = PathBuf::from(".hive/knowledge/Wiki/delete-companion.md");
+        let other_bytes = wiki_bytes("delete-companion", "Companion write evidence.");
         let dirty = store
-            .begin_external_canonical_mutation(&[(relative, Vec::new())])
+            .begin_external_canonical_mutation(&[
+                (relative.clone(), Vec::new()),
+                (other_relative.clone(), other_bytes.clone()),
+            ])
             .expect("publish deletion intent");
-        assert!(dirty.entries[0].delete);
-        assert!(matches!(store.rebuild(), Err(WikiError::Verification(_))));
+        assert!(dirty.entries.iter().any(|entry| entry.delete));
+        std::fs::write(temporary.path().join(&other_relative), &other_bytes)
+            .expect("companion write landed");
+        assert!(
+            matches!(store.rebuild(), Err(WikiError::Verification(_))),
+            "a partial write set with a pending deletion stays blocked"
+        );
         std::fs::remove_file(&absolute).expect("complete deletion");
         store.rebuild().expect("rebuild after exact deletion");
         assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
+
+        // A deletion that never started (for example Ctrl+C right after the journal was
+        // published) leaves the prior consistent state; rebuild recovers instead of blocking.
+        std::fs::write(&absolute, wiki_bytes("delete-target", "Restored evidence."))
+            .expect("page restored");
+        store.rebuild().expect("index restored page");
+        store
+            .begin_external_canonical_mutation(&[(relative, Vec::new())])
+            .expect("publish deletion intent");
+        assert!(
+            matches!(store.rebuild(), Err(WikiError::Verification(_))),
+            "a fresh journal may belong to a write still waiting for its lock"
+        );
+        std::fs::File::options()
+            .write(true)
+            .open(temporary.path().join(RAG_DIRTY_RELATIVE))
+            .expect("journal")
+            .set_modified(std::time::SystemTime::now() - ABANDONED_DIRTY_JOURNAL_AGE * 2)
+            .expect("backdate journal");
+        store
+            .rebuild()
+            .expect("an abandoned write that never landed does not block recovery");
+        assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
+        assert!(absolute.is_file());
     }
 
     #[test]

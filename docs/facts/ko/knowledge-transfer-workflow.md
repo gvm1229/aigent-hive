@@ -9,9 +9,9 @@ summary: "단일·여러 묶음의 입력·대상·검토 지문과 벡터 지�
 tags: [knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge.rs#sha256:2972313e61138d862c92568c88b6fbd40c255ca25158bdcc051934b1c2a3a5a2"
+  - "repo:crates/hive-cli/src/knowledge.rs#sha256:f72931dfc7cccc0f45d7c30a37c81cb8fcbc0e99ab94619b8701ec85b6a84979"
   - "repo:crates/hive-cli/src/knowledge_transfer.rs#sha256:d1a6df6babfbed54b46bb505889921a30fe86fd14fbd4cc0230d51bf7a99de92"
-  - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:f2004da148a9e74f922c4911266f8835853044d52601d40f6d453bfa9add5848"
+  - "repo:crates/hive-wiki/src/bundle_store.rs#sha256:5dae98a4757bee2d7025ac3ec711e31ae4a33200b04d9b5aaad8746267a97e89"
   - "repo:docs/guides/knowledge-transfer.md#sha256:f0f48767f5fcb83450853ddf95d0c9f3f573b3c2fb3e0b626adb5af5ed742bf1"
   - "repo:harness/skills/knowledge-manage/references/transfer.md#sha256:67ae49affca4cbd70567fc92eb0f06f105be2ad1d728b1bfad5c783dfc82835f"
 links: [global-knowledge-bundle-transfer, knowledge-storage]
