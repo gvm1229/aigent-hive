@@ -10,9 +10,12 @@ on:
 permissions:
   contents: read
 
+# Pull requests and branch pushes get separate groups: a develop-to-main PR must not
+# cancel the develop push run that feeds the Develop push gate. Only superseded PR
+# runs are cancelled; every push keeps its own verification.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
