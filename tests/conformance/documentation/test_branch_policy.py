@@ -23,8 +23,8 @@ class BranchPolicyTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
         self.git("init", "--template=", "-b", "main")
-        self.git("config", "user.name", "Branch policy fixture")
-        self.git("config", "user.email", "fixture@example.invalid")
+        self.git("config", "user.name", "Hojin Jeong")
+        self.git("config", "user.email", "hojini1229@gmail.com")
         self.git("commit", "--allow-empty", "-m", "fixture")
 
     def git(self, *args, success=True):
@@ -43,7 +43,7 @@ class BranchPolicyTest(unittest.TestCase):
         return self.git("for-each-ref", "--format=%(refname):%(objectname)", "refs/heads").stdout
 
     def test_commit_check_rejects_ai_identity_coauthor_and_session_link(self):
-        human = "Hojin Jeong <hojini1229@example.invalid>"
+        human = POLICY.REQUIRED_IDENTITY
         self.assertEqual(POLICY.commit_violations(human, human, "fix: one\n"), [])
         self.assertEqual(
             POLICY.commit_violations(human, human, "docs: Claude host evidence\n"), []
@@ -69,6 +69,30 @@ class BranchPolicyTest(unittest.TestCase):
         self.assertEqual(POLICY.check_commits(["HEAD~1..HEAD"], self.repo), 1)
         self.git("commit", "--allow-empty", "-m", "fix: ai\n\nClaude-Session: https://claude.ai/code/session_01X")
         with self.assertRaises(POLICY.PolicyError):
+            POLICY.check_commits(["HEAD~1..HEAD"], self.repo)
+
+    def test_commit_identity_must_be_required_maintainer(self):
+        required = POLICY.REQUIRED_IDENTITY
+        self.assertEqual(POLICY.commit_violations(required, required, "fix: one\n"), [])
+        for author, committer in (
+            ("Jane Doe <jane@example.invalid>", required),
+            (required, "Jane Doe <jane@example.invalid>"),
+            ("Hojin (Tom) Jeong <hojini1229@gmail.com>", required),
+            ("Hojin Jeong <31644837+gvm1229@users.noreply.github.com>", required),
+            ("Hojin Jeong <HOJINI1229@gmail.com>", required),
+            ("Claude <noreply@anthropic.com>", "Claude <noreply@anthropic.com>"),
+        ):
+            self.assertTrue(POLICY.commit_violations(author, committer, "x\n"), (author, committer))
+        web = POLICY.GITHUB_WEB_COMMITTER
+        for author in (required, "Hojin (Tom) Jeong <hojini1229@gmail.com>"):
+            self.assertEqual(POLICY.commit_violations(author, web, "Merge pull request\n"), [], author)
+        for author in ("Jane Doe <jane@example.invalid>",
+                       "Hojin (Tom) Jeong <31644837+gvm1229@users.noreply.github.com>"):
+            self.assertTrue(POLICY.commit_violations(author, web, "x\n"), author)
+        self.assertTrue(POLICY.commit_violations(required, "GitHub <noreply@github.com.evil>", "x\n"))
+        self.git("-c", "user.name=Branch policy fixture", "-c", "user.email=fixture@example.invalid",
+                 "commit", "--allow-empty", "-m", "fix: other author")
+        with self.assertRaisesRegex(POLICY.PolicyError, "author must be"):
             POLICY.check_commits(["HEAD~1..HEAD"], self.repo)
 
     def test_all_allowed_classes_and_nested_names(self):
