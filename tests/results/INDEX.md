@@ -1586,3 +1586,5 @@
 | [passed](runs/20261121T074108-a6115b2a5758.md) | OV160-014a 최종 0.15.3 렌더 기반 회귀 | 15c2abbd70c930d3a7f04ffe4df51c3b2ea8edf2 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261122T203937-e93826e71316.md) | OV160-014 Claude 갱신 인증 회귀 | 9eebf8203f782f3a515c3bfb26ed90653e130068 | Windows-11-10.0.26300-SP0 |
 | [passed](runs/20261125T155238-264fda72537e.md) | Python conformance: documentation | 39a16c57ff897c38ad831b219fd0994f295a9d5f | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [passed](runs/20261126T050747-8b7067aa0a6e.md) | Python conformance: documentation | 655b4fbfcba19773916ae5213f3cb9e02babedd2 | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
+| [failed](runs/20261126T050800-44ad861c09ee.md) | Python conformance: release | 655b4fbfcba19773916ae5213f3cb9e02babedd2 | Linux-6.18.44-fc-v880-x86_64-with-glibc2.39 |
