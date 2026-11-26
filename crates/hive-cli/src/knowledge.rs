@@ -3308,8 +3308,8 @@ fn run_shared_query(
                 .iter()
                 .find(|project| {
                     project.enabled
-                        && hive_wiki::shared::canonical_root(&project.root)
-                            .is_ok_and(|registered| registered == canonical_target)
+                        && hive_wiki::shared::usable_registered_root(&project.root)
+                            .is_some_and(|registered| registered == canonical_target)
                 })
                 .map(|project| project.id.clone())
                 .ok_or_else(|| {
@@ -4220,8 +4220,8 @@ fn shared_mutation_target(
         (SharedTargetKind::UserRoot, "user-root".to_owned())
     } else if let Some(project) = registry.projects.iter().find(|project| {
         project.enabled
-            && hive_wiki::shared::canonical_root(&project.root)
-                .is_ok_and(|registered| registered == canonical_target)
+            && hive_wiki::shared::usable_registered_root(&project.root)
+                .is_some_and(|registered| registered == canonical_target)
     }) {
         (SharedTargetKind::RegisteredProject, project.id.clone())
     } else {
@@ -4244,8 +4244,8 @@ fn shared_lint_target(target: &Path, user_root: &Path) -> Result<SharedMutationT
     let registry = load_project_registry(&canonical_user)?;
     let registered = registry.projects.iter().find(|project| {
         project.enabled
-            && hive_wiki::shared::canonical_root(&project.root)
-                .is_ok_and(|registered| registered == canonical_target)
+            && hive_wiki::shared::usable_registered_root(&project.root)
+                .is_some_and(|registered| registered == canonical_target)
     });
     let (target_kind, namespace) = if canonical_target == canonical_user {
         (SharedTargetKind::UserRoot, "user-root".to_owned())
@@ -5662,6 +5662,15 @@ mod tests {
         // The journaled write never landed (for example Ctrl+C right after the journal was
         // published), so the canonical files are still in their prior consistent state and
         // rebuild recovers from disk instead of blocking every later operation.
+        let journal = user.path().join(hive_wiki::store::RAG_DIRTY_RELATIVE);
+        rebuild_shared_index(user.path())
+            .expect_err("a fresh journal may belong to a write still waiting for its lock");
+        fs::File::options()
+            .write(true)
+            .open(&journal)
+            .expect("journal")
+            .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(120))
+            .expect("backdate journal");
         rebuild_shared_index(user.path()).expect("a write that never landed does not block");
         assert!(!user
             .path()

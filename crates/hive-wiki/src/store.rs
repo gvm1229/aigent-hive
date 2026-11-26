@@ -54,6 +54,9 @@ const MAX_WIKI_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 128 * 1024;
 pub(crate) const MAX_RAG_TRUST_BYTES: usize = 16 * 1024;
 const MAX_DIRTY_BYTES: usize = 1024 * 1024;
+/// A journal with no target written yet that is older than this was left by an interrupted
+/// write: lock waits last a few seconds, so no live write keeps such a journal this long.
+const ABANDONED_DIRTY_JOURNAL_AGE: std::time::Duration = std::time::Duration::from_mins(1);
 const MAX_EXTERNAL_CANONICAL_BYTES: usize = 16 * 1024 * 1024;
 const DIRTY_SCHEMA_VERSION: u32 = 2;
 const RAG_TRUST_SCHEMA_VERSION: u32 = 1;
@@ -1899,8 +1902,16 @@ impl RagStore {
         request: &RetrievalRequest,
     ) -> Result<RetrievalResult, WikiError> {
         self.with_retrieval_snapshot(|bytes, manifest, registry| {
-            let mut result = retrieve_serialized(bytes, manifest, registry, request)?;
+            // Fetch extra candidates so fresh results can fill places left by stale ones.
+            let mut wider = request.clone();
+            wider.top_k = request.top_k.saturating_mul(3).clamp(request.top_k, 100);
+            wider.byte_budget = request
+                .byte_budget
+                .saturating_mul(3)
+                .clamp(request.byte_budget, 1024 * 1024);
+            let mut result = retrieve_serialized(bytes, manifest, registry, &wider)?;
             self.retain_current_hits(registry, &mut result);
+            crate::rag::limit_to_request(&mut result, request);
             Ok(result)
         })
     }
@@ -1938,11 +1949,16 @@ impl RagStore {
         let mut expanded = request.clone();
         expanded.top_k = 100;
         expanded.byte_budget = 1024 * 1024;
-        let lexical = prepared.retrieve(&expanded)?;
-        let semantic = prepared.semantic_matches(&expanded, matches)?;
+        let mut lexical = prepared.retrieve(&expanded)?;
+        let mut semantic = prepared.semantic_matches(&expanded, matches)?;
+        // Drop stale candidates before fusion so fresh ones fill the requested places.
+        self.retain_current_hits(registry, &mut lexical);
+        self.retain_current_hits(registry, &mut semantic);
+        let dropped = lexical.stale_hits_dropped.max(semantic.stale_hits_dropped);
         let mut result =
             crate::rag::fuse_semantic_results_with_policy(request, lexical, &semantic)?;
         self.retain_current_hits(registry, &mut result.result);
+        result.result.stale_hits_dropped = result.result.stale_hits_dropped.max(dropped);
         Ok(result)
     }
 
@@ -2031,6 +2047,7 @@ impl RagStore {
     ) {
         let by_id = registry.by_id();
         let mut checked = BTreeMap::new();
+        let before = result.hits.len();
         result.hits.retain_mut(|hit| {
             let key = (
                 hit.collection_id.clone(),
@@ -2054,6 +2071,7 @@ impl RagStore {
                 false
             }
         });
+        result.stale_hits_dropped += before - result.hits.len();
         result.returned_bytes = result.hits.iter().map(|hit| hit.text.len()).sum();
     }
 
@@ -2798,14 +2816,6 @@ impl RagStore {
             if selected.is_some_and(|id| collection_name != OsStr::new(id)) {
                 continue;
             }
-            let collection_id = collection_name.to_str().ok_or_else(|| {
-                WikiError::Verification("claim collection directory is not UTF-8".to_owned())
-            })?;
-            if !known.contains(collection_id) {
-                return Err(WikiError::Verification(format!(
-                    "canonical claims reference unknown collection `{collection_id}`"
-                )));
-            }
             let metadata = claims_root
                 .symlink_metadata(&collection_name)
                 .map_err(|error| {
@@ -2814,9 +2824,17 @@ impl RagStore {
                     ))
                 })?;
             if !metadata.is_dir() {
-                return Err(WikiError::Verification(
-                    "Claims entries must be no-follow collection directories".to_owned(),
-                ));
+                // Stray files (for example `.DS_Store` or `Thumbs.db`) and links directly
+                // under Claims are never read or followed and must not block every operation.
+                continue;
+            }
+            let collection_id = collection_name.to_str().ok_or_else(|| {
+                WikiError::Verification("claim collection directory is not UTF-8".to_owned())
+            })?;
+            if !known.contains(collection_id) {
+                return Err(WikiError::Verification(format!(
+                    "canonical claims reference unknown collection `{collection_id}`"
+                )));
             }
             let collection_dir =
                 claims_root
@@ -3266,6 +3284,13 @@ impl RagStore {
                 pending = Some(entry);
             }
         }
+        // A journal with nothing written yet may belong to a write that is still waiting for
+        // its lock (at most a few seconds). Only an older one is treated as abandoned.
+        if pending.is_some() && landed == 0 && !self.dirty_journal_is_abandoned() {
+            return Err(WikiError::Verification(
+                "a knowledge write is still starting; retry the rebuild in a minute".to_owned(),
+            ));
+        }
         match pending {
             Some(entry) if landed > 0 => Err(WikiError::Verification(if entry.delete {
                 format!(
@@ -3280,6 +3305,15 @@ impl RagStore {
             })),
             _ => Ok(()),
         }
+    }
+
+    fn dirty_journal_is_abandoned(&self) -> bool {
+        self.root
+            .symlink_metadata(RAG_DIRTY_RELATIVE)
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(|modified| modified.into_std().elapsed().ok())
+            .is_some_and(|age| age >= ABANDONED_DIRTY_JOURNAL_AGE)
     }
 
     fn resolve_dirty_target(
@@ -5202,6 +5236,49 @@ mod tests {
     }
 
     #[test]
+    fn a_stale_hit_is_replaced_by_the_next_fresh_hit_and_counted() {
+        let (root, store) = store();
+        let wiki = root.path().join(WIKI_RELATIVE);
+        std::fs::create_dir_all(&wiki).unwrap();
+        std::fs::write(
+            wiki.join("alpha.md"),
+            wiki_bytes("alpha", "zebracorn zebracorn zebracorn alpha"),
+        )
+        .unwrap();
+        std::fs::write(wiki.join("beta.md"), wiki_bytes("beta", "zebracorn beta")).unwrap();
+        store.rebuild().unwrap();
+        let request = RetrievalRequest {
+            scope: RetrievalScope::Global,
+            current_collection_id: None,
+            query: "zebracorn".to_owned(),
+            query_expansions: Vec::new(),
+            top_k: 1,
+            byte_budget: 4096,
+            confidential_collection_id: None,
+        };
+        let fresh = store.checked_retrieve(&request).expect("fresh retrieval");
+        assert_eq!(fresh.hits.len(), 1);
+        assert_eq!(fresh.stale_hits_dropped, 0);
+        let first = fresh.hits[0].locator.clone();
+        let (edited, other) = if first.contains("alpha.md") {
+            ("alpha", "beta")
+        } else {
+            ("beta", "alpha")
+        };
+        std::fs::write(
+            wiki.join(format!("{edited}.md")),
+            wiki_bytes(edited, "edited after indexing"),
+        )
+        .unwrap();
+
+        let result = store.checked_retrieve(&request).expect("stale hit dropped");
+        assert_eq!(result.hits.len(), 1, "the next fresh hit fills the place");
+        assert!(result.hits[0].locator.contains(&format!("{other}.md")));
+        assert_eq!(result.stale_hits_dropped, 1);
+        assert_eq!(result.returned_bytes, result.hits[0].text.len());
+    }
+
+    #[test]
     fn deleted_attached_directory_and_stray_files_do_not_block_rebuild() {
         let (root, store) = store();
         let directory = tempfile::tempdir().unwrap();
@@ -5216,6 +5293,11 @@ mod tests {
         std::fs::create_dir_all(&claims).unwrap();
         std::fs::write(claims.join("Thumbs.db"), b"os metadata").unwrap();
         std::fs::write(claims.join("desktop.ini"), b"os metadata").unwrap();
+        std::fs::write(
+            root.path().join(CLAIMS_RELATIVE).join(".DS_Store"),
+            b"os metadata",
+        )
+        .unwrap();
         store
             .rebuild()
             .expect("a deleted attached folder and stray OS files do not block rebuild");
@@ -7880,9 +7962,19 @@ mod tests {
         store
             .begin_external_canonical_mutation(&[(relative, Vec::new())])
             .expect("publish deletion intent");
+        assert!(
+            matches!(store.rebuild(), Err(WikiError::Verification(_))),
+            "a fresh journal may belong to a write still waiting for its lock"
+        );
+        std::fs::File::options()
+            .write(true)
+            .open(temporary.path().join(RAG_DIRTY_RELATIVE))
+            .expect("journal")
+            .set_modified(std::time::SystemTime::now() - ABANDONED_DIRTY_JOURNAL_AGE * 2)
+            .expect("backdate journal");
         store
             .rebuild()
-            .expect("a write that never landed does not block recovery");
+            .expect("an abandoned write that never landed does not block recovery");
         assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
         assert!(absolute.is_file());
     }

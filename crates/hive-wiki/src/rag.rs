@@ -668,6 +668,50 @@ pub struct RetrievalResult {
     pub returned_bytes: usize,
     /// True when matches existed but top-k or byte budget truncated them.
     pub insufficient_budget: bool,
+    /// Hits left out because their canonical source changed after indexing. A rebuild refreshes
+    /// them; zero is omitted from serialized output.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub stale_hits_dropped: usize,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero(value: &usize) -> bool {
+    *value == 0
+}
+
+/// Re-apply a request's top-k and byte budget after stale hits were removed from a wider
+/// candidate list, so fresh results fill the places the stale ones left.
+pub(crate) fn limit_to_request(result: &mut RetrievalResult, request: &RetrievalRequest) {
+    let wider_was_truncated = result.insufficient_budget;
+    let mut kept = Vec::new();
+    let mut used = 0_usize;
+    let mut groups = 0_usize;
+    let mut truncated = false;
+    for mut hit in result.hits.drain(..) {
+        // Like retrieval itself, top-k counts groups: subject members follow their lead hit.
+        if hit.matched_field != "subject" {
+            if groups == request.top_k {
+                truncated = true;
+                break;
+            }
+            groups += 1;
+        }
+        let (text, cut) = truncate_utf8(&hit.text, request.byte_budget.saturating_sub(used));
+        if text.is_empty() {
+            truncated = true;
+            break;
+        }
+        used += text.len();
+        hit.text = text;
+        kept.push(hit);
+        if cut {
+            truncated = true;
+            break;
+        }
+    }
+    result.hits = kept;
+    result.returned_bytes = used;
+    result.insufficient_budget = truncated || wider_was_truncated;
 }
 
 /// Untrusted nearest-neighbor identity; canonical text and authority are resolved locally.
@@ -1207,6 +1251,7 @@ pub fn fuse_semantic_results_with_policy(
         hits: Vec::new(),
         returned_bytes: 0,
         insufficient_budget: false,
+        stale_hits_dropped: 0,
     };
     for (mut hit, score, mask) in ordered {
         if result.hits.len() == request.top_k {
@@ -2213,6 +2258,7 @@ fn semantic_matches_from_connection(
         hits,
         returned_bytes,
         insufficient_budget,
+        stale_hits_dropped: 0,
     })
 }
 
@@ -2568,6 +2614,7 @@ fn retrieve_from_connection(
         hits,
         returned_bytes,
         insufficient_budget,
+        stale_hits_dropped: 0,
     })
 }
 
@@ -5277,6 +5324,7 @@ mod tests {
             manifest_digest: digest("generation"),
             returned_bytes: first.text.len() + second.text.len(),
             insufficient_budget: false,
+            stale_hits_dropped: 0,
             hits: vec![first.clone(), second],
         };
         let mut low = first;
@@ -5286,6 +5334,7 @@ mod tests {
             manifest_digest: lexical.manifest_digest.clone(),
             returned_bytes: extra.text.len() + low.text.len(),
             insufficient_budget: false,
+            stale_hits_dropped: 0,
             hits: vec![extra, low],
         };
         (request, lexical, semantic)

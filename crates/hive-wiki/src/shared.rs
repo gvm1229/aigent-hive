@@ -1126,7 +1126,8 @@ fn validate_registry_metadata(
 /// `None` means the folder was deleted or moved, is no longer a plain directory, sits behind
 /// a symlink, or cannot be inspected. Callers treat such a project as temporarily absent
 /// instead of failing, and never open it.
-pub(crate) fn usable_registered_root(path: &Path) -> Option<PathBuf> {
+#[must_use]
+pub fn usable_registered_root(path: &Path) -> Option<PathBuf> {
     validate_absolute_root(path, "registered project root").ok()?;
     let canonical = canonical_root(path).ok()?;
     (canonical == platform_canonical_root(&portable_canonical_path(path))).then_some(canonical)
@@ -1524,7 +1525,8 @@ fn registered_project_id(registry: &ProjectRegistry, root: &Path) -> Result<Stri
         .iter()
         .find(|project| {
             project.enabled
-                && canonical_root(&project.root).is_ok_and(|registered| registered == canonical)
+                && usable_registered_root(&project.root)
+                    .is_some_and(|registered| registered == canonical)
         })
         .map(|project| project.id.clone())
         .ok_or_else(|| {
@@ -2043,6 +2045,20 @@ mod tests {
         rebuild_shared_index(&user).expect("rebuild skips the missing project folder");
         assert_eq!(fs::read(path).unwrap(), bytes);
         assert!(!first.join("not-present").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn registered_root_replaced_by_a_link_is_not_the_current_project() {
+        let (_temp, user, first, _second) = fixture();
+        let registry = load_project_registry(&user).unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let elsewhere = elsewhere.path().canonicalize().unwrap();
+        fs::remove_dir_all(&first).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &first).unwrap();
+        // The skipped registration must not lend its project identity to the link target.
+        assert!(registered_project_id(&registry, &elsewhere).is_err());
+        assert!(load_project_registry(&user).is_ok());
     }
 
     #[test]
