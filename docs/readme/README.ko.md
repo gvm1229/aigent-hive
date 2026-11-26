@@ -14,7 +14,7 @@
 
 <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.1 release-date=2026-11-26 -->
 
-Hive: 지금 쓰는 AI 코딩 앱에 같은 설정, 프로젝트 지식, Skill 연결, 사용량 보호, 안전한 업데이트 제공.
+Hive: 지금 쓰는 AI 코딩 앱에 같은 설정, 프로젝트 지식, Skill 선택, 사용량 보호, 안전한 업데이트 제공.
 모델 회사 API 키 요청·API 호출·앱의 모델 실행 대체 없음.
 
 현재 stable `0.16.1`. 버전별 변경 내용은 [GitHub Releases](https://github.com/gvm1229/aigent-hive/releases) 참고.
@@ -57,7 +57,8 @@ AIgent Hive v0.16.1 (released 2026-11-26)
    Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
    ```
 
-   앱이 그 프로젝트에서 열려 있지 않으면 "this project" 자리에 프로젝트 절대 경로 사용
+   앱이 그 프로젝트에서 열려 있지 않으면 "this project" 자리에 프로젝트 절대 경로 사용.
+   질문 취소는 동의 아님. 이 요청에 업데이트·선택형 외부 Skill·모델 회사 자격 증명 접근 권한 없음
 
 <details>
 <summary>선택: 사용자 범위 설치 전체를 AI 앱에 맡기기</summary>
@@ -87,28 +88,32 @@ an optional third-party Skill.
 ## 업데이트
 
 대화형 터미널에서 `hive update` 실행. 새 버전 확인, 정확한 갱신 내용 표시, 승인 뒤에만 설치.
-거절·입력 종료·비대화형 실행은 설치 변경 없음. 몰래 업데이트 없음, 바꾸기 전 설정과 바뀔 파일을
+거절·입력 종료·비대화형 실행은 설치 변경 없음. 승인 없는 업데이트 없음, 바꾸기 전 설정과 바뀔 파일을
 `~/hive-backups`에 복사.
 
 명령 결과는 읽기 쉬운 한국어·영어. 프로그램이 결과를 읽을 때만 `--output json` 추가.
 
 ## 다른 컴퓨터로 전역 지식 옮기기
 
-`--user-root`는 `.hive` 폴더가 아닌 홈 폴더. 묶음 파일에는 옮길 수 있는 Markdown 지식만 포함하고
-검색 색인·실행 상태·프로젝트 전용 지식·자격 증명·절대 경로는 제외. `--apply` 전에 SHA-256과
-`--dry-run` 결과 확인.
+`--user-root`는 `.hive` 폴더가 아닌 홈 폴더. 묶음 파일에는 옮길 수 있는 정본 지식만 포함하고
+검색 색인·실행 상태·프로젝트 전용 지식·자격 증명·절대 경로는 제외. 다른 컴퓨터에서 SHA-256이 내보낼 때 값과
+같은지 확인한 뒤 `--dry-run` 실행. 충돌·검증 오류가 없을 때만 `--apply`.
 
 ```sh
-# macOS·Linux: 내보낸 뒤 다른 컴퓨터에서 가져오기
+# macOS·Linux, 이 컴퓨터: 내보내기
 hive knowledge export --user-root "$HOME" --scope global --bundle "$HOME/Downloads/hive.hivekb"
+shasum -a 256 "$HOME/Downloads/hive.hivekb"
+# 다른 컴퓨터: 확인, 미리보기, 적용
 shasum -a 256 "$HOME/Downloads/hive.hivekb"
 hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --dry-run
 hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --apply
 ```
 
 ```powershell
-# Windows PowerShell: 내보낸 뒤 다른 컴퓨터에서 가져오기
+# Windows PowerShell, 이 컴퓨터: 내보내기
 hive knowledge export --user-root $env:USERPROFILE --scope global --bundle "$env:USERPROFILE\Downloads\hive.hivekb"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\hive.hivekb"
+# 다른 컴퓨터: 확인, 미리보기, 적용
 Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\hive.hivekb"
 hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --dry-run
 hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --apply
@@ -117,7 +122,7 @@ hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Do
 ## Automatic dispatch safeguard
 
 자동 작업자 실행은 꺼져 있고 이 버전에는 켜는 방법 없음. 사용량 보호를 켜면 새 자동 실행 직전에
-아래 사전 확인 실행. 이 확인만으로 실행 승인 없음:
+아래 사전 확인 실행. 이 확인만으로 실행 승인 없음. 일반 응답과 수동 작업에는 미적용:
 
 ```console
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
@@ -125,13 +130,14 @@ hive usage enforce --target <project> --session-id <id> --process-id <pid> --out
 
 ## 지원 플랫폼
 
-macOS(Apple Silicon·Intel), Linux(x86_64·arm64), Windows x86_64. macOS는 ad-hoc 서명, Windows는
-서명 없음. 자세한 내용은 [코드 서명 정책](../guides/code-signing-policy.md), 버전별 검증 범위는
-[릴리스 노트](https://github.com/gvm1229/aigent-hive/releases) 참고.
+macOS(Apple Silicon·Intel), Linux(x86_64·arm64), Windows x86_64. 공개 시험 수용 범위: macOS Apple
+Silicon·Linux x86_64·Windows x86_64. macOS Intel·Linux arm64는 후보 검증만. 실제 앱 갱신은 Windows 11
+PC 1대에서 확인, Codex 실제 실행 미확인, Claude Code 구독 동작 미검증. macOS는 ad-hoc 서명, Windows는
+SignPath Foundation 승인 전까지 서명 없음. 자세한 내용은 [코드 서명 정책](../guides/code-signing-policy.md) 참고.
 
 ## Hive 소유 범위
 
-Hive는 자기 표시 구간과 목록에 있는 파일만 변경, 지식은 Markdown·YAML·TOML 텍스트로 보관,
+Hive는 Hive 표시 구간과 manifest에 적힌 파일만 변경, 지식은 Markdown·YAML·TOML 텍스트로 보관,
 SQLite 색인은 다시 만들 수 있는 사본으로 취급. 소유 범위 밖: 모델 회사 자격 증명·모델 세션·다른 도구의 지침·
 승인 없는 선택형 외부 Skill.
 
@@ -140,7 +146,7 @@ SQLite 색인은 다시 만들 수 있는 사본으로 취급. 소유 범위 밖
 - [문서 홈](../00-home.md) · [문서 색인](../01-index.md)
 - [제품 개요](../overview/product.md) · [개발](../guides/development.md)
 
-개발에는 Rust stable과 Python 3.13 필요. push 전 `python scripts/dev-check.py pre-push` 실행.
+개발에는 Rust stable과 Python 3.13, Windows에서는 PowerShell 7 필요. push 전 `python scripts/dev-check.py pre-push` 실행.
 
 ## QA 기여자
 

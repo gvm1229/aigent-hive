@@ -631,7 +631,7 @@
             { t: "aside", s: "old-landing은 건너뜀, 등록 목록에는 유지" },
             { t: "agent", s: "저장된 선호에 맞춰 이어서 작업하겠습니다." }
           ], outcome: "지운 폴더만 건너뛰고 기억은 그대로" },
-          notes: ["`Thumbs.db`·`desktop.ini` 같은 잡파일, 비정상 종료로 남은 세션 잠금(5분 뒤 자동 정리)도 더 이상 작업을 막지 않음", "바뀌거나 사라진 원본은 그 결과만 제외, 나머지 결과는 그대로 전달", "업데이트: `npm install -g aigent-hive@0.16.1` 뒤 `hive update`"]
+          notes: ["지식 폴더의 `Thumbs.db`·`desktop.ini` 같은 잡파일과 링크는 무시. 비정상 종료로 남은 세션 잠금은 5분 뒤 자동 정리", "바뀌거나 사라진 원본은 그 결과만 제외, 나머지 결과는 그대로 전달", "업데이트: `npm install -g aigent-hive@0.16.1` 뒤 `hive update`"]
         },
         {
           id: "memory", tab: "내 선호 기억", title: "말하지 않아도 지켜지는 내 선호",
@@ -748,8 +748,8 @@
       ],
       en: [
         {
-          id: "folders", tab: "Deleted folders", from: "0.16.0", to: "0.16.1", title: "A deleted project folder no longer stops your memory",
-          lead: "If you delete or move a registered project folder, Hive skips just that folder and keeps recording and finding knowledge for every other project. It reconnects when the folder is back.",
+          id: "folders", tab: "Deleted folders", from: "0.16.0", to: "0.16.1", title: "A deleted project folder no longer breaks memory",
+          lead: "If you delete or move a registered project folder, Hive skips just that folder and keeps recording and finding knowledge for every other project. It reconnects automatically when the folder is back.",
           host: "Knowledge", memory: ["Package manager: pnpm", "Commit messages: Conventional Commits with a scope"],
           before: { who: "Claude Code", items: [
             { t: "aside", s: "After deleting the old project folder old-landing" },
@@ -763,9 +763,9 @@
             { t: "user", s: "Continue the checkout page work." },
             { t: "hive", title: "Hive automatic knowledge lookup · 2 matches", list: ["[preference] Package manager: pnpm", "[preference] Commit messages: Conventional Commits with a scope"] },
             { t: "aside", s: "old-landing skipped, still registered" },
-            { t: "agent", s: "Continuing, following your saved preferences." }
+            { t: "agent", s: "I'll continue, following your saved preferences." }
           ], outcome: "Only the deleted folder is skipped; your memory still works" },
-          notes: ["Stray files such as `Thumbs.db` or `desktop.ini`, and session locks left by a crash (cleared after five minutes), no longer block work", "A changed or missing source drops only its own result; the other results still return", "To update: `npm install -g aigent-hive@0.16.1`, then `hive update`"]
+          notes: ["Stray files such as `Thumbs.db` or `desktop.ini`, and links, inside knowledge folders are ignored. A session lock left by a crash is cleared after five minutes", "A changed or missing source drops only its own result; the other results still return", "To update: `npm install -g aigent-hive@0.16.1`, then `hive update`"]
         },
         {
           id: "memory", tab: "Remembered preferences", title: "Your preferences, followed without a reminder",
@@ -883,23 +883,23 @@
       ja: [
         {
           id: "folders", tab: "削除したフォルダー", from: "0.16.0", to: "0.16.1", title: "削除したプロジェクトフォルダーで記憶が止まらない",
-          lead: "登録したプロジェクトフォルダーを削除・移動しても、そのフォルダーだけを飛ばして、ほかのプロジェクトの知識の記録・検索はそのまま。フォルダーが戻れば自動で再接続。",
+          lead: "登録したプロジェクトフォルダーを削除・移動しても、そのフォルダーだけをスキップし、他のプロジェクトの知識の記録・検索はそのまま。フォルダーが戻れば自動で再接続。",
           host: "知識", memory: ["パッケージマネージャーは pnpm", "コミットメッセージは日本語"],
           before: { who: "Claude Code", items: [
             { t: "aside", s: "以前のプロジェクトフォルダー old-landing を削除した後" },
             { t: "user", s: "決済画面の作業を続けて。" },
             { t: "warn", title: "Hive の知識検索に失敗", lines: ["登録されたプロジェクトフォルダーを読み取れません: old-landing"] },
-            { t: "agent", s: "保存済みの好みを読み込めませんでした。デフォルトのまま進めますか？" },
+            { t: "agent", s: "保存済みの好みを読み込めませんでした。デフォルトの方法で進めますか？" },
             { t: "user", s: "そのフォルダー、だいぶ前に消したんだけど…" }
           ], outcome: "フォルダー 1 つのせいで知識の検索がすべて停止" },
           after: { who: "Claude Code", items: [
             { t: "aside", s: "以前のプロジェクトフォルダー old-landing を削除した後" },
             { t: "user", s: "決済画面の作業を続けて。" },
             { t: "hive", title: "Hive 知識の自動検索 · 一致 2 件", list: ["[preference] パッケージマネージャーは pnpm", "[preference] コミットメッセージは日本語"] },
-            { t: "aside", s: "old-landing は飛ばし、登録一覧には維持" },
+            { t: "aside", s: "old-landing はスキップ、登録は維持" },
             { t: "agent", s: "保存済みの好みに合わせて作業を続けます。" }
-          ], outcome: "削除したフォルダーだけを飛ばし、記憶はそのまま" },
-          notes: ["`Thumbs.db`・`desktop.ini` などの不要なファイルや、異常終了で残ったセッションのロック (5 分後に自動解除) も作業を止めなくなりました", "変更・削除された元データはその結果だけを除外し、ほかの結果はそのまま返します", "アップデート: `npm install -g aigent-hive@0.16.1` の後に `hive update`"]
+          ], outcome: "削除したフォルダーだけをスキップし、記憶はそのまま" },
+          notes: ["知識フォルダー内の `Thumbs.db`・`desktop.ini` などの不要なファイルやリンクは無視します。異常終了で残ったセッションのロックは 5 分後に自動解除されます", "変更・削除された元データはその結果だけを除外し、他の結果はそのまま返します", "アップデート: `npm install -g aigent-hive@0.16.1` の後に `hive update`"]
         },
         {
           id: "memory", tab: "好みを記憶", title: "言わなくても守られるあなたの好み",
@@ -1056,17 +1056,17 @@
     const REL = "https://github.com/gvm1229/aigent-hive/blob/main/docs/releases/";
     const NEWS = {
       ko: [
-        { v: "0.16.1", date: "2026-11-26", text: "지운 프로젝트 폴더·잡파일·남은 잠금이 지식 작업을 막지 않음, 0.16.0에서 자료 보존", href: REL + "0.16.1.subscriber.ko.md" },
+        { v: "0.16.1", date: "2026-11-26", text: "지운 프로젝트 폴더·잡파일이 지식 작업을 막지 않음, 남은 잠금은 5분 뒤 자동 정리, 0.16.0에서 올려도 자료 보존", href: REL + "0.16.1.subscriber.ko.md" },
         { v: "0.16.0", date: "2026-11-25", text: "바꾸기 전 자동 백업, 요청마다 지식 자동 조회(Claude Code), AI 간 작업 전달(실험)", href: REL + "0.16.0.subscriber.ko.md" },
         { v: "0.15.3", date: "2026-11-20", text: "AI 에이전트에게 프로젝트 설정 요청, 사실 여러 개 한 번에 저장, 짧은 한국어 검색어 개선", href: REL + "0.15.3.subscriber.ko.md" },
       ],
       en: [
-        { v: "0.16.1", date: "2026-11-26", text: "Deleted project folders, stray files and leftover locks no longer block knowledge work; your data is kept when updating from 0.16.0", href: REL + "0.16.1.md" },
+        { v: "0.16.1", date: "2026-11-26", text: "Deleted project folders and stray files no longer block knowledge work; leftover locks clear after five minutes; your data is kept when updating from 0.16.0", href: REL + "0.16.1.md" },
         { v: "0.16.0", date: "2026-11-25", text: "Automatic backup before changes, automatic knowledge lookup on every request (Claude Code), AI-to-AI work handoff (experimental)", href: REL + "0.16.0.md" },
         { v: "0.15.3", date: "2026-11-20", text: "Ask your AI agent to set up a project, save several facts at once, better matching for short Korean search terms", href: REL + "0.15.3.md" },
       ],
       ja: [
-        { v: "0.16.1", date: "2026-11-26", text: "削除したプロジェクトフォルダー・不要なファイル・残ったロックで知識の作業が止まらない、0.16.0 からデータを維持", href: REL + "0.16.1.md" },
+        { v: "0.16.1", date: "2026-11-26", text: "削除したプロジェクトフォルダーや不要なファイルで知識の作業が止まらない、残ったロックは 5 分後に自動解除、0.16.0 からの更新でもデータを維持", href: REL + "0.16.1.md" },
         { v: "0.16.0", date: "2026-11-25", text: "変更前の自動バックアップ、依頼ごとの知識の自動検索 (Claude Code)、AI 間の作業の受け渡し (実験)", href: REL + "0.16.0.md" },
         { v: "0.15.3", date: "2026-11-20", text: "AI エージェントにプロジェクト設定を依頼、複数の事実をまとめて保存、短い韓国語の検索語での検索精度を改善", href: REL + "0.15.3.md" },
       ]

@@ -27,7 +27,7 @@ Stable `0.16.1` is the current public release. See
 npm install -g aigent-hive@0.16.1
 ```
 
-The npm installer needs Node.js and npm. The installed `hive` is a native binary and does not.
+The npm installer needs Node.js and npm. The installed `hive` is a native binary and needs neither.
 Without npm, use the direct installer for your shell:
 
 ```sh
@@ -45,7 +45,7 @@ irm https://unpkg.com/aigent-hive@0.16.1/install.ps1 | iex
 curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.1/install.cmd && install-aigent-hive.cmd
 ```
 
-Direct installers verify the package's exact-version SHA-256 and need neither npm, Node.js nor
+Direct installers verify the package's exact-version SHA-256 and do not need npm, Node.js or
 PowerShell 7. `hive --version` then prints:
 
 ```text
@@ -63,6 +63,8 @@ AIgent Hive v0.16.1 (released 2026-11-26)
    ```
 
    If the app is not open in the project, replace "this project" with an absolute project path.
+   Cancelling a question is not consent, and this prompt does not authorize an update, an optional
+   third-party Skill or provider-credential access.
 
 <details>
 <summary>Optional: let your AI app do the whole user-level install</summary>
@@ -93,28 +95,33 @@ an optional third-party Skill.
 
 Run `hive update` in an interactive terminal. It checks for a newer version, shows the exact
 update and installs only after you accept. Declining, closing input or running
-non-interactively installs nothing. Hive never updates silently, and it copies settings and
-changed files to `~/hive-backups` first.
+non-interactively installs nothing. Hive never updates silently, and it first copies your settings
+and the files it will change to `~/hive-backups`.
 
 Commands print readable Korean or English. Add `--output json` only when a program reads the result.
 
 ## Move global knowledge to another computer
 
-`--user-root` is your home directory, not its `.hive` folder. Bundles hold portable Markdown
+`--user-root` is your home directory, not its `.hive` folder. Bundles hold portable canonical
 knowledge only: no search index, runtime state, project-private knowledge, credentials or
-absolute paths. Check the SHA-256 and run `--dry-run` before `--apply`.
+absolute paths. On the other computer, confirm the SHA-256 matches the one printed at export,
+then run `--dry-run`. Run `--apply` only if the dry run reports no conflict or validation error.
 
 ```sh
-# macOS and Linux: export, then import on the other computer
+# macOS and Linux, on this computer: export
 hive knowledge export --user-root "$HOME" --scope global --bundle "$HOME/Downloads/hive.hivekb"
+shasum -a 256 "$HOME/Downloads/hive.hivekb"
+# On the other computer: verify, preview, apply
 shasum -a 256 "$HOME/Downloads/hive.hivekb"
 hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --dry-run
 hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --apply
 ```
 
 ```powershell
-# Windows PowerShell: export, then import on the other computer
+# Windows PowerShell, on this computer: export
 hive knowledge export --user-root $env:USERPROFILE --scope global --bundle "$env:USERPROFILE\Downloads\hive.hivekb"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\hive.hivekb"
+# On the other computer: verify, preview, apply
 Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\hive.hivekb"
 hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --dry-run
 hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --apply
@@ -124,7 +131,7 @@ hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Do
 
 Automatic worker execution is off, and this release has no way to turn it on. When usage
 protection is enabled, this preflight runs before any new automatic dispatch; it never
-authorizes dispatch by itself:
+authorizes dispatch by itself. Ordinary answers and manual work do not run it:
 
 ```console
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
@@ -132,10 +139,12 @@ hive usage enforce --target <project> --session-id <id> --process-id <pid> --out
 
 ## Supported platforms
 
-macOS (Apple Silicon, Intel), Linux (x86_64, arm64) and Windows x86_64. macOS builds use
-ad-hoc signing and Windows builds are unsigned; see the
-[code signing policy](./docs/guides/code-signing-policy.md). Per-release verification is in
-each [release note](https://github.com/gvm1229/aigent-hive/releases).
+macOS (Apple Silicon, Intel), Linux (x86_64, arm64) and Windows x86_64. Public test acceptance
+covers macOS Apple Silicon, Linux x86_64 and Windows x86_64; macOS Intel and Linux arm64 are
+candidate-qualified only. Real app updates were checked on one Windows 11 PC; Codex runs were not
+checked and Claude Code subscription behaviour is unverified. macOS builds use ad-hoc signing, and
+Windows builds are unsigned unless SignPath Foundation signing is approved; see the
+[code signing policy](./docs/guides/code-signing-policy.md).
 
 ## What Hive owns
 
@@ -149,7 +158,7 @@ your approval.
 - [Documentation home](./docs/00-home.md) · [Document index](./docs/01-index.md)
 - [Product overview](./docs/overview/product.md) · [Development](./docs/guides/development.md)
 
-Development needs Rust stable and Python 3.13; run `python scripts/dev-check.py pre-push`
+Development needs Rust stable and Python 3.13, plus PowerShell 7 on Windows; run `python scripts/dev-check.py pre-push`
 before pushing.
 
 ## QA Contributors
