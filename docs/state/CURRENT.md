@@ -1,20 +1,20 @@
 # 현재 상태
 
 - 제품 버전: `0.16.1`
-- 공개 안정판: `0.16.0`(2026-11-25 출시). PC 설치: `0.16.0`(2026-11-25 갱신, 자료 보존 확인)
+- 공개 안정판: `0.16.0`(2026-11-25 출시). PC 설치: `0.16.1-test.2`(2026-11-26 갱신, 자료 보존 확인)
 - 작업: 0.16.1 지식 작업 비차단 수정. [소유 계획](../plans/active/0.16.1-knowledge-fixes.md)
 - 현재 요청(2026-11-26 유지관리자, local 세션): 0.16.1 정식 출시까지 사람 개입 없이 진행. 스스로 풀 수 없는 차단이 있으면 정식 보류 뒤 질문
-- 현재 위치: OV161-001–005 구현·시험 완료(PR [#106](https://github.com/gvm1229/aigent-hive/pull/106)). 다음은 단계 검토·develop 병합·`0.16.1-test.1`
-- **다음 시작점**: OV161-006 번호 공개 시험
+- 현재 위치: OV161-001–006 완료(PR [#106](https://github.com/gvm1229/aigent-hive/pull/106)·[#107](https://github.com/gvm1229/aigent-hive/pull/107), [시험 근거](../research/overhaul/OV161-006.md))
+- **다음 시작점**: OV161-007 정식 0.16.1 출시
 - [0.16.0 종료 상태](../archive/state/0.16.0-closeout.md) 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
 - 구현 목표: `0.16.1`
-- 현재 등록 항목: 5/7 완료
+- 현재 등록 항목: 6/7 완료
 
-- `agent-owned`: `OV161-006`, `OV161-007`
+- `agent-owned`: `OV161-007`
 - `awaiting-user-authority`: 없음
 - `awaiting-external-evidence`: 없음
 - `blocked`: 없음
