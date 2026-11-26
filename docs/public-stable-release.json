@@ -14,43 +14,43 @@
   "coverage": {
     "SCOPE-01": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "SCOPE-02": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "SCOPE-03": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "SCOPE-04": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "SCOPE-05": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "SCOPE-06": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "scope"
     },
     "COMPAT-01": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "compatibility"
     },
     "COMPAT-02": {
       "status": "documented",
-      "path": "README.md",
-      "anchor": "what-changed-in-0161"
+      "path": "docs/releases/0.16.1.md",
+      "anchor": "compatibility"
     }
   }
 }

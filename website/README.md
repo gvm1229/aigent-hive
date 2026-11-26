@@ -28,7 +28,7 @@ python3 website/build.py
 | 순서 | 구역 | 내용 |
 | --- | --- | --- |
 | 1 | Hero | 방문자 운영체제에 맞춘 설치 명령 한 줄과 복사 버튼 |
-| 2 | 0.16.0 비교 | 장면별 업데이트 전후 대화 |
+| 2 | 업데이트 비교 | 장면별 업데이트 전후 대화, 장면마다 비교 버전 표시 |
 | 3 | 지원 앱 | Codex·Claude Code·Gemini Antigravity별 되는 것과 미검증·주의 사항 |
 | 4 | 특징 | API 키 요청 없음, 텍스트 정본, 바꾸기 전 백업, 동의 뒤 적용 |
 | 5 | 최근 업데이트 | 최근 정식 3개의 날짜·요약과 릴리스 노트 링크 |
@@ -39,7 +39,7 @@ python3 website/build.py
 - 참고 사이트: [Claude Code 제품 페이지](https://claude.com/ko/product/claude-code)의 구성과 기법만 참고. 상표·문구 복사 금지
 - 금지: 실제 자료가 없는 고객 로고·추천사·사용 통계
 - 운영체제 판별: macOS·Linux는 curl, Windows는 PowerShell, 휴대 기기·판별 불가는 npm
-- 앱별 미검증 항목과 FAQ 답은 README와 릴리스 노트 근거만 사용
+- 앱별 미검증 항목과 FAQ 답은 릴리스 노트와 README 근거만 사용
 
 ## 언어
 

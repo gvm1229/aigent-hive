@@ -11,9 +11,9 @@ aliases: ["public stable docs"]
 sources:
   - "repo:.github/workflows/release-publish.yml#sha256:3f4998b2889cfd7cb3ada0b94a7a1648ef6bbd9c8cd7e848676742d13bc17a42"
   - "repo:.github/workflows/release.yml#sha256:6fa640b5ce08594bdcbccd28530846ff7a34f7dfd6f918f4b62a860555ed7567"
-  - "repo:README.md#sha256:42b603f183a90b1c9fc9e523f08b7030f7e5d8a32b0cd14701bae7c7892623c4"
-  - "repo:docs/public-stable-release.json#sha256:5372ae7c19cce45bdac8640ed646ae035f5f5f44e5b1a89a0b1ebeebe9f0aa97"
-  - "repo:scripts/check-public-stable-docs.py#sha256:69b25685285621ee94a515748de03c56b9100ca0e2f9e283bdc35a2278cb9f04"
+  - "repo:README.md#sha256:05c2f90b0096663c3c8ded051eec7d7632df4b99442d90a77faca4f26b5bf80b"
+  - "repo:docs/public-stable-release.json#sha256:45913c2779432631e5873c9f9f221c76673fea90a878a05cb5fee827aaf46474"
+  - "repo:scripts/check-public-stable-docs.py#sha256:1b0ff65b6c7b7d37fd45554d2465885515ab5f9f06c6f3f46a0c08b99d5a89f9"
   - "repo:tests/conformance/release/test_release_notes.py#sha256:0e6e4201c7c3369ea787c956b7022add3aae86f1331894787331e955a4c9a63c"
 links: [product-purpose, release-verification]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
@@ -24,6 +24,7 @@ status: active
 
 The public stable manifest owns the version, date, surfaces, and release-note coverage for ordinary users.
 README files, the install HTML, product overview, and document index show only that stable release.
+README files carry no release history: they link to GitHub Releases, and release-note coverage points to the release note.
 Numbered prereleases remain maintenance evidence in npm, GitHub, and maintainer documentation, not install guidance.
 Test candidates preserve the manifest stable; stable candidates require the requested version and date before build and publication.
 
