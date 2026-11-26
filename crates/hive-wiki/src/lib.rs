@@ -627,7 +627,8 @@ fn ingest_with_projection(
         }
         drop(lock);
         let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
-        let canonical_lock = KnowledgeLock::acquire(target)?;
+        let canonical_lock =
+            abort_external_on_error(shared.store, &dirty, KnowledgeLock::acquire(target))?;
         for snapshot in &snapshots {
             if let Err(error) = snapshot.verify_current() {
                 drop(canonical_lock);
@@ -784,9 +785,18 @@ fn promote_with_projection(
                 }
                 drop(lock);
                 let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
-                let canonical_lock = CapabilityKnowledgeLock::acquire(&user_root.dir)?;
-                plan.snapshots[0].verify_current(&user_root.dir)?;
-                plan.snapshots[1].verify_current(&user_root.dir)?;
+                let canonical_lock = abort_external_on_error(
+                    shared.store,
+                    &dirty,
+                    CapabilityKnowledgeLock::acquire(&user_root.dir),
+                )?;
+                abort_external_on_error(
+                    shared.store,
+                    &dirty,
+                    plan.snapshots[0]
+                        .verify_current(&user_root.dir)
+                        .and_then(|()| plan.snapshots[1].verify_current(&user_root.dir)),
+                )?;
                 let commit = commit_promotion_canonical(
                     &user_root,
                     &mut plan.snapshots[..2],
@@ -1420,9 +1430,10 @@ fn delete_page_with_projection(
         );
         drop(lock);
         let dirty = shared.store.begin_external_canonical_mutation(&writes)?;
-        let canonical_lock = KnowledgeLock::acquire(target)?;
+        let canonical_lock =
+            abort_external_on_error(shared.store, &dirty, KnowledgeLock::acquire(target))?;
         for snapshot in &snapshots {
-            snapshot.verify_current()?;
+            abort_external_on_error(shared.store, &dirty, snapshot.verify_current())?;
         }
         let commit = transactional(&snapshots, || {
             fs::remove_file(&absolute).map_err(|error| {
@@ -2520,6 +2531,24 @@ fn commit_ingest_canonical(
     result
 }
 
+/// Clear the recovery journal when a step before any canonical write fails.
+///
+/// Nothing was written yet, so leaving the journal would only block every later
+/// knowledge operation until a manual cleanup.
+fn abort_external_on_error<T>(
+    store: &store::RagStore,
+    dirty: &store::PersistentDirtyState,
+    result: Result<T, WikiError>,
+) -> Result<T, WikiError> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            abort_external_after_rollback(store, dirty, &error)?;
+            Err(error)
+        }
+    }
+}
+
 fn abort_external_after_rollback(
     store: &store::RagStore,
     dirty: &store::PersistentDirtyState,
@@ -2541,8 +2570,8 @@ fn commit_shared_suppression(
     snapshot: &FileSnapshot,
     bytes: &[u8],
 ) -> Result<(), WikiError> {
-    let canonical_lock = KnowledgeLock::acquire(target)?;
-    snapshot.verify_current()?;
+    let canonical_lock = abort_external_on_error(store, dirty, KnowledgeLock::acquire(target))?;
+    abort_external_on_error(store, dirty, snapshot.verify_current())?;
     let commit = transactional(std::slice::from_ref(snapshot), || {
         write_atomic(&target.join(SUPPRESSION_RELATIVE), bytes)?;
         if cfg!(debug_assertions)

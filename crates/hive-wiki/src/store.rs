@@ -3235,8 +3235,17 @@ impl RagStore {
         Ok(next.max(dirty.target_generation))
     }
 
+    /// Allow recovery when the journaled write set fully landed or never landed at all.
+    ///
+    /// Only a partial write set (some targets written, others not) stays blocked, because
+    /// rebuilding then would legitimize an inconsistent canonical state. A write that never
+    /// started (crash, Ctrl+C, or a lock timeout right after the journal was published) left
+    /// the canonical files in their prior consistent state, so rebuilding from disk is safe and
+    /// must not leave the user blocked until a manual cleanup.
     fn verify_dirty_targets(&self, dirty: &PersistentDirtyState) -> Result<(), WikiError> {
         let registry = self.load_registry()?;
+        let mut pending = None;
+        let mut landed = 0_usize;
         for entry in &dirty.entries {
             let (target_root, path) = self.resolve_dirty_target(&registry, &entry.locator)?;
             let actual = read_bounded_optional(
@@ -3245,23 +3254,32 @@ impl RagStore {
                 MAX_EXTERNAL_CANONICAL_BYTES,
                 "dirty-journal canonical target",
             )?;
-            if entry.delete {
-                if actual.is_some() {
-                    return Err(WikiError::Verification(format!(
-                        "RAG recovery is blocked until deletion completes: {}",
-                        entry.locator
-                    )));
-                }
-            } else if actual.as_deref().map(sha256_digest).as_deref()
-                != Some(entry.target_digest.as_str())
-            {
-                return Err(WikiError::Verification(format!(
-                    "RAG recovery is blocked until the exact canonical write completes: {}",
-                    entry.locator
-                )));
+            let complete = if entry.delete {
+                actual.is_none()
+            } else {
+                actual.as_deref().map(sha256_digest).as_deref()
+                    == Some(entry.target_digest.as_str())
+            };
+            if complete {
+                landed += 1;
+            } else if pending.is_none() {
+                pending = Some(entry);
             }
         }
-        Ok(())
+        match pending {
+            Some(entry) if landed > 0 => Err(WikiError::Verification(if entry.delete {
+                format!(
+                    "RAG recovery is blocked until deletion completes: {}",
+                    entry.locator
+                )
+            } else {
+                format!(
+                    "RAG recovery is blocked until the exact canonical write completes: {}",
+                    entry.locator
+                )
+            })),
+            _ => Ok(()),
+        }
     }
 
     fn resolve_dirty_target(
@@ -7817,14 +7835,38 @@ mod tests {
         )
         .expect("canonical page");
         store.rebuild().expect("index canonical page");
+        let other_relative = PathBuf::from(".hive/knowledge/Wiki/delete-companion.md");
+        let other_bytes = wiki_bytes("delete-companion", "Companion write evidence.");
         let dirty = store
-            .begin_external_canonical_mutation(&[(relative, Vec::new())])
+            .begin_external_canonical_mutation(&[
+                (relative.clone(), Vec::new()),
+                (other_relative.clone(), other_bytes.clone()),
+            ])
             .expect("publish deletion intent");
-        assert!(dirty.entries[0].delete);
-        assert!(matches!(store.rebuild(), Err(WikiError::Verification(_))));
+        assert!(dirty.entries.iter().any(|entry| entry.delete));
+        std::fs::write(temporary.path().join(&other_relative), &other_bytes)
+            .expect("companion write landed");
+        assert!(
+            matches!(store.rebuild(), Err(WikiError::Verification(_))),
+            "a partial write set with a pending deletion stays blocked"
+        );
         std::fs::remove_file(&absolute).expect("complete deletion");
         store.rebuild().expect("rebuild after exact deletion");
         assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
+
+        // A deletion that never started (for example Ctrl+C right after the journal was
+        // published) leaves the prior consistent state; rebuild recovers instead of blocking.
+        std::fs::write(&absolute, wiki_bytes("delete-target", "Restored evidence."))
+            .expect("page restored");
+        store.rebuild().expect("index restored page");
+        store
+            .begin_external_canonical_mutation(&[(relative, Vec::new())])
+            .expect("publish deletion intent");
+        store
+            .rebuild()
+            .expect("a write that never landed does not block recovery");
+        assert!(!temporary.path().join(RAG_DIRTY_RELATIVE).exists());
+        assert!(absolute.is_file());
     }
 
     #[test]

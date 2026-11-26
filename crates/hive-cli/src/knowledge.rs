@@ -1883,7 +1883,17 @@ pub(crate) fn run_index(arguments: &[String]) -> ExitCode {
                 (None, Some(user_root)) => {
                     require_shared_wiki_enabled(Path::new(user_root))?;
                     let store = RagStore::open(Path::new(user_root))?;
-                    let initialized = ensure_rag_registry(Path::new(user_root), &store)?;
+                    // Rebuild is the repair for an interrupted write, so recover first
+                    // instead of letting the registry sync refuse the dirty store.
+                    let recovered = if store.is_dirty()? {
+                        Some(store.rebuild()?)
+                    } else {
+                        None
+                    };
+                    let mut initialized = ensure_rag_registry(Path::new(user_root), &store)?;
+                    if let Some(recovered) = recovered {
+                        initialized.changed_paths.extend(recovered.changed_paths);
+                    }
                     let mut outcome = store.rebuild()?;
                     outcome.changed_paths.extend(initialized.changed_paths);
                     outcome.changed_paths.sort();
@@ -5649,12 +5659,14 @@ mod tests {
             .join(hive_wiki::store::RAG_DIRTY_RELATIVE)
             .is_file());
 
-        rebuild_shared_index(user.path())
-            .expect_err("rebuild must not erase an unfinished exact canonical write");
-        assert!(user
+        // The journaled write never landed (for example Ctrl+C right after the journal was
+        // published), so the canonical files are still in their prior consistent state and
+        // rebuild recovers from disk instead of blocking every later operation.
+        rebuild_shared_index(user.path()).expect("a write that never landed does not block");
+        assert!(!user
             .path()
             .join(hive_wiki::store::RAG_DIRTY_RELATIVE)
-            .is_file());
+            .exists());
         fs::write(
             project
                 .path()
