@@ -6,23 +6,23 @@
 
 > Codex, Claude Code(검증 전), Gemini Antigravity를 위한 provider-neutral 로컬 harness.
 
-[![Version](https://img.shields.io/badge/version-0.16.0-4C1)](../../Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.16.1-4C1)](../../Cargo.toml)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](../../rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](../../LICENSE)
 
 [English](../../README.md) · [한국어](./README.ko.md)
 
-<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.0 release-date=2026-11-25 -->
+<!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.1 release-date=2026-11-26 -->
 
 Hive: subscription 인증 agent host에 일관된 setup, Skill routing, project knowledge,
 지속 가능한 role/run 상태, usage safeguard와 안전한 update 계약 제공.
 Model-provider API key 요청·provider API 호출·host model runtime 대체 없음.
 
-현재 stable `0.16.0`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
+현재 stable `0.16.1`: npm `latest`, normal GitHub Release, annotated Git tag 배포.
 
 ## 현재 stable 설치
 
-npm `0.16.0|latest`, GitHub normal Release, annotated Git tag 배포.
+npm `0.16.1|latest`, GitHub normal Release, annotated Git tag 배포.
 
 기본 설치:
 
@@ -33,7 +33,7 @@ npm install -g aigent-hive
 또는 exact version 고정:
 
 ```console
-npm install -g aigent-hive@0.16.0
+npm install -g aigent-hive@0.16.1
 ```
 
 npm 설치 dependency: Node.js·npm. 설치된 `hive` runtime: native Rust binary,
@@ -42,26 +42,26 @@ Node.js dependency 없음.
 예상 stable version label:
 
 ```text
-AIgent Hive v0.16.0 (released 2026-11-25)
+AIgent Hive v0.16.1 (released 2026-11-26)
 ```
 
 ### macOS·Linux curl
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.16.0/install.sh | sh
+  https://unpkg.com/aigent-hive@0.16.1/install.sh | sh
 ```
 
 ### Windows PowerShell 5.1+
 
 ```powershell
-irm https://unpkg.com/aigent-hive@0.16.0/install.ps1 | iex
+irm https://unpkg.com/aigent-hive@0.16.1/install.ps1 | iex
 ```
 
 ### Windows 명령 프롬프트
 
 ```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.0/install.cmd && install-aigent-hive.cmd
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.1/install.cmd && install-aigent-hive.cmd
 ```
 
 직접 installer: npm의 동일 native package bytes 수신, embedded exact-version
@@ -77,7 +77,7 @@ Codex, Claude Code 또는 Gemini Antigravity에게 user-level 설치 전체 진�
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
 initialize, or change any project, repository, folder, or current working directory.
 
-Install the current stable release 0.16.0. The stable install guidance is
+Install the current stable release 0.16.1. The stable install guidance is
 https://github.com/gvm1229/aigent-hive#install-the-current-stable-release.
 Detect my operating system and active host (Codex, Claude Code, or Gemini Antigravity), asking
 me if either is unclear. Check whether Node.js and npm are available. If they are missing,
@@ -95,7 +95,18 @@ an optional third-party Skill.
 
 이 선택지는 현재 stable release만 설치.
 
-## 0.16.0 주요 변경
+## 0.16.1 주요 변경
+
+- 삭제·이동되었거나 쓸 수 없게 된 등록 프로젝트 폴더로 인한 지식 명령 중단 해결. 해당 폴더는 건너뛰고 다른 프로젝트의 명령은 계속 동작
+- 건너뛴 프로젝트의 등록 유지. 폴더를 다시 쓸 수 있게 되면 자동 재연결
+- 원본이 바뀌었거나 사라진 검색 결과만 제외하고 나머지 결과는 반환. 오래된 본문은 미반환
+- 아무것도 쓰기 전에 멈춘 지식 기록으로 인한 이후 명령 차단 해결. `hive index rebuild`가 디스크 내용으로 복구
+- 지식 폴더의 `Thumbs.db`·`desktop.ini` 같은 잡파일과 링크는 무시. 모든 명령의 실패 원인에서 제외
+- 충돌로 남은 세션 조정 잠금은 5분 뒤 자동 정리
+- 공개 0.16.0과 이전 지원 버전에서 갱신 시 사용자 답변·지식·프로젝트 등록·프로젝트 파일 보존
+- 일부만 쓰인 지식 기록, 손상된 복구 기록, 없는 폴더로의 가져오기는 계속 오류로 중단
+
+## 이전 0.16.0 변경
 
 - 공개 0.15.x의 Claude Code·Antigravity 설치를 `hive update`가 그대로 인식. 재설치가 필요해도 프로젝트 목록·실행 상태·백업·claims 보존. 사용자 답변·지식·프로젝트 파일 보존
 - 설치·갱신·제거 전에 설정·프로젝트 목록·바뀔 파일을 `~/hive-backups`에 복사(`~/.claude/settings.json` 포함). `hive storage backup list`로 확인, `hive storage backup restore --id <id>`로 복원 미리보기. 자동 삭제 없음. 바뀌지 않는 지식·기록과 `hive setup` 변경은 백업 범위 밖
@@ -186,7 +197,7 @@ an optional third-party Skill.
 
 ## 지원 target
 
-| Platform | Native target | 0.16.0 근거 |
+| Platform | Native target | 0.16.1 근거 |
 | --- | --- | --- |
 | macOS Apple Silicon | `aarch64-apple-darwin` | 공개 번호 시험판 수용 |
 | macOS Intel | `x86_64-apple-darwin` | Candidate runtime 검증 |
@@ -194,10 +205,11 @@ an optional third-party Skill.
 | Linux arm64 | `aarch64-unknown-linux-musl` | native 후보 검증 |
 | Windows x86_64 | `x86_64-pc-windows-msvc` | 공개 번호 시험판 수용 |
 
-공개 시험의 Windows x64·Linux x64·macOS arm64에서 0.15.3·0.13.1 갱신, 제거, 재설치 수용(대역 Antigravity 호스트).
-실제 Codex·Claude Code·Antigravity 설치 갱신은 Windows 11 PC 1대에서 확인. macOS·Linux 실제 호스트 갱신과
-모든 호스트의 데스크톱 모델·할당량 조회 증명 제외. Claude Code 사용량 기록은 Windows 터미널 세션에서 확인,
-그 밖 구독 세션 동작 미검증. Stable `0.16.0`: macOS ad-hoc signing,
+0.16.1 공개 시험의 Windows x64·Linux x64·macOS arm64에서 공개 0.16.0 갱신 수용.
+실제 Codex·Claude Code·Antigravity 설치 갱신은 Windows 11 PC 1대에서 확인, 지식·설정·프로젝트 목록 변화 없음.
+같은 PC에서 삭제된 프로젝트 폴더의 등록을 둔 채 지식 명령 정상 동작 확인. 모든 호스트의 데스크톱 모델·할당량 조회,
+macOS·Linux 실제 호스트 갱신, 실제 호스트 세션 안의 Skill 표시 증명 제외. Codex 실제 실행 미확인,
+Claude Code 구독 세션 동작 미검증. Stable `0.16.1`: macOS ad-hoc signing,
 SignPath Foundation 무료 승인 전 Windows unsigned 공개. 정확한 경계는
 [code signing policy](../guides/code-signing-policy.md) 참고.
 

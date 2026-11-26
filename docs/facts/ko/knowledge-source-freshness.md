@@ -9,10 +9,10 @@ summary: "과거 기록의 무결성과 현재 원본의 일치 여부를 분리
 tags: [freshness, knowledge, portability]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:a0cf1b55b6cfc9d02920f117d25fb752e25267093d1be960b33267b8f6b0a94c"
+  - "repo:crates/hive-cli/src/knowledge/retrieve.rs#sha256:4f3d3dbb7d7b4e456dfb827f116e5f68ce113834c28bfcaaec0fcd3e377ea1a3"
   - "repo:crates/hive-wiki/src/store/freshness.rs#sha256:aaea806d5543632cf6ebf6c9faee349e6d67a97f9b8c8bd753bd0da9e02582b7"
   - "repo:docs/decisions/ADR-0023-foundation-refactor.md#sha256:e609abd004c690bcdce2822313645ba7dd733fa9114e778c6305314c4ada0813"
-  - "repo:schemas/knowledge-retrieval-result.schema.json#sha256:6d8499cf211d663d928c3fa1a31a0e375e6c970736414a1298f1b42180953ac9"
+  - "repo:schemas/knowledge-retrieval-result.schema.json#sha256:533b476a4e51769311dd24fd4561daf6de358eeb4e0f5b3a35cbc5dfbcc7c8e4"
 links: [foundation-refactor, knowledge-portability-scan]
 reviewed_revision: "git:1cdebf8aef9dde963f5aa88a36042186fbf37e80"
 status: active
@@ -23,6 +23,6 @@ status: active
 - 이식 뒤 원본 파일 부재: 정본 무결성을 확인한 과거 기록 조회 유지
 - `source_freshness=verified-current`: 해당 조회 시점의 원본 내용 일치
 - `historical-unverified`: 현재 코드 근거로 사용 금지, 원본 복원·재스캔·검토 경로 안내
-- 정본 변조·잘못된 출처 연결·확인된 원본 변경은 계속 거부
+- 정본 변조·잘못된 출처 연결·확인된 원본 변경이 있는 결과는 미반환. 해당 결과만 빼고 `stale_hits_dropped`에 개수 기록
 - 일부 근거 부재로 다른 근거의 내용 변경을 숨기는 처리 금지
 - 조회의 정본 수정·색인 복구 없음. 유지보수자가 선택한 `0.11.0` 이식 계약

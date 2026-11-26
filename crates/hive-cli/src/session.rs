@@ -511,11 +511,16 @@ fn open_or_create_directory(parent: &Dir, name: &str) -> Result<Dir, String> {
 
 struct Lock<'a> {
     directory: &'a Dir,
+    owner: Vec<u8>,
 }
 
 impl Drop for Lock<'_> {
     fn drop(&mut self) {
-        let _ = self.directory.remove_file(LOCK_FILE);
+        // Remove only this process's own lock: if it was cleared as abandoned and another
+        // process now holds a new lock, leave that lock in place.
+        if read_lock_bytes(self.directory).is_ok_and(|bytes| bytes == self.owner) {
+            let _ = self.directory.remove_file(LOCK_FILE);
+        }
     }
 }
 
@@ -528,9 +533,12 @@ fn acquire_lock(sessions: &Dir) -> Result<Lock<'_>, String> {
     for _ in 0..2 {
         match sessions.open_with(LOCK_FILE, &options) {
             Ok(mut file) => {
-                let initialized = file
-                    .write_all(format!("process_id={}\n", std::process::id()).as_bytes())
-                    .and_then(|()| file.sync_all());
+                let nonce = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |elapsed| elapsed.as_nanos());
+                let owner =
+                    format!("process_id={}\nowner={nonce:x}\n", std::process::id()).into_bytes();
+                let initialized = file.write_all(&owner).and_then(|()| file.sync_all());
                 if let Err(error) = initialized {
                     let _ = sessions.remove_file(LOCK_FILE);
                     return Err(format!(
@@ -539,11 +547,25 @@ fn acquire_lock(sessions: &Dir) -> Result<Lock<'_>, String> {
                 }
                 return Ok(Lock {
                     directory: sessions,
+                    owner,
                 });
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                let process_id = read_lock_process_id(sessions)?;
-                if process_liveness(process_id) == Liveness::Dead {
+                let stale = match read_lock_process_id(sessions) {
+                    Ok(process_id) => match process_liveness(process_id) {
+                        Liveness::Dead => true,
+                        Liveness::Live => false,
+                        // The owner cannot be checked. The lock is held only for one short
+                        // coordination step, so a much older lock was left by a crash.
+                        #[cfg(not(target_os = "linux"))]
+                        Liveness::Unknown => lock_is_abandoned(sessions),
+                    },
+                    // A crash before the process ID was written leaves an unreadable lock;
+                    // once it is old it must not block every later session.
+                    Err(error) if !lock_is_abandoned(sessions) => return Err(error),
+                    Err(_) => true,
+                };
+                if stale {
                     sessions.remove_file(LOCK_FILE).map_err(|error| {
                         format!("cannot clear verified stale session coordination lock: {error}")
                     })?;
@@ -563,7 +585,20 @@ fn acquire_lock(sessions: &Dir) -> Result<Lock<'_>, String> {
     Err("session coordination lock was recreated concurrently".to_owned())
 }
 
-fn read_lock_process_id(sessions: &Dir) -> Result<u32, String> {
+/// How long a coordination lock may exist before it is treated as left behind by a crash.
+const ABANDONED_LOCK_AGE: std::time::Duration = std::time::Duration::from_mins(5);
+
+fn lock_is_abandoned(sessions: &Dir) -> bool {
+    sessions
+        .symlink_metadata(LOCK_FILE)
+        .ok()
+        .filter(|metadata| metadata.is_file() && !metadata.file_type().is_symlink())
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified| modified.into_std().elapsed().ok())
+        .is_some_and(|age| age >= ABANDONED_LOCK_AGE)
+}
+
+fn read_lock_bytes(sessions: &Dir) -> Result<Vec<u8>, String> {
     let metadata = sessions
         .symlink_metadata(LOCK_FILE)
         .map_err(|error| format!("cannot inspect session coordination lock: {error}"))?;
@@ -575,12 +610,19 @@ fn read_lock_process_id(sessions: &Dir) -> Result<u32, String> {
     let file = sessions
         .open_with(LOCK_FILE, &options)
         .map_err(|error| format!("cannot open session coordination lock: {error}"))?;
-    let mut bytes = String::new();
+    let mut bytes = Vec::new();
     file.take(129)
-        .read_to_string(&mut bytes)
+        .read_to_end(&mut bytes)
         .map_err(|error| format!("cannot read session coordination lock: {error}"))?;
-    bytes
-        .strip_prefix("process_id=")
+    Ok(bytes)
+}
+
+fn read_lock_process_id(sessions: &Dir) -> Result<u32, String> {
+    let bytes = read_lock_bytes(sessions)?;
+    std::str::from_utf8(&bytes)
+        .ok()
+        .and_then(|text| text.split_inclusive('\n').next())
+        .and_then(|line| line.strip_prefix("process_id="))
         .and_then(|value| value.strip_suffix('\n'))
         .and_then(|value| value.parse::<u32>().ok())
         .filter(|value| *value > 0)
@@ -871,6 +913,45 @@ fn emit(result: &SessionResult) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn abandoned_coordination_lock_does_not_block_new_sessions() {
+        let temporary = tempfile::tempdir().unwrap();
+        let lock_path = temporary.path().join(LOCK_FILE);
+        // A crash between creating the lock and writing its process ID leaves an empty file.
+        let file = std::fs::File::create(&lock_path).unwrap();
+        let sessions = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
+        assert!(
+            acquire_lock(&sessions).is_err(),
+            "a fresh lock is respected"
+        );
+        file.set_modified(std::time::SystemTime::now() - ABANDONED_LOCK_AGE * 2)
+            .unwrap();
+        drop(file);
+        let lock = acquire_lock(&sessions).expect("abandoned lock is cleared");
+        drop(lock);
+        assert!(!lock_path.exists());
+
+        // An old lock whose owner is still running is never taken over.
+        std::fs::write(&lock_path, format!("process_id={}\n", std::process::id())).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&lock_path)
+            .unwrap()
+            .set_modified(std::time::SystemTime::now() - ABANDONED_LOCK_AGE * 2)
+            .unwrap();
+        assert!(
+            acquire_lock(&sessions).is_err(),
+            "a live owner keeps its lock"
+        );
+        std::fs::remove_file(&lock_path).unwrap();
+
+        // An owner whose lock was replaced leaves the newer lock in place.
+        let lock = acquire_lock(&sessions).expect("fresh lock");
+        std::fs::write(&lock_path, b"process_id=1\nowner=other\n").unwrap();
+        drop(lock);
+        assert!(lock_path.exists(), "another process's lock survives");
+    }
 
     #[test]
     fn detects_equal_ancestor_and_descendant_path_overlap() {

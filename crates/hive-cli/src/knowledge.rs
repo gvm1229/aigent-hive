@@ -1883,7 +1883,17 @@ pub(crate) fn run_index(arguments: &[String]) -> ExitCode {
                 (None, Some(user_root)) => {
                     require_shared_wiki_enabled(Path::new(user_root))?;
                     let store = RagStore::open(Path::new(user_root))?;
-                    let initialized = ensure_rag_registry(Path::new(user_root), &store)?;
+                    // Rebuild is the repair for an interrupted write, so recover first
+                    // instead of letting the registry sync refuse the dirty store.
+                    let recovered = if store.is_dirty()? {
+                        Some(store.rebuild()?)
+                    } else {
+                        None
+                    };
+                    let mut initialized = ensure_rag_registry(Path::new(user_root), &store)?;
+                    if let Some(recovered) = recovered {
+                        initialized.changed_paths.extend(recovered.changed_paths);
+                    }
                     let mut outcome = store.rebuild()?;
                     outcome.changed_paths.extend(initialized.changed_paths);
                     outcome.changed_paths.sort();
@@ -3298,8 +3308,8 @@ fn run_shared_query(
                 .iter()
                 .find(|project| {
                     project.enabled
-                        && hive_wiki::shared::canonical_root(&project.root)
-                            .is_ok_and(|registered| registered == canonical_target)
+                        && hive_wiki::shared::usable_registered_root(&project.root)
+                            .is_some_and(|registered| registered == canonical_target)
                 })
                 .map(|project| project.id.clone())
                 .ok_or_else(|| {
@@ -4210,8 +4220,8 @@ fn shared_mutation_target(
         (SharedTargetKind::UserRoot, "user-root".to_owned())
     } else if let Some(project) = registry.projects.iter().find(|project| {
         project.enabled
-            && hive_wiki::shared::canonical_root(&project.root)
-                .is_ok_and(|registered| registered == canonical_target)
+            && hive_wiki::shared::usable_registered_root(&project.root)
+                .is_some_and(|registered| registered == canonical_target)
     }) {
         (SharedTargetKind::RegisteredProject, project.id.clone())
     } else {
@@ -4234,8 +4244,8 @@ fn shared_lint_target(target: &Path, user_root: &Path) -> Result<SharedMutationT
     let registry = load_project_registry(&canonical_user)?;
     let registered = registry.projects.iter().find(|project| {
         project.enabled
-            && hive_wiki::shared::canonical_root(&project.root)
-                .is_ok_and(|registered| registered == canonical_target)
+            && hive_wiki::shared::usable_registered_root(&project.root)
+                .is_some_and(|registered| registered == canonical_target)
     });
     let (target_kind, namespace) = if canonical_target == canonical_user {
         (SharedTargetKind::UserRoot, "user-root".to_owned())
@@ -5649,12 +5659,23 @@ mod tests {
             .join(hive_wiki::store::RAG_DIRTY_RELATIVE)
             .is_file());
 
+        // The journaled write never landed (for example Ctrl+C right after the journal was
+        // published), so the canonical files are still in their prior consistent state and
+        // rebuild recovers from disk instead of blocking every later operation.
+        let journal = user.path().join(hive_wiki::store::RAG_DIRTY_RELATIVE);
         rebuild_shared_index(user.path())
-            .expect_err("rebuild must not erase an unfinished exact canonical write");
-        assert!(user
+            .expect_err("a fresh journal may belong to a write still waiting for its lock");
+        fs::File::options()
+            .write(true)
+            .open(&journal)
+            .expect("journal")
+            .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(120))
+            .expect("backdate journal");
+        rebuild_shared_index(user.path()).expect("a write that never landed does not block");
+        assert!(!user
             .path()
             .join(hive_wiki::store::RAG_DIRTY_RELATIVE)
-            .is_file());
+            .exists());
         fs::write(
             project
                 .path()
@@ -5788,7 +5809,16 @@ mod tests {
         let index_path = user.path().join(SHARED_INDEX_RELATIVE);
         let before_index = fs::read(&index_path).expect("index");
         fs::write(&claim_path, b"changed canonical evidence").expect("missed change event");
-        assert!(run_retrieve(&retrieve_arguments).is_err());
+        // The changed claim is dropped from results; stale text is never returned and the
+        // retrieval itself still succeeds for every other source.
+        let stale = run_retrieve(&retrieve_arguments).expect("stale hit dropped");
+        assert_eq!(
+            stale.data.expect("retrieval data")["hits"]
+                .as_array()
+                .expect("hits")
+                .len(),
+            0
+        );
         assert_eq!(
             fs::read(&index_path).expect("unchanged index"),
             before_index
@@ -6462,6 +6492,64 @@ mod tests {
         store
             .replace_active_claims(&[(original, relabeled)])
             .expect("subject-only replacement");
+    }
+
+    #[test]
+    fn a_stale_subject_lead_takes_its_members_with_it() {
+        let user = temp_root();
+        write_user_setup(user.path(), true);
+        write_empty_knowledge(user.path());
+        let unregistered = temp_root();
+        for index in 0..3 {
+            remember_fact(
+                user.path(),
+                &format!("Palette rule number {index} keeps contrast high."),
+                &format!("palette-{index}"),
+                Some("design/palette"),
+            );
+        }
+        remember_fact(
+            user.path(),
+            "Palette rule number lookups use a fresh index.",
+            "palette-lookup",
+            None,
+        );
+        let arguments = [
+            "--user-root".to_owned(),
+            user.path().to_string_lossy().into_owned(),
+            "--target".to_owned(),
+            unregistered.path().to_string_lossy().into_owned(),
+            "--scope".to_owned(),
+            "auto".to_owned(),
+            "--query".to_owned(),
+            "palette rule number 1 keeps contrast".to_owned(),
+            "--top-k".to_owned(),
+            "1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let data = run_retrieve(&arguments).expect("fresh").data.expect("data");
+        assert_eq!(data["hits"][0]["subject"], "design/palette");
+        let lead_locator = data["hits"][0]["locator"]
+            .as_str()
+            .expect("locator")
+            .split('#')
+            .next()
+            .expect("path")
+            .to_owned();
+        fs::write(user.path().join(&lead_locator), b"edited after indexing").expect("edit lead");
+
+        let data = run_retrieve(&arguments)
+            .expect("stale lead")
+            .data
+            .expect("data");
+        let hits = data["hits"].as_array().expect("hits");
+        assert_eq!(hits.len(), 1, "the next fresh group fills the place");
+        assert!(
+            hits[0]["subject"].is_null(),
+            "no orphaned subject member: {hits:?}"
+        );
+        assert_eq!(data["stale_hits_dropped"], 1);
     }
 
     #[test]

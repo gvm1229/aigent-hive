@@ -97,6 +97,7 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         hits.iter()
             .any(|hit| hit["source_freshness"] == "historical-unverified")
     });
+    let stale = result["stale_hits_dropped"].as_u64().unwrap_or(0);
     let mut outcome = success(
         "RetrieveKnowledge",
         "hive.knowledge-retrieved",
@@ -108,6 +109,10 @@ pub(super) fn run_retrieve(arguments: &[String]) -> Result<KnowledgeResult, Wiki
     );
     if historical {
         outcome.next_action = Some("Historical knowledge is available, but original sources are unavailable locally. Do not treat these items as current source evidence; restore the sources or explicitly rescan and review before current-code use.".to_owned());
+    } else if stale > 0 {
+        outcome.next_action = Some(format!(
+            "{stale} result(s) were left out because their source changed after indexing; run `hive index rebuild --user-root <user-root>` to search them again."
+        ));
     }
     Ok(outcome)
 }

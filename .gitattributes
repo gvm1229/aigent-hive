@@ -46,3 +46,5 @@ harness/project-bases/0.15.2/** -text
 harness/user-bases/0.15.2/** -text
 harness/project-bases/0.15.3/** -text
 harness/user-bases/0.15.3/** -text
+harness/project-bases/0.16.0/** -text
+harness/user-bases/0.16.0/** -text
