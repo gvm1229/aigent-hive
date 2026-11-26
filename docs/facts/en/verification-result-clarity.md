@@ -10,7 +10,7 @@ tags: [communication, reporting, verification]
 aliases: ["skip reporting", "verification qualifiers"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:a40a0ad017c8287244994186b004c017560a7c30f1f41b722f61180f0fb41d69"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:f90a63a394a6735a6b8300e796fee6585cc9be356322eeac99f0a9a8bc20c45d"
   - "repo:docs/guidance-schema.md#sha256:eae385d284f448a27a5243d8e7846aa69d9568e0849d3457147fb814229416ad"
   - "repo:harness/template/AGENTS.md.jinja#sha256:fe7f06cc88b566a9ab1ef2919d8ca43830aa963a98208c084c56b5c12f26c864"
 links: [language-consistency, release-verification]
