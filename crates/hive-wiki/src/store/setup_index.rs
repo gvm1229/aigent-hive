@@ -309,11 +309,15 @@ mod tests {
                 || preview.sources[0].path == project_path
         );
         assert!(!root.path().join(SHARED_INDEX_RELATIVE).exists());
-        assert!(store.rebuild_setup_index(&preview.scope_digest).is_err());
         assert_eq!(
             std::fs::read(root.path().join(COLLECTION_REGISTRY_RELATIVE)).unwrap(),
             before
         );
+        // An offline project folder is skipped, not opened, and does not block setup.
+        store
+            .rebuild_setup_index(&preview.scope_digest)
+            .expect("offline project does not block setup rebuild");
+        assert!(root.path().join(SHARED_INDEX_RELATIVE).exists());
         assert!(!root.path().join(RAG_DIRTY_RELATIVE).exists());
     }
 

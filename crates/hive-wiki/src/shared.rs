@@ -1060,19 +1060,12 @@ fn validate_registry(user_root: &Path, registry: &ProjectRegistry) -> Result<(),
     validate_registry_metadata(user_root, registry)?;
     let mut roots = BTreeSet::new();
     for project in &registry.projects {
-        validate_absolute_root(&project.root, "registered project root")?;
-        let canonical = canonical_root(&project.root).map_err(|error| {
-            WikiError::Verification(format!(
-                "registered project root is unavailable {}: {error}",
-                project.root.display()
-            ))
-        })?;
-        if canonical != platform_canonical_root(&portable_canonical_path(&project.root)) {
-            return Err(WikiError::Conflict(format!(
-                "registered project root must be canonical and contain no symlink components: {}",
-                project.root.display()
-            )));
-        }
+        // One project folder the user deleted, moved, or replaced must not block every other
+        // knowledge operation. An unusable root is never opened: knowledge operations skip it
+        // and collection sync detaches it until the folder is usable again.
+        let Some(canonical) = usable_registered_root(&project.root) else {
+            continue;
+        };
         if !roots.insert(canonical) {
             return Err(WikiError::InvalidInput(
                 "duplicate registered project root".to_owned(),
@@ -1126,6 +1119,17 @@ fn validate_registry_metadata(
         }
     }
     Ok(())
+}
+
+/// Return the canonical root when a registered project folder is safe to use right now.
+///
+/// `None` means the folder was deleted or moved, is no longer a plain directory, sits behind
+/// a symlink, or cannot be inspected. Callers treat such a project as temporarily absent
+/// instead of failing, and never open it.
+pub(crate) fn usable_registered_root(path: &Path) -> Option<PathBuf> {
+    validate_absolute_root(path, "registered project root").ok()?;
+    let canonical = canonical_root(path).ok()?;
+    (canonical == platform_canonical_root(&portable_canonical_path(path))).then_some(canonical)
 }
 
 fn validate_absolute_root(path: &Path, name: &str) -> Result<(), WikiError> {
@@ -2032,9 +2036,11 @@ mod tests {
                 .changed_paths,
             Vec::<String>::new()
         );
-        assert!(ensure_project_registry(&user).is_err());
-        assert!(load_project_registry(&user).is_err());
-        assert!(rebuild_shared_index(&user).is_err());
+        // A project folder the user deleted must not block knowledge operations for every
+        // other project: it is skipped, its registration stays, and it is never recreated.
+        ensure_project_registry(&user).expect("missing project folder does not block");
+        assert_eq!(load_project_registry(&user).unwrap(), registry);
+        rebuild_shared_index(&user).expect("rebuild skips the missing project folder");
         assert_eq!(fs::read(path).unwrap(), bytes);
         assert!(!first.join("not-present").exists());
     }

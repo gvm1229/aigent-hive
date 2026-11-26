@@ -2517,10 +2517,19 @@ impl RagStore {
         inspect_roots: bool,
     ) -> Result<CollectionRegistry, WikiError> {
         let mut registry = prior.unwrap_or(self.default_registry()?);
-        let active_ids = projects
+        // A registered folder that was deleted, moved, or made unsafe is detached automatically
+        // (not explicitly), so it reattaches on its own once the folder is usable again.
+        let live_projects = projects
             .projects
             .iter()
-            .filter(|project| project.enabled)
+            .filter(|project| {
+                project.enabled
+                    && (!inspect_roots
+                        || crate::shared::usable_registered_root(&project.root).is_some())
+            })
+            .collect::<Vec<_>>();
+        let active_ids = live_projects
+            .iter()
             .map(|project| project.id.as_str())
             .collect::<BTreeSet<_>>();
         for collection in &mut registry.collections {
@@ -2534,7 +2543,7 @@ impl RagStore {
                 collection.local_locator = None;
             }
         }
-        for project in projects.projects.iter().filter(|project| project.enabled) {
+        for project in live_projects {
             let canonical = if inspect_roots {
                 let canonical = crate::shared::canonical_root(&project.root)?;
                 let _pinned = pin_absolute_directory(&canonical, "registered project root")?;
@@ -2881,6 +2890,10 @@ impl RagStore {
                 self.root.try_clone().map_err(|error| {
                     WikiError::Io(format!("cannot clone pinned user root: {error}"))
                 })?
+            } else if crate::shared::usable_registered_root(Path::new(locator)).is_none() {
+                // A deleted, moved, or unsafe attached folder contributes no pages and is
+                // never opened; it must not block knowledge work for every other source.
+                continue;
             } else {
                 pin_absolute_directory(Path::new(locator), "collection root")?
             };
@@ -5488,6 +5501,75 @@ mod tests {
         assert_eq!(
             project_collection(&store, "project-auto").state,
             CollectionState::Attached
+        );
+    }
+
+    #[test]
+    fn deleted_project_folder_is_detached_without_blocking_knowledge_operations() {
+        let (_temporary, store) = store();
+        let kept = tempfile::tempdir().expect("kept root");
+        let deleted = tempfile::tempdir().expect("deleted root");
+        let deleted_path = deleted.path().to_path_buf();
+        store
+            .register_project_atomic(registered("project-kept", kept.path(), true))
+            .expect("register kept");
+        store
+            .register_project_atomic(registered("project-gone", &deleted_path, true))
+            .expect("register deleted");
+        drop(deleted);
+        assert!(!deleted_path.exists());
+
+        let projects = crate::shared::load_project_registry(&store.root_path)
+            .expect("a deleted project folder does not invalidate the registry");
+        assert_eq!(
+            projects.projects.len(),
+            2,
+            "the registration itself is preserved"
+        );
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync succeeds with a deleted project folder");
+        crate::shared::rebuild_shared_index(&store.root_path).expect("rebuild succeeds");
+        let gone = project_collection(&store, "project-gone");
+        assert_eq!(gone.state, CollectionState::Detached);
+        assert!(!gone.explicitly_detached);
+        assert!(gone.local_locator.is_none());
+        assert_eq!(
+            project_collection(&store, "project-kept").state,
+            CollectionState::Attached
+        );
+
+        let another = tempfile::tempdir().expect("another root");
+        store
+            .register_project_atomic(registered("project-new", another.path(), true))
+            .expect("registering another project is not blocked");
+
+        std::fs::create_dir(&deleted_path).expect("folder comes back");
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync after the folder returns");
+        assert_eq!(
+            project_collection(&store, "project-gone").state,
+            CollectionState::Attached
+        );
+        std::fs::remove_dir(&deleted_path).expect("cleanup");
+    }
+
+    #[test]
+    fn project_folder_replaced_by_a_file_is_detached_without_blocking() {
+        let (_temporary, store) = store();
+        let parent = tempfile::tempdir().expect("parent");
+        let root = parent.path().join("project");
+        std::fs::create_dir(&root).expect("project dir");
+        store
+            .register_project_atomic(registered("project-file", &root, true))
+            .expect("register");
+        std::fs::remove_dir(&root).expect("remove dir");
+        std::fs::write(&root, b"not a folder").expect("replace with file");
+
+        crate::shared::sync_current_project_registry(&store.root_path, &store)
+            .expect("sync succeeds when the folder became a file");
+        assert_eq!(
+            project_collection(&store, "project-file").state,
+            CollectionState::Detached
         );
     }
 

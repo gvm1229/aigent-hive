@@ -851,6 +851,13 @@ fn prepare_export_bundle(
             let locator = collection.local_locator.as_deref().ok_or_else(|| {
                 WikiError::Verification("attached collection lost its local locator".to_owned())
             })?;
+            let is_user_root = collection.collection_id == USER_ROOT_COLLECTION_ID;
+            if !is_user_root && crate::shared::usable_registered_root(Path::new(locator)).is_none()
+            {
+                // A deleted or moved folder has no pages to export; its claims (stored in the
+                // user root) were already collected above. It must not abort the whole export.
+                continue;
+            }
             let source_path = crate::shared::canonical_root(Path::new(locator))?;
             let owned_source;
             let source = if source_path == root_path {
