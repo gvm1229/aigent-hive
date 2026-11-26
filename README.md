@@ -14,69 +14,58 @@
 
 <!-- AIGENT-HIVE:PUBLIC-STABLE version=0.16.1 release-date=2026-11-26 -->
 
-Hive gives subscription-authenticated agent hosts one consistent setup, Skill routing,
-project knowledge, durable role/run state, usage safeguards, and safe update contracts.
-It never asks for model-provider API keys, calls model-provider APIs, or replaces the
-host's own model runtime.
+Hive gives the AI coding apps you already use one consistent setup, project knowledge, Skill
+routing, usage safeguards and safe updates. It never asks for model-provider API keys, never
+calls model-provider APIs, and never replaces the app's own model runtime.
 
-Stable `0.16.1` is the current public release.
-
-## Roles and named feature entries
-
-Nine named entries group existing features. Use `hive roster` to inspect role settings and
-`hive summon` to preview a task request. Automatic worker execution remains disabled;
-this release has no enablement path. See [feature ownership and role migration](docs/architecture/god-ownership.md).
+Stable `0.16.1` is the current public release. See
+[GitHub Releases](https://github.com/gvm1229/aigent-hive/releases) for what changed in each version.
 
 ## Install the current stable release
-
-`0.16.1` is published on npm as `latest`, with a normal GitHub Release and annotated Git tag.
-
-```console
-npm install -g aigent-hive
-```
-
-Or pin the exact version:
 
 ```console
 npm install -g aigent-hive@0.16.1
 ```
 
-The npm installer requires Node.js and npm. The installed `hive` runtime is a native
-Rust binary and does not require Node.js.
+The npm installer needs Node.js and npm. The installed `hive` is a native binary and does not.
+Without npm, use the direct installer for your shell:
 
-Expected stable version label:
+```sh
+# macOS and Linux
+curl --proto '=https' --tlsv1.2 -LsSf https://unpkg.com/aigent-hive@0.16.1/install.sh | sh
+```
+
+```powershell
+# Windows PowerShell 5.1+
+irm https://unpkg.com/aigent-hive@0.16.1/install.ps1 | iex
+```
+
+```bat
+:: Windows Command Prompt
+curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.1/install.cmd && install-aigent-hive.cmd
+```
+
+Direct installers verify the package's exact-version SHA-256 and need neither npm, Node.js nor
+PowerShell 7. `hive --version` then prints:
 
 ```text
 AIgent Hive v0.16.1 (released 2026-11-26)
 ```
 
-### macOS and Linux with curl
+## First setup
 
-```sh
-curl --proto '=https' --tlsv1.2 -LsSf \
-  https://unpkg.com/aigent-hive@0.16.1/install.sh | sh
-```
+1. Run `hive update` in an interactive terminal, choose your AI apps, and answer the setup
+   questions. Hive previews its changes before applying them and does not touch any project.
+2. Open a project in your AI app and paste this prompt once per project:
 
-### Windows PowerShell 5.1+
+   ```text
+   Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
+   ```
 
-```powershell
-irm https://unpkg.com/aigent-hive@0.16.1/install.ps1 | iex
-```
+   If the app is not open in the project, replace "this project" with an absolute project path.
 
-### Windows Command Prompt
-
-```bat
-curl.exe -fLo install-aigent-hive.cmd https://unpkg.com/aigent-hive@0.16.1/install.cmd && install-aigent-hive.cmd
-```
-
-The direct installers fetch the same native package bytes from npm, verify the
-embedded exact-version SHA-256, and record direct-install ownership. They do not
-require npm, Node.js, or PowerShell 7.
-
-## Optional one-prompt setup
-
-If you want Codex, Claude Code, or Gemini Antigravity to guide the entire user-level
-installation, paste the following prompt instead of following the manual steps below.
+<details>
+<summary>Optional: let your AI app do the whole user-level install</summary>
 
 ```text
 I want the optional one-prompt Aigent Hive setup. Work only at user scope; do not inspect,
@@ -98,327 +87,70 @@ offer the separate project-setup prompt instead. Never ask for provider API cred
 an optional third-party Skill.
 ```
 
-This option installs only the current stable release.
+</details>
 
-## What changed in 0.16.1
+## Update
 
-- A registered project folder that was deleted, moved or made unusable no longer stops knowledge commands. Hive skips it, and commands keep working for every other project.
-- A skipped project stays registered and reconnects automatically when its folder becomes usable again.
-- When the source of a search result changed or disappeared, search drops only that result and still returns the others. Outdated text never returns.
-- A knowledge write that stopped before writing anything no longer blocks later commands. `hive index rebuild` repairs it from disk.
-- Stray files such as `Thumbs.db` or `desktop.ini`, and links inside knowledge folders, are ignored instead of failing every command.
-- A session coordination lock left by a crash is cleared after five minutes.
-- Updating from public 0.16.0 and earlier supported versions keeps user answers, knowledge, project registrations and project files.
-- A partly written knowledge write, a corrupt recovery record and importing into a missing folder still stop with an error.
+Run `hive update` in an interactive terminal. It checks for a newer version, shows the exact
+update and installs only after you accept. Declining, closing input or running
+non-interactively installs nothing. Hive never updates silently, and it copies settings and
+changed files to `~/hive-backups` first.
 
-## Earlier changes in 0.16.0
-
-- `hive update` recognises Claude Code and Antigravity installs from public 0.15.x. If a reinstall is needed, the project list, runtime state, backups and claims stay. User answers, knowledge and project files are kept.
-- Install, update and uninstall first copy settings, the project list and files they change to `~/hive-backups`, including `~/.claude/settings.json`. `hive storage backup list` shows the copies and `hive storage backup restore --id <id>` previews a restore. Copies are never deleted automatically. Unchanged knowledge, history and `hive setup` edits are outside this backup.
-- Claude usage is shown and entered as percent used; Codex and Antigravity use percent remaining. For example, `hive usage threshold --user-root <user-root> --host claude --window weekly --stop-used-percent 96` stops at 96% used.
-- When usage cannot be read, work continues with a warning that names the missing limit, cause and fix. Discord no longer promises recovery for an unreadable measurement.
-- `hive setup --scope user --section usage --claude-statusline preview` shows the Claude Code status-line connection before you approve it. An existing status line keeps working and the change can be reverted. The desktop app Code tab is not confirmed; use Claude Code in a terminal if usage does not appear there.
-- Experimental `hive msg` carries work and receipts between builder, reviewer and advisor roles through a project file inbox, with project hooks, a decision queue and a status view. Discord notices show the task, result, roles, the measured worker model and time, separated by a line. `--reviewer-provider` selects the reviewer provider. Hive does not launch workers. Hook status does not prove that a host loaded the hook.
-- With two or more hosts selected, user guidance makes each new project Skill for every selected host. In a folder without `.hive/`, guidance keeps Hive project commands and other tools' files out of the work.
-- User guidance blocks AI co-author lines in commits and pull requests by default. Change it with `hive setup --scope user --section review`.
-- Codex hook, worker and cross-review behaviour on this version is not verified. Codex asks you to trust project hooks after apply. Claude automatic mode can block `hive msg`; a project permission rule is your choice. Gemini hooks are preview only.
-- `hive stop` stops new messages. Worker limits use `max_workers`; an old `max_panes` value moves to it, and conflicting values stop the change. `hive route` and `hive prompt` moved under `hive advanced`.
-- Built-in Skills merged into `knowledge-manage`, `run` and `judge`. Descriptions list old names, but Claude Code does not run an old `/aigent-hive:...` name. Files you changed stay.
-- In Claude Code, the plugin hook looks up Hive knowledge for each prompt and adds the top matches, so stored preferences reach the agent even when it skips a lookup. It writes nothing and adds nothing when there is no match. Set `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off` to turn it off. User guidance now asks for a lookup before every task except small talk, including read-only work.
-- `--target .` works on Windows.
-- Antigravity 1.x usage callbacks after 1.1.18 are accepted only with the same data shape. Version 1.2 is not verified on a real host.
-- Before a downgrade to 0.15.x, revert the status line. A 0.15.x reinstall deletes `~/.hive/backups` and the project list.
-
-## Earlier changes in 0.15.3
-
-- Ask your AI agent to set up Hive for a project. Calling the project-setup Skill makes the agent run setup: in an empty folder it asks about the project one question at a time, and in an existing project it scans the files first, then shows one proposal before applying.
-- Agents preview, apply and validate project setup without a capability file. `hive setup --answers` uses the same saved or detected host capabilities as terminal setup; detected capabilities stay unverified and never enable hooks.
-- A pending setup result tells the agent how to continue: `--show --summary`, then an agent `--dry-run`. The terminal resume command is still listed for people.
-- Terminal setup is easier to read: each question has a numbered title such as `[2/4] Project name`, and the preview groups values into sections. Colour appears only in an interactive terminal without `NO_COLOR`.
-- `hive project upgrade --validate` passes right after a fresh project setup. When files do change, each changed path shows its reason.
-- Record several facts from one turn with `hive knowledge remember --batch <facts.json>`. One rejected fact cancels the whole batch.
-- Give a fact a subject such as `design/visual-style`. A matching fact returns up to 16 more facts of the same subject, and `hive knowledge subjects list|preview|apply|restore` manages subjects.
-- Short Korean search words find stored sentences with particles, so `남색` finds `남색과`. The recall Skill passes Korean and English variants with `--expansions`.
-- After a fact receives a subject, Hive 0.15.2 and earlier refuse that knowledge store. Downgrade is unsupported.
-- Usage protection asks, for each app you selected, whether its subscription has a 5-hour limit, then whether to guard the 5-hour limit, the weekly limit, or both with separate thresholds. Antigravity gets one threshold, and new per-app thresholds start from your global threshold. Codex's 30-day window counts as the weekly limit.
-- A mistyped command or option suggests up to three close matches without any AI, for example `hive instal` → `install`. `hive --help` is now a short grouped list.
-- `hive update` works after `npm install -g` installs a new version over the previous public release. If a reinstall fails, Hive files stay and the error names the restore command.
-- Saying no at the last setup confirmation now reports that nothing changed and shows how to continue, instead of a failure. JSON keeps the same code and exit code 2 and adds `data.declined`. Long setup lines wrap at 80 columns, and a notice appears before slow app checks.
-- Hive's user instructions tell agents to save a lasting preference as separate facts with one shared subject. `hive setup --describe --question` accepts `project_kind` as `project-kind` and suggests close question names.
-
-## Earlier changes in 0.15.2
-
-- Install into Codex, Claude Code and Antigravity in one setup. The app question says you can choose several, and accepts numbers or names separated by commas or spaces, such as `1,2`.
-- Claude Code installation replaces an `aigent-hive` registration left pointing at a deleted folder, so Hive's plugin and Skills appear in the Claude CLI and app.
-- Antigravity CLI 1.2.x is supported.
-- A resumed `hive update` no longer repeats "monitor choice changed since setup preview". A PC already looping on 0.15.1 runs `npm install -g aigent-hive@0.15.2`, then `hive update`.
-- A failed first install removes its Codex registration before restoring files, so Codex keeps listing plugins; an earlier broken registration is repaired on update.
-- When an attached knowledge folder needs index consent, install and update finish and show `hive index rebuild --user-root <home>` next.
-
-## Earlier changes in 0.15.1
-
-- Commands print readable English or Korean results by default, with the reason and the next step. Add `--output json` when a program reads the result.
-- Project setup detects languages, frameworks, package managers, commands and structure locally without model calls, and shows the proposal for one confirmation.
-- Project facts live apart from a short Hive entry. Rules you wrote outside Hive markers stay unchanged.
-- A project chosen as compact reuses the verified Hive plugin for shared Skills. Other projects keep their local Skill copies.
-- Facts an agent would keep in its own memory are written as Hive Markdown knowledge, in the project first and in global knowledge only when they apply beyond one project.
-- Every Skill description, including the nine named entries, says what the Skill does.
-- Upgrade from 0.15.0 or 0.14.x with authenticated historical sources. Supported JSON schemas, values and exit codes stay the same.
-
-## Earlier changes in 0.15.0
-
-- Choose among nine named entries for planning, research, implementation, writing, setup, coordination, knowledge, usage and cleanup. Existing commands and Skill paths remain available.
-- Set role models and effort globally or per project. Inspect the merged configuration with `hive roster`; fixed-model user profiles remain preserved.
-- Preview a task request with `hive summon`, or prepare a signed inbox request. Hive does not launch workers. Orchestration is disabled with no enablement path in this release.
-- Upgrade from 0.14.2 with its authenticated historical project and user sources.
-
-## Earlier changes in 0.14.2
-
-- Updates and `hive prune --confirm` now remove old monitor copies larger than 1 MiB and no larger than 128 MiB.
-- Keep current and previous copies. Preserve files locked by Windows and copies that fail exact-byte verification.
-- The monitor copy input limit remains 128 MiB.
-
-
-## Earlier changes in 0.14.1
-
-- Changing the global usage floor keeps its saved choice record valid, so the change succeeds.
-- An explicitly detached knowledge collection stays detached. Sync and rebuild do not attach it again; attach it explicitly before use.
-- Updates keep only the current and previous usage monitor programs and remove older copies.
-- Report Hive storage use with `hive storage`. Preview unused monitor programs with `hive prune --dry-run`; removal requires `hive prune --confirm`.
-- Updates from public 0.14.0 keep complete ownership verification. Version 0.14.0 cannot read a collection list with an explicit detach; attach the collection before a downgrade.
-
-## Earlier changes in 0.14.0
-
-- Answer local CLI questions to configure user and project settings in English or Korean. Setup does not call a model.
-- Reuse saved choices, change one setting, or resume interrupted setup. User notes and role assignments remain preserved.
-- New installations start with automatic usage stops disabled. Existing protection choices require review before changes.
-- Preview removal with `hive uninstall --dry-run`. Confirm the program removal while keeping settings, knowledge, history and project data for reinstallation.
-- When protection is enabled, choose a remaining-usage floor from 0 through 99%. Reset detection, exhausted-quota protection and midway monitoring remain separate controls. A 0% floor does not disable exhausted-quota protection or guarantee zero credit charges.
-- Updates from 0.13.1 continue into local setup questions. Without an interactive terminal, the approved preserving update keeps existing choices, leaves new optional features off and reports pending questions. Historical update inputs still require complete ownership verification.
-- Downloads, hooks, external notifications and Windows Codex midway interruption still require their own consent. Monitoring checks the required app communication capabilities. Other operating systems and remote or cloud tasks lack direct interruption support; app survival and direct user resume remain required.
-- Existing answer files remain supported. New records distinguish explicit choices, defaults, inherited settings and unknown historical origins.
-
-Earlier improvements remain in the [0.13.1 release notes](docs/releases/0.13.1.md), [0.13.0 release notes](docs/releases/0.13.0.md) and [0.12.0 release notes](docs/releases/0.12.0.md).
-
-## Supported targets
-
-| Platform | Native target | 0.16.1 evidence |
-| --- | --- | --- |
-| macOS Apple Silicon | `aarch64-apple-darwin` | Public numbered-test acceptance |
-| macOS Intel | `x86_64-apple-darwin` | Candidate runtime qualified |
-| Linux x86_64 | `x86_64-unknown-linux-musl` | Public numbered-test acceptance |
-| Linux arm64 | `aarch64-unknown-linux-musl` | Native candidate qualification |
-| Windows x86_64 | `x86_64-pc-windows-msvc` | Public numbered-test acceptance |
-
-The accepted public 0.16.1 test covers the update from public 0.16.0 on Windows x64,
-Linux x64 and macOS arm64. The update of real Codex, Claude Code and Antigravity installs was
-checked on one Windows 11 PC, with knowledge, settings and the project list unchanged. On that PC,
-knowledge commands worked again while a deleted project folder stayed registered. This does not
-prove live desktop-model or quota sensing on every host, real host updates on macOS and Linux, or
-Skill display inside a real host session. Codex runs were not checked. Claude Code subscription
-behaviour remains unverified. Stable `0.16.1` uses explicit macOS ad-hoc signing and publishes Windows as
-unsigned unless free SignPath Foundation signing is approved. See the
-[code signing policy](./docs/guides/code-signing-policy.md) for the exact trust boundary.
-
-## First setup
-
-First install the executable, then run one global update command. Project setup remains a
-separate, explicit action for each project.
-
-### 1. Install the Hive CLI
-
-Use one command from [Install the current stable release](#install-the-current-stable-release) above. The npm installation provides the
-`hive` command only. It does not create user settings, host projections, or a project harness.
-
-### 2. Initialize or update the global Hive installation
-
-In an interactive terminal, run:
-
-```console
-hive update
-```
-
-For a first npm installation, choose one or more hosts when prompted. Hive installs only its
-owned minimum user projection. For an existing installation, it refreshes and validates only
-the authenticated saved hosts; it does not inspect or change projects.
-
-### 3. Answer any new global question
-
-Continue the local questions shown by `hive update`. Review the proposed changes before
-applying them. Choices such as semantic search can affect storage, downloads and future behavior.
-Cancelling does not supply consent. A preserving update without an interactive terminal keeps
-existing choices and reports any questions that still need an answer.
-
-After confirmation, Hive applies and validates its global user files. Project setup remains separate.
-
-### 4. Configure one project
-
-Open the exact project in the host and paste this separate prompt:
-
-```text
-Configure the local Aigent Hive harness for this project. Use my existing global Hive preferences, inspect only this project, show the exact write preview, and ask me only about choices that require my approval.
-```
-
-Use this prompt once for each repository. It inherits your global preferences and only changes
-the named project after showing its exact write preview. If the host is not open in the project,
-name the project with an absolute path instead:
-
-```text
-Configure the local Aigent Hive harness for the project at /absolute/path/to/project. Use my existing global Hive preferences, inspect only that project, show the exact write preview, and ask me only about choices that require my approval.
-```
-
-Do not use the project prompt from your home directory without a project path. A request that
-includes both scopes completes global setup first and asks before inspecting or changing a project.
-
-Neither prompt authorizes an update, optional third-party Skill, or provider-credential
-access.
-
-Hive previews its exact owned write set, preserves foreign guidance bytes, and keeps
-canonical knowledge in Markdown.
-
-## Updating
-
-```console
-hive update
-```
-
-This performs an immediate version check and reconciles Hive-owned global user files even when
-the executable is already current. If a newer version exists, Hive explains the exact update and
-asks before invoking the authenticated install owner. Without explicit update confirmation, declining, closing stdin or running
-non-interactively causes no installation. The first initialization requires an interactive host
-selection.
-
-When daily checks are enabled, a successful check is throttled for 24 hours. An offline
-or failed check is not recorded as successful, so the next Codex, Claude Code, or
-Antigravity session retries it.
-
-Hive never installs an update silently.
-
-## CLI output
-
-Commands print readable Korean or English results by default.
-Add `--output json` only when a program, Skill or hook reads the result.
+Commands print readable Korean or English. Add `--output json` only when a program reads the result.
 
 ## Move global knowledge to another computer
 
-Use a `.hivekb` bundle to move global knowledge between computers. `--user-root` is the
-user home directory, not its `.hive` subdirectory. Use the command block for the shell
-that is running it; do not copy a Windows environment variable into a macOS or Linux
-shell, or the reverse.
-
-The bundle contains portable canonical knowledge. It does not copy SQLite indexes,
-runtime state, project-private knowledge, credentials, or absolute local paths.
-
-### macOS and Linux shell
-
-Export the global bundle:
+`--user-root` is your home directory, not its `.hive` folder. Bundles hold portable Markdown
+knowledge only: no search index, runtime state, project-private knowledge, credentials or
+absolute paths. Check the SHA-256 and run `--dry-run` before `--apply`.
 
 ```sh
-bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root "$HOME" --scope global --bundle "$bundle"
-shasum -a 256 "$bundle"
+# macOS and Linux: export, then import on the other computer
+hive knowledge export --user-root "$HOME" --scope global --bundle "$HOME/Downloads/hive.hivekb"
+shasum -a 256 "$HOME/Downloads/hive.hivekb"
+hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --dry-run
+hive knowledge import --user-root "$HOME" --bundle "$HOME/Downloads/hive.hivekb" --apply
 ```
-
-On the destination computer, replace the bundle path and expected checksum with the values
-you received. Run the dry run first. Run `--apply` only after the file exists, the checksum
-matches, and the dry run reports no conflict or validation error.
-
-```sh
-bundle="$HOME/Downloads/aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-shasum -a 256 "$bundle"
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --dry-run
-hive knowledge import --user-root "$HOME" --bundle "$bundle" --apply
-hive knowledge lint --target "$HOME" --user-root "$HOME"
-```
-
-### Windows PowerShell
-
-Export the global bundle:
 
 ```powershell
-$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-hive knowledge export --user-root $env:USERPROFILE --scope global --bundle $bundle
-Get-FileHash -Algorithm SHA256 $bundle
-```
-
-On the destination computer, use the returned `Hash` value to verify the received bundle.
-Run `--apply` only after the file exists, the hash matches, and the dry run reports no
-conflict or validation error.
-
-```powershell
-$bundle = "$env:USERPROFILE\Downloads\aigent-hive-knowledge-YYYY-MM-DD.hivekb"
-Get-FileHash -Algorithm SHA256 $bundle
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --dry-run
-hive knowledge import --user-root $env:USERPROFILE --bundle $bundle --apply
-hive knowledge lint --target $env:USERPROFILE --user-root $env:USERPROFILE
+# Windows PowerShell: export, then import on the other computer
+hive knowledge export --user-root $env:USERPROFILE --scope global --bundle "$env:USERPROFILE\Downloads\hive.hivekb"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\hive.hivekb"
+hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --dry-run
+hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Downloads\hive.hivekb" --apply
 ```
 
 ## Automatic dispatch safeguard
 
-When enabled, Hive checks subscription usage immediately before a new automatic
-dispatch:
+Automatic worker execution is off, and this release has no way to turn it on. When usage
+protection is enabled, this preflight runs before any new automatic dispatch; it never
+authorizes dispatch by itself:
 
 ```console
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
-hive run resume --dispatch-intent automatic --target <project> --run <run-id> --capabilities <json>
 ```
 
-The first command is only a preflight; it never authorizes dispatch by itself. External
-runtime cancellation is auxiliary evidence and never replaces durable goal/task state.
-Ordinary quick-answers and manual work do not run this automatic-dispatch gate.
+## Supported platforms
 
-## Load-tested for large knowledge bases
-
-A chunk is a retrieval-sized piece of a Wiki page, not one complete document. To make
-the scale concrete, the qualification fixture splits 25 deliberately long Wiki pages
-into 2,000 chunks each: 50,000 search-ready pieces in total. Its portable-bundle
-scenario also carries a registry of 100 portable collections. This is a deliberately
-large test fixture, rather than a claim that an ordinary user has 50,000 documents.
-
-| Qualification | Scenario | Latest p95 | Acceptance limit |
-| --- | --- | ---: | ---: |
-| Fresh local retrieval | 50,000 chunks | 170 ms | 500 ms |
-| Warm repeat retrieval | 50,000 chunks | 0.14 ms | 100 ms |
-| Portable bundle export | 100 collections, 50,000 chunks | 1.04 s | 5 s |
-| Bundle import and index rebuild | 100 collections, 50,000 chunks | 3.27 s | 15 s |
-
-These release-build, local-SSD measurements are qualification evidence; real timing
-varies with hardware and the shape of the knowledge. See the
-[qualification record](docs/facts/en/knowledge-portability-scan.md) for the method and
-limits.
+macOS (Apple Silicon, Intel), Linux (x86_64, arm64) and Windows x86_64. macOS builds use
+ad-hoc signing and Windows builds are unsigned; see the
+[code signing policy](./docs/guides/code-signing-policy.md). Per-release verification is in
+each [release note](https://github.com/gvm1229/aigent-hive/releases).
 
 ## What Hive owns
 
-- Hive-owned marker blocks and manifest-listed files only
-- Provider-neutral Skills and thin host projections
-- Canonical Markdown/YAML/TOML state
-- Disposable SQLite indexes rebuilt from canonical text
-- Verified direct-install receipts
+Hive changes only its own marker blocks and manifest-listed files, keeps knowledge as
+Markdown/YAML/TOML text, and treats SQLite indexes as rebuildable. It never owns provider
+credentials, model sessions, other tools' guidance, or optional third-party Skills without
+your approval.
 
-Hive does not own provider credentials, model sessions, foreign guidance, OMX/OMC
-state, Homebrew/WinGet installations, or optional third-party Skills without explicit
-approval.
+## Documentation
 
-## Architecture and maintainer docs
+- [Documentation home](./docs/00-home.md) · [Document index](./docs/01-index.md)
+- [Product overview](./docs/overview/product.md) · [Development](./docs/guides/development.md)
 
-- [Documentation home](./docs/00-home.md)
-- [Complete document index](./docs/01-index.md)
-- [Product overview](./docs/overview/product.md)
-- [Development and verification](./docs/guides/development.md)
-- [Active plan](./docs/plans/PLAN.md)
-- [Current project state](./docs/state/CURRENT.md)
-- [Source layout](./docs/architecture/source-layout.md)
-- [Release and update trust boundary](./docs/architecture/release-update-trust-boundary.md)
-- [Code signing policy](./docs/guides/code-signing-policy.md)
-- [Product decisions](./docs/decisions/product-release-decisions.md)
-
-Development requires Rust stable, Python 3.13 for conformance tests, and PowerShell 7
-for Windows development/release workflows. Consumer installations do not require
-Python or PowerShell 7.
-
-```console
-python scripts/dev-check.py pre-push
-```
+Development needs Rust stable and Python 3.13; run `python scripts/dev-check.py pre-push`
+before pushing.
 
 ## QA Contributors
 

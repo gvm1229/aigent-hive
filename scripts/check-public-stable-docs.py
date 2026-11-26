@@ -25,6 +25,12 @@ PUBLIC_PRERELEASE = re.compile(
     re.IGNORECASE,
 )
 RELEASE_ID = re.compile(r"^- \[([A-Z][A-Z0-9-]+)\] ", re.MULTILINE)
+# README files point to GitHub Releases instead of carrying release history.
+RELEASES_URL = "https://github.com/gvm1229/aigent-hive/releases"
+README_HISTORY = re.compile(
+    r"^#{1,6}\s+(?:What changed in|Earlier changes in|\S+\s+주요 변경|이전\s+\S+\s+변경)",
+    re.MULTILINE,
+)
 
 
 @dataclass(frozen=True)
@@ -79,7 +85,7 @@ def validate_public_surface(
             f"https://unpkg.com/aigent-hive@{version}/install.sh",
             f"https://unpkg.com/aigent-hive@{version}/install.ps1",
             f"https://unpkg.com/aigent-hive@{version}/install.cmd",
-            f"## What changed in {version}",
+            RELEASES_URL,
         )
     elif relative == "docs/readme/README.ko.md":
         required = (
@@ -90,7 +96,7 @@ def validate_public_surface(
             f"https://unpkg.com/aigent-hive@{version}/install.sh",
             f"https://unpkg.com/aigent-hive@{version}/install.ps1",
             f"https://unpkg.com/aigent-hive@{version}/install.cmd",
-            f"## {version} 주요 변경",
+            RELEASES_URL,
         )
     elif relative == "docs/hive-install-guide.ko.html":
         required = (
@@ -113,6 +119,9 @@ def validate_public_surface(
     for value in required:
         if value not in text:
             add(failures, "required-stable-text", relative, value)
+    if relative in {"README.md", "docs/readme/README.ko.md"}:
+        for match in README_HISTORY.finditer(text):
+            add(failures, "readme-release-history", relative, match.group(0).strip())
 
 
 def release_scope_ids(root: Path, relative: str) -> set[str]:

@@ -9,7 +9,7 @@ summary: "Bare hive update delegates an exact confirmed package to the authentic
 tags: [installation, update]
 aliases: ["Install-owner update"]
 sources:
-  - "repo:README.md#sha256:42b603f183a90b1c9fc9e523f08b7030f7e5d8a32b0cd14701bae7c7892623c4"
+  - "repo:README.md#sha256:500b838781c3eabeaca7d08a8af512d9553a4f0a038aec51a77d4784a7ba792e"
 links: [test-distribution, update-discovery, update-transaction]
 reviewed_revision: "git:c5b13bc26c4b2485dcad7509bc8590f97d0831fe"
 status: active
