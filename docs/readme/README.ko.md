@@ -110,7 +110,7 @@ an optional third-party Skill.
 - 내장 Skill을 `knowledge-manage`·`run`·`judge`로 통합. 설명에 옛 이름 표기, Claude Code의 옛 `/aigent-hive:...` 명령 실행은 미지원. 사용자가 바꾼 파일 보존
 - Claude Code에서 플러그인 훅이 요청마다 Hive 지식을 찾아 상위 결과를 함께 전달. Agent가 조회를 빠뜨려도 저장된 선호가 전달되며, 아무것도 쓰지 않고 결과가 없으면 추가 없음. 끄기: `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off`. 사용자 지침의 조회 조건을 잡담 외 모든 작업으로 명확화, 읽기 전용 작업도 포함
 - Windows의 `--target .` 지원
-- Antigravity 사용량 콜백은 1.1.18 이상 2.0 미만의 같은 자료 구조만 수용. 1.2 실제 호스트 미검증
+- Antigravity 사용량 콜백은 1.1.18 뒤 1.x의 같은 자료 구조만 수용. 1.2 실제 호스트 미검증
 - 0.15.x로 내리기 전 상태 표시줄 연결 되돌리기 필요. 0.15.x 재설치의 `~/.hive/backups`·프로젝트 목록 삭제
 
 ## 이전 0.15.3 변경

@@ -115,7 +115,7 @@ This option installs only the current stable release.
 - Built-in Skills merged into `knowledge-manage`, `run` and `judge`. Descriptions list old names, but Claude Code does not run an old `/aigent-hive:...` name. Files you changed stay.
 - In Claude Code, the plugin hook looks up Hive knowledge for each prompt and adds the top matches, so stored preferences reach the agent even when it skips a lookup. It writes nothing and adds nothing when there is no match. Set `HIVE_KNOWLEDGE_PROMPT_CONTEXT=off` to turn it off. User guidance now asks for a lookup before every task except small talk, including read-only work.
 - `--target .` works on Windows.
-- Antigravity usage callbacks from 1.1.18 up to 2.0 are accepted only with the same data shape. Version 1.2 is not verified on a real host.
+- Antigravity 1.x usage callbacks after 1.1.18 are accepted only with the same data shape. Version 1.2 is not verified on a real host.
 - Before a downgrade to 0.15.x, revert the status line. A 0.15.x reinstall deletes `~/.hive/backups` and the project list.
 
 ## Earlier changes in 0.15.3
