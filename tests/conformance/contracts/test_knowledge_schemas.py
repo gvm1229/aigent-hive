@@ -413,6 +413,7 @@ class KnowledgeSchemaConformanceTests(unittest.TestCase):
                 "hits",
                 "returned_bytes",
                 "insufficient_budget",
+                "stale_hits_dropped",
                 "search",
             },
             "knowledge-bundle-manifest.schema.json": {
