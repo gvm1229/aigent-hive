@@ -542,6 +542,16 @@ fn acquire_lock(sessions: &Dir) -> Result<Lock<'_>, String> {
                 });
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                // The lock is held only for one short coordination step. A lock file that is
+                // much older than that was left by a crash (possibly before its process ID was
+                // written, or with a process ID Windows has since reused), so it must not
+                // block every later session.
+                if lock_is_abandoned(sessions) {
+                    sessions.remove_file(LOCK_FILE).map_err(|error| {
+                        format!("cannot clear abandoned session coordination lock: {error}")
+                    })?;
+                    continue;
+                }
                 let process_id = read_lock_process_id(sessions)?;
                 if process_liveness(process_id) == Liveness::Dead {
                     sessions.remove_file(LOCK_FILE).map_err(|error| {
@@ -561,6 +571,19 @@ fn acquire_lock(sessions: &Dir) -> Result<Lock<'_>, String> {
         }
     }
     Err("session coordination lock was recreated concurrently".to_owned())
+}
+
+/// How long a coordination lock may exist before it is treated as left behind by a crash.
+const ABANDONED_LOCK_AGE: std::time::Duration = std::time::Duration::from_mins(5);
+
+fn lock_is_abandoned(sessions: &Dir) -> bool {
+    sessions
+        .symlink_metadata(LOCK_FILE)
+        .ok()
+        .filter(|metadata| metadata.is_file() && !metadata.file_type().is_symlink())
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified| modified.into_std().elapsed().ok())
+        .is_some_and(|age| age >= ABANDONED_LOCK_AGE)
 }
 
 fn read_lock_process_id(sessions: &Dir) -> Result<u32, String> {
@@ -871,6 +894,25 @@ fn emit(result: &SessionResult) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn abandoned_coordination_lock_does_not_block_new_sessions() {
+        let temporary = tempfile::tempdir().unwrap();
+        let lock_path = temporary.path().join(LOCK_FILE);
+        // A crash between creating the lock and writing its process ID leaves an empty file.
+        let file = std::fs::File::create(&lock_path).unwrap();
+        let sessions = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
+        assert!(
+            acquire_lock(&sessions).is_err(),
+            "a fresh lock is respected"
+        );
+        file.set_modified(std::time::SystemTime::now() - ABANDONED_LOCK_AGE * 2)
+            .unwrap();
+        drop(file);
+        let lock = acquire_lock(&sessions).expect("abandoned lock is cleared");
+        drop(lock);
+        assert!(!lock_path.exists());
+    }
 
     #[test]
     fn detects_equal_ancestor_and_descendant_path_overlap() {
