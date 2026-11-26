@@ -53,7 +53,28 @@ python3 website/build.py
 | 일본어 글꼴 | 일본어 선택 시에만 Pretendard JP Variable 1.3.9 추가 로드 |
 | Discord 알림 카드 | 제품이 한국어로만 보내므로 모든 언어에서 실제 한국어 문구 유지, 영어·일본어는 안내 한 줄 추가 |
 
+## Vercel 배포
+
+설정 파일: [`vercel.json`](vercel.json)
+
+| 항목 | 값 | 이유 |
+| --- | --- | --- |
+| Root Directory | `website` | 소개 사이트만 배포 |
+| 바깥 파일 포함 | 켬(기본값) | `build.py`가 `docs/assets/branding`의 로고 읽기 |
+| Framework | 없음 | 정적 파일 한 개 |
+| 설치 명령 | 없음 | 패키지 설치 불필요 |
+| 만들기 명령 | `python3 build.py` | `dist/index.html` 생성 |
+| 결과 폴더 | `dist` | 생성 결과 위치 |
+| 배포 브랜치 | `main`만 | 다른 브랜치는 배포 기록 자체를 만들지 않음 |
+| 건너뛰기 | 사이트 파일·로고 변경 없음 | 불필요한 빌드와 취소 기록 감소 |
+
+무료 요금제 보호를 위한 대시보드 설정(파일로 지정 불가):
+
+1. Project Settings → Build and Deployment → Deployment Retention Policy
+2. Canceled·Errored·Pre-Production·Production을 모두 가장 짧은 값(`1 day`)으로 선택 뒤 Save
+3. 항상 남는 배포: 현재 Production 별칭 배포, 최근 생성 배포 3개, Ready 상태 Production 배포 3개(Hobby 기준)
+
 ## 범위
 
 - 제품 패키지와 설치본에 포함되지 않는 원본 저장소 전용 자료
-- 배포 위치와 도메인은 미정
+- 도메인은 미정
