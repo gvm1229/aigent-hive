@@ -19,7 +19,7 @@ sources:
   - "repo:docs/decisions/ADR-0012-global-onboarding-shared-index.md#sha256:dea6123b7b193eb760a37b198566f9318d868fd7035491ac10756de0d4315530"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848"
-  - "repo:harness/user-setup/catalog.yml#sha256:b5e91926bf309dfbfdb91504179fecfd92cc47e01ec969c342c58b828be2f108"
+  - "repo:harness/user-setup/catalog.yml#sha256:3f25034f1287d43eb1514f24eafa0f467ecbf3527a355ee70de836895676e74e"
   - "repo:schemas/user-setup.schema.json#sha256:b99f5f407d0c939de48ec8f540868bcc42928a91c88115cecfca97e1ae0c4fec"
 links: [project-onboarding, test-distribution, usage-guard-thresholds]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"

@@ -10,7 +10,7 @@ tags: [directive, project, skill]
 aliases: []
 sources:
   - "repo:crates/hive-render/src/lib.rs#sha256:95986fc182da052aa80fb7d2e57dae3d1b65cb3a8f9226932ca2914e32050132"
-  - "repo:harness/project-setup/skill-suites.yml#sha256:c2144a8477259673cffbb51e5cd99143adca435ac583576b74c9640f5d0f2297"
+  - "repo:harness/project-setup/skill-suites.yml#sha256:8b044a217f41e45c39ed8f9ae0f465d38a592d7b9484e4d97d918234aeab381a"
   - "repo:schemas/setup-answers.schema.json#sha256:1a14afc5c389eaad085a2daedfa0c8e14700fdbaabd8f81a779634c793d51895"
 links: [agent-directive-ownership, codex-skill-delivery]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
