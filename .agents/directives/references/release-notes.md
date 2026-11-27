@@ -21,3 +21,11 @@
   the relevant benefit. Separate release status and verification evidence from feature highlights.
 - Before delivery, ask whether a person unfamiliar with Hive's design understands why to update
   from the heading and first explanation alone. Rewrite any entry that still needs internal context.
+
+## Marketing site
+
+- The site lives in its own repository, `gvm1229/aigent-hive-website`, and deploys from there
+  at any time. This repository never gates, reviews or carries site design or code changes.
+- This repository steps in only for a stable release: as part of release completion, add that
+  version's content (What's new, before-and-after conversations, affected sections) to the site
+  repository and confirm the live site shows it. Never bump only the version number.
