@@ -747,5 +747,5 @@ fn msg_only_the_addressed_role_may_consume_and_a_body_grants_no_authority() {
     assert_eq!(claimed["status"], "success", "{claimed}");
     let view = f.run(&["status", "--id", &id, "--now", "1003"]);
     assert_eq!(view["data"]["message"]["state"], "claimed");
-    assert!(f.files(".hive/mediation/stops").is_empty());
+    assert_eq!(f.files(".hive/mediation/stops"), Vec::<String>::new());
 }

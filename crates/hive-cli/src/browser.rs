@@ -1,7 +1,7 @@
 //! Classify the host-reported default web browser for preview guidance.
 //!
 //! Hive never queries the operating system itself. The user-setup Skill runs the documented
-//! read-only query (Windows `UserChoice` ProgId, macOS LaunchServices `https` handler, Linux
+//! read-only query (Windows `UserChoice` `ProgId`, macOS `LaunchServices` `https` handler, Linux
 //! `xdg-settings get default-web-browser`) and records the raw answer; this module only maps it.
 
 /// One recognized browser and whether it is Chromium based.
@@ -11,7 +11,7 @@ pub(crate) struct KnownBrowser {
     pub(crate) chromium: bool,
 }
 
-/// Lowercase markers seen in Windows ProgIds, macOS bundle IDs and Linux desktop files.
+/// Lowercase markers seen in Windows `ProgId` values, macOS bundle IDs and Linux desktop files.
 const KNOWN: &[(&[&str], KnownBrowser)] = &[
     (
         &["whale"],
