@@ -14,9 +14,9 @@
 - 구현 목표: `0.17.0`
 - 현재 등록 항목: 15/27 완료
 
-- `agent-owned`: `OV170-009`, `OV170-010`, `OV170-013`, `OV170-014`, `OV170-024`, `OV170-025`, `OV170-026`, `OV170-022`
+- `agent-owned`: `OV170-009`, `OV170-010`, `OV170-013`, `OV170-024`, `OV170-025`, `OV170-026`, `OV170-022`
 - `awaiting-user-authority`: `OV170-005`, `OV170-008`, `OV170-011`
-- `awaiting-external-evidence`: `OV170-027`
+- `awaiting-external-evidence`: `OV170-014`, `OV170-027`
 - `blocked`: 없음
 - `reopened`: 없음
 <!-- HIVE:PLAN-STATE:END -->

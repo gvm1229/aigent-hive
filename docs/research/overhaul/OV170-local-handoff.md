@@ -8,6 +8,7 @@
 
 | 항목 | local 단계 | 기대 결과 |
 | --- | --- | --- |
+| OV170-014 | 0.17.0 시험판 설치 뒤 Codex CLI·Claude Code·Antigravity·Codex 앱·Claude 앱에서 Hive Skill 목록 표시 확인 | 33개 이름(`autonomous-workflow`·`ai-slop-cleaner`·`design-curate`·`aphrodite` 포함), 옛 이름 `verified-workflow`·`code-polish` 미표시 |
 | OV170-023 | 0.17.0 main 통합 뒤 Actions의 Upstream sync 수동 실행, 필요하면 저장소 비밀값 `UPSTREAM_SYNC_TOKEN` 등록 | 바뀐 원본이 없으면 "No upstream change.", 있으면 `chore/upstream-sync` → develop PR과 CI 실행 |
 
 ## 0. 준비
