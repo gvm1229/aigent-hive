@@ -54,8 +54,8 @@ No consumer state in source, source directives in releases, or user data in rele
 - Use narrow descriptions and host-native discovery; do not add a duplicate prompt-classifier hook.
 - Keep execution Skills declarative: validate state and prepare envelopes for official host
   extensions only. No provider calls, process launch, CLI key injection, or screen capture.
-- Product Skills: `harness/skills/<name>/`. Source exceptions: `.agents/skills/update-summary/`
-  and `.agents/skills/draft-devlog/`; neither ships. No general source Skill inventory.
+- Product Skills: `harness/skills/<name>/`. Source exceptions: `.agents/skills/update-summary/`,
+  `.agents/skills/draft-devlog/` and `.agents/skills/autonomous-workflow/`; neither ships. No general source Skill inventory.
 - Reuse a consumer workflow in source only after scope, consent, safety, and conformance review.
   Never copy installed project state or weaken source-root, usage, or mutation boundaries.
 - Apply a Skill rename through the complete current inventory and transitive rename ledger in one

@@ -8,7 +8,7 @@
 ## 이름 원칙
 
 - Active Skill: 설치 제품의 단일 목록만 유지
-- Source 전용 Skill: 비출하 `update-summary|draft-devlog` 2건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외
+- Source 전용 Skill: 비출하 `update-summary|draft-devlog|autonomous-workflow` 3건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외
 - 제품 이름: 사용자가 인식할 기능 중심
 - 모든 Hive Skill: 선택 언어·host와 무관하게 설명 첫머리에 `(정본 영문 ID)` 표기
 - 폐기 ID: scope가 지정된 one-to-one·merge·split 이관 입력으로만 허용

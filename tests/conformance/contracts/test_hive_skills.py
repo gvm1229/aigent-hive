@@ -64,7 +64,8 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertEqual(skill_names(TEMPLATE_ROOT), EXPECTED_SKILLS)
         self.assertEqual(skill_names(CLAUDE_TEMPLATE_ROOT), EXPECTED_SKILLS)
         self.assertEqual(
-            skill_names(SOURCE_SKILL_ROOT), {"draft-devlog", "update-summary"}
+            skill_names(SOURCE_SKILL_ROOT),
+            {"autonomous-workflow", "draft-devlog", "update-summary"},
         )
         for name in ("draft-devlog", "update-summary"):
             source_skill = (SOURCE_SKILL_ROOT / name / "SKILL.md").read_text(

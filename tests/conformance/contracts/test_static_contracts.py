@@ -270,7 +270,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
                 path.relative_to(source_skills).as_posix()
                 for path in source_skills.rglob("SKILL.md")
             },
-            {"draft-devlog/SKILL.md", "update-summary/SKILL.md"},
+            {"autonomous-workflow/SKILL.md", "draft-devlog/SKILL.md", "update-summary/SKILL.md"},
         )
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         ownership = (ROOT / "docs/architecture/agent-directive-ownership.md").read_text(encoding="utf-8")
@@ -278,7 +278,7 @@ class Phase3SkillSourceContract(unittest.TestCase):
         architecture=" ".join(directive_text(".agents/directives/02-architecture.md").split())
         self.assertIn("Source exceptions:",architecture)
         self.assertIn("neither ships. No general source Skill inventory",architecture)
-        for name in ["update-summary","draft-devlog"]:
+        for name in ["update-summary","draft-devlog","autonomous-workflow"]:
             self.assertIn(f".agents/skills/{name}/",architecture)
         self.assertIn("Source 규칙", ownership)
 

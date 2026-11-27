@@ -57,5 +57,6 @@ when authoring or revising a plan.
 
 `AGENTS.md`, `.agents/`, `docs/` and `tests/fixtures/` never ship to consumers.
 `harness/` owns canonical consumer templates/directives/Skills; `crates/` compiles product artifacts.
-Only `.agents/skills/update-summary/` and `.agents/skills/draft-devlog/` are explicitly authorized
-nonshipping source-project Skills; no separate tracked Skill inventory beyond these exceptions.
+Only `.agents/skills/update-summary/`, `.agents/skills/draft-devlog/` and `.agents/skills/autonomous-workflow/`
+are explicitly authorized nonshipping source-project Skills; no separate tracked Skill inventory beyond these exceptions.
+All 0.17.0 work follows [`autonomous-workflow`](.agents/skills/autonomous-workflow/SKILL.md): never halt midway to ask; park real questions and ask once at the end.

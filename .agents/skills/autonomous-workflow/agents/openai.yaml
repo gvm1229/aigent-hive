@@ -1,0 +1,4 @@
+interface:
+  display_name: "자율 진행"
+  short_description: "사소한 질문 없이 끝까지 진행하고 질문은 마지막에 한 번에"
+  default_prompt: "Use $autonomous-workflow: finish everything you can without stopping to ask, decide trivial choices yourself, and ask only the questions you truly cannot answer once at the end."

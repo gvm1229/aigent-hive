@@ -140,7 +140,7 @@ OMC_MERGE = frozenset(
     }
 )
 
-CURRENT_SOURCE_SKILLS = frozenset({"draft-devlog", "update-summary"})
+CURRENT_SOURCE_SKILLS = frozenset({"autonomous-workflow", "draft-devlog", "update-summary"})
 CURRENT_CONSUMER_SKILLS = frozenset(
     {
         "athena",
@@ -476,7 +476,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         )
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
-        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 2)
+        self.assertEqual(len(CURRENT_SOURCE_SKILLS), 3)
         self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 31)
         self.assertEqual(len(CURRENT_SHARED_SKILLS), 0)
 
@@ -489,7 +489,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(len(consumer_values), len(CURRENT_CONSUMER_SKILLS))
         self.assertEqual(set(consumer_values), CURRENT_CONSUMER_SKILLS)
         self.assertIn(
-            "Source 전용 Skill: 비출하 `update-summary|draft-devlog` 2건",
+            "Source 전용 Skill: 비출하 `update-summary|draft-devlog|autonomous-workflow` 3건",
             catalog_text,
         )
 
