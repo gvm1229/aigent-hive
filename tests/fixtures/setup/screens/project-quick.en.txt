@@ -53,12 +53,12 @@ General
 Features
   Feature bundle    : Individual, 27
                       aither, amend-directive, apollon, artemis, athena,
-                      code-polish, demeter, eileithyia, hades, hephaistos,
-                      humanize-kor, judge, knowledge-capture, knowledge-manage,
-                      knowledge-recall, multi-goal, poseidon, product-update,
-                      project-refresh, prompt-refine, quick-answer,
-                      research-best-practices, run, ship, team-execution,
-                      usage-guard, verified-workflow
+                      autonomous-workflow, code-polish, demeter, eileithyia,
+                      hades, hephaistos, humanize-kor, judge,
+                      knowledge-capture, knowledge-manage, knowledge-recall,
+                      multi-goal, poseidon, product-update, project-refresh,
+                      prompt-refine, quick-answer, research-best-practices,
+                      run, ship, team-execution, usage-guard
   Roles             : None
   Optional features : None
   Hooks             : None

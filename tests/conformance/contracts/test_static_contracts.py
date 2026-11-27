@@ -35,7 +35,7 @@ CURRENT = {
     "aither",
     "hades",
 
-    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow",
+    "quick-answer", "project-setup", "code-polish", "humanize-kor", "autonomous-workflow",
     "knowledge-manage", "knowledge-capture", "prompt-refine", "research-best-practices",
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run", "project-transition", "product-update", "project-refresh", "judge",

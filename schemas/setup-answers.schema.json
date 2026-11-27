@@ -732,6 +732,7 @@
       "enum": [
         "adversarial-judge",
         "amend-directive",
+        "autonomous-workflow",
         "code-polish",
         "custom-subagent-create",
         "humanize-kor",

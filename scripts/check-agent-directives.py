@@ -174,17 +174,17 @@ def run() -> dict[str, object]:
             failures.append({"code": "directive-projection-drift", "target": source.name})
 
     source_duplicates = duplicate_findings(tuple(path for path in SOURCE_FILES if path.name != "00-editing-discipline.md"))
-    consumer_duplicates = duplicate_findings(CONSUMER_DIRECTIVES + (ROOT / "harness/skills/verified-workflow/SKILL.md",))
+    consumer_duplicates = duplicate_findings(CONSUMER_DIRECTIVES + (ROOT / "harness/skills/autonomous-workflow/SKILL.md",))
     for scope, findings in (("source", source_duplicates), ("consumer", consumer_duplicates)):
         for finding in findings:
             failures.append({"code": "duplicate-normative-bullet", "scope": scope, **finding})
 
-    verified = (ROOT / "harness/skills/verified-workflow/SKILL.md").read_text(encoding="utf-8")
-    if ".agents/directives/00-project-harness.md" not in verified:
-        failures.append({"code": "verified-workflow-route-missing"})
+    autonomous = (ROOT / "harness/skills/autonomous-workflow/SKILL.md").read_bytes()
+    if autonomous != (ROOT / ".agents/skills/autonomous-workflow/SKILL.md").read_bytes():
+        failures.append({"code": "autonomous-workflow-source-copy-drift"})
     for forbidden in ("Abort the continued task only", "Before a whole Goal or task becomes"):
-        if forbidden in verified:
-            failures.append({"code": "verified-workflow-common-rule-copy", "text": forbidden})
+        if forbidden.encode() in autonomous:
+            failures.append({"code": "autonomous-workflow-common-rule-copy", "text": forbidden})
 
     renderer = (ROOT / "crates/hive-render/src/lib.rs").read_text(encoding="utf-8")
     function = renderer.split("fn render_agents_marker(", 1)[1].split("fn merge_shared_marker", 1)[0]

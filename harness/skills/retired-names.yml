@@ -8,7 +8,7 @@ retired_names:
   best-practice-research: research-best-practices
   clean-ai-slop: code-polish
   configure: user-setup
-  engineer-run: verified-workflow
+  engineer-run: autonomous-workflow
   handoff-role: run
   hive-judge-package: judge
   hive-knowledge-capture: knowledge-capture
@@ -16,7 +16,7 @@ retired_names:
   hive-knowledge-promote: knowledge-manage
   hive-knowledge-query: knowledge-recall
   hive-knowledge-scan: knowledge-capture
-  hive-loop-engineering: verified-workflow
+  hive-loop-engineering: autonomous-workflow
   hive-migrate: project-transition
   hive-project-upgrade: project-refresh
   hive-prompt-refine: prompt-refine
@@ -28,7 +28,7 @@ retired_names:
   hive-usage-guard: usage-guard
   hive-wiki: knowledge-manage
   import-repository-knowledge: knowledge-capture
-  iterative-execution: verified-workflow
+  iterative-execution: autonomous-workflow
   judge-evidence: judge
   knowledge-import: knowledge-capture
   knowledge-maintain: knowledge-manage
@@ -40,7 +40,7 @@ retired_names:
   manage-wiki: knowledge-manage
   migrate-project: project-transition
   package-review: judge
-  ralph-loop: verified-workflow
+  ralph-loop: autonomous-workflow
   record-knowledge: knowledge-capture
   refine-prompt: prompt-refine
   research-practices: research-best-practices
@@ -56,10 +56,11 @@ retired_names:
   share-knowledge: knowledge-manage
   update-hive: product-update
   upgrade-project: project-refresh
+  verified-workflow: autonomous-workflow
   verify-package: judge
 lifecycle:
-  - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: rename }
-  - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: verified-workflow, transition_kind: merge }
+  - { retired_name: ralph-loop, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: autonomous-workflow, transition_kind: rename }
+  - { retired_name: iterative-execution, introduced_in: 0.9.3, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: autonomous-workflow, transition_kind: merge }
   - { retired_name: package-review, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: judge, transition_kind: rename }
   - { retired_name: knowledge-import, introduced_in: 0.9.0, renamed_in: 0.10.0, deprecated_in: 0.10.0, removed_in: 0.10.0, replacement: knowledge-capture, transition_kind: rename }
   - { retired_name: knowledge-maintain, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: knowledge-manage, transition_kind: merge }
@@ -71,3 +72,4 @@ lifecycle:
   - { retired_name: run-resume, introduced_in: 0.9.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: run, transition_kind: merge }
   - { retired_name: adversarial-judge, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }
   - { retired_name: judge-evidence, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }
+  - { retired_name: verified-workflow, introduced_in: 0.10.0, renamed_in: 0.17.0, deprecated_in: 0.17.0, removed_in: 0.17.0, replacement: autonomous-workflow, transition_kind: rename }

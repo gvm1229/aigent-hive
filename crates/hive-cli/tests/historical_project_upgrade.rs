@@ -340,6 +340,10 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
             result["data"]["skill_merges"],
             json!([
                 {
+                    "sources": ["iterative-execution", "ralph-loop"],
+                    "target": "autonomous-workflow"
+                },
+                {
                     "sources": ["knowledge-capture", "knowledge-import"],
                     "target": "knowledge-capture"
                 },
@@ -350,10 +354,6 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
                 {
                     "sources": ["run-checkpoint", "run-handoff", "run-resume"],
                     "target": "run"
-                },
-                {
-                    "sources": ["iterative-execution", "ralph-loop"],
-                    "target": "verified-workflow"
                 }
             ])
         );
@@ -373,7 +373,7 @@ fn compiled_cli_migrates_the_complete_095_project_selection_before_rendering() {
         );
     }
     let current = fs::read_to_string(&harness_path).expect("current harness");
-    assert!(current.contains("\"verified-workflow\""));
+    assert!(current.contains("\"autonomous-workflow\""));
     assert!(!current.contains("\"iterative-execution\""));
     assert!(!current.contains("\"ralph-loop\""));
     assert!(!target.join(".agents/skills/iterative-execution").exists());

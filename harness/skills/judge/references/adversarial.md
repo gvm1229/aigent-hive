@@ -1,13 +1,13 @@
 # Adversarial mode (formerly `adversarial-judge`)
 
-Read only for an explicitly requested Judge step or a verified-workflow Judge node. Do not use for ordinary continuation, verdict production, signing, or task-agent self-review.
+Read only for an explicitly requested Judge step or a Judge step in a saved plan. Do not use for ordinary continuation, verdict production, signing, or task-agent self-review.
 
 
 Prepare the smallest clean-context Judge request for an explicitly selected subject.
 
 ## Workflow
 
-1. Require one explicit user request or one verified-workflow node that names independent adversarial review.
+1. Require one explicit user request or one saved plan step that names independent adversarial review.
 2. Keep only the subject, risk tier, acceptance criteria, artifact digests, verification evidence digests, and known constraints.
 3. Exclude task-agent reasoning, preferred outcomes, self-score, prior Judge results, transcripts, and unrelated project memory.
 4. Run `hive judge package` to validate the clean-context package. Do not recreate package validation in prose.

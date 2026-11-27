@@ -12,8 +12,8 @@ ownership_ko = "계획·검증"
 role = "hive-complex-implementer"
 aliases = ["Minerva", "미네르바"]
 commands = ["roster", "judge", "report", "release", "discord"]
-skills = ["athena", "verified-workflow", "multi-goal", "judge", "run"]
-steps = ["Choose the owned planning or verification Skill for the request; save its plan and acceptance criteria before implementation."]
+skills = ["athena", "autonomous-workflow", "multi-goal", "judge", "run"]
+steps = ["Choose the owned planning or verification Skill for the request; save its plan and acceptance criteria before implementation, and use autonomous-workflow to finish without mid-task questions."]
 
 [[gods]]
 name = "artemis"

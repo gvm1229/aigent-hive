@@ -33,8 +33,8 @@ const UPDATE_HARNESS: &[u8] = include_bytes!("../../../harness/skills/product-up
 const MIGRATE_HARNESS: &[u8] =
     include_bytes!("../../../harness/skills/project-transition/SKILL.md");
 const PROJECT_UPGRADE: &[u8] = include_bytes!("../../../harness/skills/project-refresh/SKILL.md");
-const VERIFIED_WORKFLOW: &[u8] =
-    include_bytes!("../../../harness/skills/verified-workflow/SKILL.md");
+const AUTONOMOUS_WORKFLOW: &[u8] =
+    include_bytes!("../../../harness/skills/autonomous-workflow/SKILL.md");
 const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execution/SKILL.md");
 const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
 const CUSTOM_SUBAGENT_CREATE: &[u8] =
@@ -393,11 +393,12 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
         "run-resume",
         "adversarial-judge",
         "judge-evidence",
+        "verified-workflow",
     ]);
     if lifecycle_names != required_lifecycle {
         return Err(ProjectionError::new(
             "hive.skill-name-ledger-invalid",
-            "retired Skill lifecycle does not cover every 0.10.0 and 0.16.0 transition",
+            "retired Skill lifecycle does not cover every 0.10.0, 0.16.0 and 0.17.0 transition",
         ));
     }
     Ok(ledger.retired_names)
@@ -1469,11 +1470,11 @@ fn localized_skill_text(
             "프로젝트 이전",
             "지원되는 Hive 프로젝트 형식을 백업과 검증을 거쳐 이전합니다.",
         ),
-        "verified-workflow" => (
-            "Verified workflow",
-            "Run a bounded evidence-gated workflow with independent verification.",
-            "검증형 작업 흐름",
-            "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
+        "autonomous-workflow" => (
+            "Autonomous workflow",
+            "Finish the work without mid-task questions and ask real questions once at the end.",
+            "자율 진행",
+            "사소한 질문 없이 끝까지 진행하고 진짜 질문은 마지막에 한 번에 묻습니다.",
         ),
         "code-polish" => (
             "Clean AI slop",
@@ -1725,8 +1726,8 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "project-refresh" => Some(include_bytes!(
             "../../../harness/skills/project-refresh/agents/openai.yaml"
         )),
-        "verified-workflow" => Some(include_bytes!(
-            "../../../harness/skills/verified-workflow/agents/openai.yaml"
+        "autonomous-workflow" => Some(include_bytes!(
+            "../../../harness/skills/autonomous-workflow/agents/openai.yaml"
         )),
         "team-execution" => Some(include_bytes!(
             "../../../harness/skills/team-execution/agents/openai.yaml"
@@ -1798,7 +1799,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
         ("product-update", UPDATE_HARNESS),
         ("project-transition", MIGRATE_HARNESS),
         ("project-refresh", PROJECT_UPGRADE),
-        ("verified-workflow", VERIFIED_WORKFLOW),
+        ("autonomous-workflow", AUTONOMOUS_WORKFLOW),
         ("team-execution", TEAM_EXECUTION),
         ("multi-goal", MULTI_GOAL),
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
@@ -1917,16 +1918,18 @@ pub enum WorkflowSignal {
 #[serde(rename_all = "kebab-case")]
 pub enum WorkflowOverride {
     SimpleContinuation,
-    VerifiedWorkflow,
+    /// Accepts the pre-0.17.0 spelling `verified-workflow` from older hosts.
+    #[serde(alias = "verified-workflow")]
+    AutonomousWorkflow,
     NoRetry,
 }
 
-/// Outcome of the optional verified-workflow routing gate.
+/// Outcome of the optional autonomous-workflow routing gate.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum WorkflowRoute {
     Simple,
-    VerifiedWorkflow,
+    AutonomousWorkflow,
     RequiredButUnsupported,
 }
 
@@ -2011,6 +2014,9 @@ pub struct RoutingDecision {
     pub workflow_reason_codes: Vec<WorkflowSignal>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workflow_override: Option<WorkflowOverride>,
+    /// Retired Skill name the user asked for; hosts say the new `selected_skill` name once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub renamed_from: Option<String>,
 }
 
 /// Resolves normalized routing facts without inspecting or classifying a prompt.
@@ -2137,7 +2143,7 @@ fn resolve_non_plain_route(
         }
     }
 
-    if let Some(workflow) = resolve_verified_workflow_route(request)? {
+    if let Some(workflow) = resolve_autonomous_workflow_route(request)? {
         return Ok(workflow);
     }
 
@@ -2170,7 +2176,7 @@ fn resolve_non_plain_route(
     ))
 }
 
-fn resolve_verified_workflow_route(
+fn resolve_autonomous_workflow_route(
     request: &RoutingRequest,
 ) -> Result<Option<RoutingDecision>, ProjectionError> {
     if request.explicit_action != Some(LogicalAction::RunWork) && request.explicit_action.is_some()
@@ -2182,20 +2188,20 @@ fn resolve_verified_workflow_route(
     {
         return Ok(None);
     }
-    let explicit = request.workflow_override == Some(WorkflowOverride::VerifiedWorkflow);
+    let explicit = request.workflow_override == Some(WorkflowOverride::AutonomousWorkflow);
     let signals = normalized_workflow_signals(&request.workflow_signals)?;
     if !explicit && signals.len() < 2 {
         return Ok(None);
     }
     let mut result = resolve_hive_skill(
         request,
-        "verified-workflow",
+        "autonomous-workflow",
         LogicalAction::RunWork,
         Route::HiveSkill,
     )?;
     result.workflow_reason_codes = signals;
     result.workflow_route = Some(if result.route == Route::HiveSkill {
-        WorkflowRoute::VerifiedWorkflow
+        WorkflowRoute::AutonomousWorkflow
     } else {
         WorkflowRoute::RequiredButUnsupported
     });
@@ -2255,14 +2261,23 @@ fn resolve_explicit_skill(
     request: &RoutingRequest,
     fallback_action: LogicalAction,
 ) -> Result<Option<RoutingDecision>, ProjectionError> {
-    let Some(skill) = request.explicit_skill.as_deref() else {
+    let Some(requested) = request.explicit_skill.as_deref() else {
         return Ok(None);
     };
-    let action = action_for_skill(skill).unwrap_or(fallback_action);
-    let provider = explicit_skill_provider(skill, request.host)?;
+    let provider = explicit_skill_provider(requested, request.host)?;
     if provider == RouteProvider::Hive {
-        return resolve_hive_skill(request, skill, action, Route::HiveSkill).map(Some);
+        // A retired built-in name routes to its replacement and reports the old name once.
+        let replacement = retired_builtin_skill_names()?.get(requested).cloned();
+        let skill = replacement.as_deref().unwrap_or(requested);
+        let action = action_for_skill(skill).unwrap_or(fallback_action);
+        let mut result = resolve_hive_skill(request, skill, action, Route::HiveSkill)?;
+        if replacement.is_some() {
+            result.renamed_from = Some(requested.to_owned());
+        }
+        return Ok(Some(result));
     }
+    let skill = requested;
+    let action = action_for_skill(skill).unwrap_or(fallback_action);
     let route = match provider {
         RouteProvider::Omx | RouteProvider::Omc => Route::ExternalSkill,
         RouteProvider::Hive => unreachable!("Hive Skills return above"),
@@ -2446,6 +2461,7 @@ fn decision(
         workflow_route: None,
         workflow_reason_codes: Vec::new(),
         workflow_override: None,
+        renamed_from: None,
     }
 }
 
@@ -2466,7 +2482,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "code-polish"
         | "humanize-kor"
         | "research-best-practices"
-        | "verified-workflow"
+        | "autonomous-workflow"
         | "usage-guard"
         | "ship"
         | "amend-directive" => Some(LogicalAction::RunWork),
@@ -2965,9 +2981,26 @@ mod tests {
     }
 
     #[test]
-    fn complex_work_automatically_selects_verified_workflow() {
+    fn retired_verified_workflow_name_routes_to_autonomous_workflow_with_notice() {
         let mut request = routing_request();
-        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.explicit_skill = Some("verified-workflow".to_owned());
+        request.active_hive_skills = vec![builtin_proof("autonomous-workflow")];
+        let result = resolve_route(&request).expect("route");
+        assert_eq!(result.route, Route::HiveSkill);
+        assert_eq!(
+            result.selected_skill.as_deref(),
+            Some("autonomous-workflow")
+        );
+        assert_eq!(result.renamed_from.as_deref(), Some("verified-workflow"));
+
+        request.explicit_skill = Some("autonomous-workflow".to_owned());
+        assert_eq!(resolve_route(&request).expect("route").renamed_from, None);
+    }
+
+    #[test]
+    fn complex_work_automatically_selects_autonomous_workflow() {
+        let mut request = routing_request();
+        request.active_hive_skills = vec![builtin_proof("autonomous-workflow")];
         request.workflow_signals = vec![
             WorkflowSignal::DependencyGraph,
             WorkflowSignal::IndependentVerifier,
@@ -2978,11 +3011,11 @@ mod tests {
         assert_eq!(resolved.route, Route::HiveSkill);
         assert_eq!(
             resolved.selected_skill.as_deref(),
-            Some("verified-workflow")
+            Some("autonomous-workflow")
         );
         assert_eq!(
             resolved.workflow_route,
-            Some(WorkflowRoute::VerifiedWorkflow)
+            Some(WorkflowRoute::AutonomousWorkflow)
         );
         assert_eq!(
             resolved.workflow_reason_codes,
@@ -2994,9 +3027,9 @@ mod tests {
     }
 
     #[test]
-    fn simple_continuation_override_prevents_verified_workflow_routing() {
+    fn simple_continuation_override_prevents_autonomous_workflow_routing() {
         let mut request = routing_request();
-        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.active_hive_skills = vec![builtin_proof("autonomous-workflow")];
         request.workflow_signals = vec![
             WorkflowSignal::DependencyGraph,
             WorkflowSignal::IndependentVerifier,
@@ -3011,9 +3044,9 @@ mod tests {
     }
 
     #[test]
-    fn no_retry_override_is_preserved_for_verified_workflow() {
+    fn no_retry_override_is_preserved_for_autonomous_workflow() {
         let mut request = routing_request();
-        request.active_hive_skills = vec![builtin_proof("verified-workflow")];
+        request.active_hive_skills = vec![builtin_proof("autonomous-workflow")];
         request.workflow_signals = vec![
             WorkflowSignal::DependencyGraph,
             WorkflowSignal::IndependentVerifier,
@@ -3024,13 +3057,13 @@ mod tests {
 
         assert_eq!(
             resolved.selected_skill.as_deref(),
-            Some("verified-workflow")
+            Some("autonomous-workflow")
         );
         assert_eq!(resolved.workflow_override, Some(WorkflowOverride::NoRetry));
     }
 
     #[test]
-    fn complex_work_without_active_verified_workflow_is_blocked() {
+    fn complex_work_without_active_autonomous_workflow_is_blocked() {
         let mut request = routing_request();
         request.workflow_signals = vec![
             WorkflowSignal::DependencyGraph,
@@ -3216,7 +3249,7 @@ description: Inspect one local file without changing it.
                 "research-best-practices",
                 "judge",
                 "knowledge-capture",
-                "verified-workflow",
+                "autonomous-workflow",
                 "humanize-kor",
                 "prompt-refine",
                 "run",
@@ -3564,14 +3597,14 @@ description: Inspect one local file without changing it.
         .expect("declared historical merge");
         assert_eq!(
             migrated.selected,
-            vec!["judge".to_owned(), "verified-workflow".to_owned()]
+            vec!["autonomous-workflow".to_owned(), "judge".to_owned()]
         );
         assert_eq!(migrated.merges.len(), 1);
         assert_eq!(
             migrated.merges[0].sources,
             vec!["iterative-execution".to_owned(), "ralph-loop".to_owned()]
         );
-        assert_eq!(migrated.merges[0].target, "verified-workflow");
+        assert_eq!(migrated.merges[0].target, "autonomous-workflow");
 
         let duplicate = migrate_historical_project_skill_selection(
             "0.9.5",
@@ -3882,9 +3915,9 @@ description: Inspect one local file without changing it.
                 include_bytes!("../../../harness/skills/knowledge-manage/SKILL.md").as_slice(),
             ),
             (
-                "verified-workflow",
-                VERIFIED_WORKFLOW,
-                include_bytes!("../../../harness/skills/verified-workflow/SKILL.md").as_slice(),
+                "autonomous-workflow",
+                AUTONOMOUS_WORKFLOW,
+                include_bytes!("../../../harness/skills/autonomous-workflow/SKILL.md").as_slice(),
             ),
             (
                 "humanize-kor",

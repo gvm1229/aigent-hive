@@ -31,6 +31,8 @@ _exclude:
   - "{% if 'poseidon' not in selected_project_skills %}.claude/skills/poseidon{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.agents/skills/amend-directive{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.claude/skills/amend-directive{% endif %}"
+  - "{% if 'autonomous-workflow' not in selected_project_skills %}.agents/skills/autonomous-workflow{% endif %}"
+  - "{% if 'autonomous-workflow' not in selected_project_skills %}.claude/skills/autonomous-workflow{% endif %}"
   - "{% if 'code-polish' not in selected_project_skills %}.agents/skills/code-polish{% endif %}"
   - "{% if 'code-polish' not in selected_project_skills %}.claude/skills/code-polish{% endif %}"
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.agents/skills/custom-subagent-create{% endif %}"
@@ -69,8 +71,6 @@ _exclude:
   - "{% if 'team-execution' not in selected_project_skills %}.claude/skills/team-execution{% endif %}"
   - "{% if 'usage-guard' not in selected_project_skills %}.agents/skills/usage-guard{% endif %}"
   - "{% if 'usage-guard' not in selected_project_skills %}.claude/skills/usage-guard{% endif %}"
-  - "{% if 'verified-workflow' not in selected_project_skills %}.agents/skills/verified-workflow{% endif %}"
-  - "{% if 'verified-workflow' not in selected_project_skills %}.claude/skills/verified-workflow{% endif %}"
   # Claude project projection carries Skill bodies only, matching the Rust renderer.
   - ".claude/skills/*/agents"
   # The Discord onboarding guide belongs to the user-level installation.
@@ -307,6 +307,7 @@ selected_project_skills:
     - apollon
     - artemis
     - athena
+    - autonomous-workflow
     - code-polish
     - demeter
     - eileithyia
@@ -328,4 +329,3 @@ selected_project_skills:
     - ship
     - team-execution
     - usage-guard
-    - verified-workflow

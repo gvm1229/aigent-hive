@@ -8,7 +8,7 @@
 
 | 정본 | 맡는 일 | CLI 명령 | Skill |
 | --- | --- | --- | --- |
-| athena | 계획·검증 | `roster`, `judge`, `report`, `release`, `discord` | `athena`, `verified-workflow`, `multi-goal`, `judge`, `run` |
+| athena | 계획·검증 | `roster`, `judge`, `report`, `release`, `discord` | `athena`, `autonomous-workflow`, `multi-goal`, `judge`, `run` |
 | artemis | 조사·진단 | `doctor`, `check-target`, `route` | `artemis`, `research-best-practices`, `quick-answer` |
 | hephaistos | 구현 | `role`, `agent`, `run`, `loop` | `hephaistos`, `code-polish`, `custom-subagent-create`, `ship` |
 | apollon | 글쓰기 | `prompt`, `korean` | `apollon`, `humanize-kor`, `prompt-refine` |

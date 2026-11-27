@@ -44,10 +44,21 @@ skills:
 {% if 'athena' in selected_project_skills -%}
 - name: athena
   source_type: built-in
-  content_digest: sha256:736754bdf14368b61f01c74e3f3bd3bd9d285416e22d2ac843f07ecb316a34a0
+  content_digest: sha256:6ee1a4df043e17f4907660f2ba22cf05fde6c728ae13f73dc2b65b3a9aa5cf12
   side_effect_class: read-only
   capabilities:
   - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'autonomous-workflow' in selected_project_skills -%}
+- name: autonomous-workflow
+  source_type: built-in
+  content_digest: sha256:b34cea59b0aae88c6e2587a3ff0a4a5f991911adfc8dc7fa414d2b399bb6bbce
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
   consent_digest: null
 {% endif -%}
 {% if 'code-polish' in selected_project_skills -%}
@@ -124,7 +135,7 @@ skills:
 {% if 'judge' in selected_project_skills -%}
 - name: judge
   source_type: built-in
-  content_digest: sha256:eff261723439586f4b8e0b5b78b6976c33f56a6bfb38f13439e56fe140ca13e9
+  content_digest: sha256:d043bbd66fbc7bff2ee7436269ddca35d01845192deb1901c8d1486826295fe6
   side_effect_class: read-only
   capabilities:
   - filesystem-read
@@ -172,7 +183,7 @@ skills:
 {% if 'multi-goal' in selected_project_skills -%}
 - name: multi-goal
   source_type: built-in
-  content_digest: sha256:78519d508ec6b8836c67e2e608c07398aa093bbd70fe0bf5ed69e77f824c7f94
+  content_digest: sha256:de7415692ceb0b868b9b6c4a48d3d54a8e5d84a163dc14b27778d8d2e53bdda0
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -287,7 +298,7 @@ skills:
 {% if 'team-execution' in selected_project_skills -%}
 - name: team-execution
   source_type: built-in
-  content_digest: sha256:64be6b47a882ec8aa43b3bcc5357923a65f98edf7dcc58cf2ed68c6babcc776e
+  content_digest: sha256:461d57ae5411f8cc0fe3ace27b4ccc35543cd2e96f9d375d95cc030747549a3a
   side_effect_class: project-write
   capabilities:
   - filesystem-read
@@ -307,19 +318,6 @@ skills:
   - filesystem-write
   - run-state
   - shell
-  consent_digest: null
-{% endif -%}
-{% if 'verified-workflow' in selected_project_skills -%}
-- name: verified-workflow
-  source_type: built-in
-  content_digest: sha256:f06e29b9f7738d4ef33c16bd45fea4844e9408b87ee287c611d152d2f6c76cf6
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - run-state
-  - shell
-  - subagents
   consent_digest: null
 {% endif -%}
 {% endif -%}

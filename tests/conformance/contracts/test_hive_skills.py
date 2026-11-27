@@ -32,7 +32,7 @@ EXPECTED_SKILLS = frozenset(
         "code-polish",
         "humanize-kor",
         "custom-subagent-create",
-        "verified-workflow",
+        "autonomous-workflow",
         "knowledge-manage",
         "knowledge-capture",
         "prompt-refine",
@@ -213,16 +213,19 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertIn("Antigravity context recovery is unavailable", recovery)
         self.assertIn("4,096 UTF-8 byte limit", recovery)
 
-    def test_verified_workflow_keeps_role_parity_on_one_strict_judge_path(self) -> None:
-        text = (SKILL_ROOT / "verified-workflow" / "SKILL.md").read_text(encoding="utf-8")
-        for route in (
-            "dependency edges",
-            "Lost\n   acknowledgement is `dispatch-uncertain`",
-            "A Judge node or\n   elevated risk uses the adversarial mode of `$aigent-hive:judge`",
-            "repeated failure fingerprints",
-            "independent verifier",
-        ):
-            self.assertIn(route.casefold(), text.casefold())
+    def test_autonomous_workflow_product_body_matches_the_source_project_copy(self) -> None:
+        source = (ROOT / ".agents/skills/autonomous-workflow/SKILL.md").read_bytes()
+        self.assertEqual((SKILL_ROOT / "autonomous-workflow" / "SKILL.md").read_bytes(), source)
+        for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+            self.assertEqual((destination / "autonomous-workflow" / "SKILL.md").read_bytes(), source)
+        text = source.decode("utf-8")
+        for rule in ("Never stop midway to ask", "Ask once, at the end", "Approval-required actions stay"):
+            self.assertIn(rule, text)
+        ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))
+        self.assertEqual(ledger["retired_names"]["verified-workflow"], "autonomous-workflow")
+        self.assertFalse((SKILL_ROOT / "verified-workflow").exists())
+        for root in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+            self.assertFalse((root / "verified-workflow").exists())
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

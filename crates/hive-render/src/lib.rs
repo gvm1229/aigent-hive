@@ -8939,7 +8939,7 @@ mod tests {
             "quick-answer",
             "code-polish",
             "humanize-kor",
-            "verified-workflow",
+            "autonomous-workflow",
             "knowledge-manage",
             "knowledge-capture",
             "prompt-refine",
