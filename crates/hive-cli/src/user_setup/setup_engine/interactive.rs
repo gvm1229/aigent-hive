@@ -1154,7 +1154,7 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
             "일반",
             "General",
             &[
-                "language", "setup", "persona", "review", "profile", "hosts", "updates",
+                "language", "setup", "persona", "review", "tools", "profile", "hosts", "updates",
             ],
         ),
         ("기능", "Features", &["skills"]),

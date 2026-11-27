@@ -60,6 +60,12 @@
     "ai_coauthor": {
       "$ref": "#/$defs/ai_coauthor"
     },
+    "browser": {
+      "$ref": "#/$defs/browser"
+    },
+    "design": {
+      "$ref": "#/$defs/design"
+    },
     "usage_guard": {
       "type": "object"
     },
@@ -261,6 +267,22 @@
         "implicit"
       ],
       "default": "explicit"
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": { "enum": ["default-browser", "in-app"], "default": "default-browser" },
+        "reuse_active_tab": { "type": "boolean", "default": true },
+        "detected_default": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bundle": { "enum": ["recommended", "blank"], "default": "recommended" }
+      }
     },
     "ai_coauthor": {
       "enum": [

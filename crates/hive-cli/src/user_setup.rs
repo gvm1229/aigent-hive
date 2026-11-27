@@ -373,6 +373,54 @@ pub(crate) enum AiCoauthor {
     Allow,
 }
 
+/// Where agents open web and localhost previews.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum BrowserTarget {
+    #[default]
+    DefaultBrowser,
+    InApp,
+}
+
+/// Preview browser choice; an install without the key keeps the defaults.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct BrowserPreferences {
+    #[serde(default)]
+    pub(crate) target: BrowserTarget,
+    #[serde(default = "default_true")]
+    pub(crate) reuse_active_tab: bool,
+    /// Raw default-browser answer the setup Skill read from the operating system.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) detected_default: Option<String>,
+}
+
+impl Default for BrowserPreferences {
+    fn default() -> Self {
+        Self {
+            target: BrowserTarget::default(),
+            reuse_active_tab: true,
+            detected_default: None,
+        }
+    }
+}
+
+/// Whether design-curate uses Hive's bundled design sources.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum DesignBundle {
+    #[default]
+    Recommended,
+    Blank,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DesignPreferences {
+    #[serde(default)]
+    pub(crate) bundle: DesignBundle,
+}
+
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum JudgeInvocation {
@@ -413,6 +461,10 @@ pub(crate) struct UserSetupConfig {
     pub(crate) judge_invocation: JudgeInvocation,
     #[serde(default)]
     pub(crate) ai_coauthor: AiCoauthor,
+    #[serde(default)]
+    pub(crate) browser: BrowserPreferences,
+    #[serde(default)]
+    pub(crate) design: DesignPreferences,
     pub(crate) usage_guard: UsageGuardPreferences,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) preference_decisions: hive_core::preferences::PreferenceDecisions,

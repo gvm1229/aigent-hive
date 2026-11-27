@@ -32,3 +32,11 @@ threshold, stored as `five_hour_limit: false`, `guard: weekly` and
 `/usage_guard/host_windows/<host>/{five_hour_limit,guard,five_hour_stop_remaining_percent,weekly_stop_remaining_percent}`
 and the concrete question IDs end with `-<host>`. Never answer for another app or reuse one app's
 answer for another.
+
+The preview-browser question (`user-browser`) stores `/browser/target`. Before asking it, read the
+operating system's default browser once with one read-only query and patch the raw answer into
+`/browser/detected_default`: Windows `reg query HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice /v ProgId`;
+macOS the `https` handler in `defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers`;
+Linux `xdg-settings get default-web-browser`. If the query fails, leave the key unset. Hive uses
+that browser only when it is Chromium based and falls back to Chrome. Never change browser,
+extension or host settings from this step.

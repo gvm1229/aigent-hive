@@ -51,13 +51,14 @@
   잔여량 기준    : 20
 
 기능
-  기능 묶음 : 개별 선택 27개
-              ai-slop-cleaner, aither, amend-directive, apollon, artemis,
-              athena, autonomous-workflow, demeter, eileithyia, hades,
-              hephaistos, humanize-kor, judge, knowledge-capture,
-              knowledge-manage, knowledge-recall, multi-goal, poseidon,
-              product-update, project-refresh, prompt-refine, quick-answer,
-              research-best-practices, run, ship, team-execution, usage-guard
+  기능 묶음 : 개별 선택 29개
+              ai-slop-cleaner, aither, amend-directive, aphrodite, apollon,
+              artemis, athena, autonomous-workflow, demeter, design-curate,
+              eileithyia, hades, hephaistos, humanize-kor, judge,
+              knowledge-capture, knowledge-manage, knowledge-recall, multi-goal,
+              poseidon, product-update, project-refresh, prompt-refine,
+              quick-answer, research-best-practices, run, ship, team-execution,
+              usage-guard
   역할      : 없음
   선택 기능 : 없음
   후크      : 없음
@@ -73,7 +74,7 @@
   비공개 종류    : 없음
 
 변경 규모
-  변경 파일 수 : 101
+  변경 파일 수 : 126
 
 ------------------------------------------------------------------------
 이 변경을 적용할까요? [예/아니요, 기본: 아니요]

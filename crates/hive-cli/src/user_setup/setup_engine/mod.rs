@@ -71,7 +71,7 @@ pub(in crate::user_setup) fn default_answers(language: Option<InterfaceLanguage>
     };
     let mut answers = json!({"schema_version":2,"wiki":{"enabled":true,"language":wiki_language,"backend":"markdown"},
         "profile":{"contexts":["non-developer"]},"persona":{"id":"balanced"},"selected_hosts":["codex"],
-        "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","ai_coauthor":"forbid","usage_guard":guard,"preference_decisions":{}});
+        "skills":{"mode":"all"},"update_check":{"enabled":false},"judge_invocation":"explicit","ai_coauthor":"forbid","browser":{"target":"default-browser","reuse_active_tab":true},"design":{"bundle":"recommended"},"usage_guard":guard,"preference_decisions":{}});
     if let Some(language) = language {
         answers["interface_language"] = json!(language);
     }

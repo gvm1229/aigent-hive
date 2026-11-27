@@ -7,6 +7,8 @@ General
   Response style     : Balanced
   Independent review : Only when requested
   AI co-authors      : Block (recommended)
+  Preview browser    : Default browser (recommended)
+  Design bundle      : Recommended bundle (recommended)
   Background         : General knowledge work
   Apps               : Codex
   Update check       : no
