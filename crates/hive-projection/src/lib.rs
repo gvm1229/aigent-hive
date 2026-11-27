@@ -1473,6 +1473,19 @@ fn localized_skill_text(
             "프로젝트 이전",
             "지원되는 Hive 프로젝트 형식을 백업과 검증을 거쳐 이전합니다.",
         ),
+        // Retired names keep their published descriptors so historical installs authenticate.
+        "verified-workflow" => (
+            "Verified workflow",
+            "Run a bounded evidence-gated workflow with independent verification.",
+            "검증형 작업 흐름",
+            "증거·재시도·독립 검증을 적용한 제한된 작업 흐름을 실행합니다.",
+        ),
+        "code-polish" => (
+            "Clean AI slop",
+            "Review and clean unnecessary AI-generated wording and structure.",
+            "AI 군더더기 정리",
+            "AI가 만든 불필요한 표현과 구조를 검토해 정리합니다.",
+        ),
         "autonomous-workflow" => (
             "Autonomous workflow",
             "Finish the work without mid-task questions and ask real questions once at the end.",
