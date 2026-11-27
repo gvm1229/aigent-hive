@@ -12,7 +12,7 @@ sources:
   - "repo:docs/archive/plans/verified-workflow-0.10.0.md#sha256:6b2ee66b721493ad6c69f2f22d56ed16a6b47886e7609a4be42bff9aea768c57"
   - "repo:docs/decisions/ADR-0020-0.10.0-product-scope.md#sha256:71a8c4e0f75fdc3f99aa7f4d1c4e2ace759af640dbc4dd013174639e71a3f01b"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"
-  - "repo:scripts/accept-verified-workflow.py#sha256:8389fd9febc6e5e63ba614fb1dbd6066a5800938d578702a24ca71507cc41913"
+  - "repo:scripts/accept-verified-workflow.py#sha256:2b2b43f8f98c0ce8fbc583a6cf5ef360d6c5d18c7f6890812a3bea0625a75d0a"
 links: [host-neutral-continuation, v0-10-product-scope]
 reviewed_revision: "git:c06e1d0e8077c4fb0a20bb209c2580570454f354"
 status: active
@@ -26,3 +26,8 @@ task length and bare continue do not qualify. A disposable acceptance verified n
 canonical run creation, intentional failure then successful retry, a separate host-owned Judge
 receipt, fresh-process/session recovery, and terminal cancellation in one receipt. It proves CLI
 process recovery, not a Codex desktop restart, and gives no quorum authority to one Judge receipt.
+
+0.17.0 change: the product Skill `verified-workflow` is replaced by `autonomous-workflow`
+(maintainer decision, 2026-11-28). A call with the old name routes to the new name and the
+decision reports the old name in `renamed_from`. The routing condition (two or more workflow
+signals) stays; the loop state machine stays in the `hive loop` and `hive orchestration` CLI.

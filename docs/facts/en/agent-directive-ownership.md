@@ -14,7 +14,7 @@ sources:
   - "repo:AGENTS.md#sha256:214d39d1c6a871fce91f14dd543ebdfd46c7e61a448f4e9e88077355c5c648fa"
   - "repo:docs/architecture/agent-directive-ownership.md#sha256:db0d5c52f75c5ce82354cde25673a5ff701bf99b3458f4f311b7844555b0df05"
   - "repo:harness/template/AGENTS.md.jinja#sha256:fe7f06cc88b566a9ab1ef2919d8ca43830aa963a98208c084c56b5c12f26c864"
-  - "repo:scripts/check-agent-directives.py#sha256:b575636bcb279f1839fbd57c0aec697da34cd4cdc4709ca66e2bc6e122442b00"
+  - "repo:scripts/check-agent-directives.py#sha256:a605050eb008a1d959dbd8c71cd9da6b216a3763db7b14d16b81edc0f13aa73e"
 links: [agent-autonomous-continuation, artifact-boundaries, historical-project-base-coverage]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active
