@@ -22,7 +22,7 @@
 | S8 | 정상 파일이 아닌 기록 하나가 수신 상자 전체 실패 | 읽을 수 없는 기록은 해당 메시지만 격리. `msg_inbox_quarantines_only_the_message_with_a_symlinked_claim` |
 | S9 | `.hive/mediation/`이 작업자 쓰기 범위 안·Git 미제외 | 템플릿 `.hive/.gitignore`에 `/mediation/`, 작업자 정책에 `excluded_roots: ["{target}/.hive"]` |
 | S10 | 배포 Skill·지침에 중재 명령 안내 없음 | Poseidon 단계 안내와 `team-execution/references/mediation.md`, 참조 처리기 적합성 시험 `test_mediation_reference_handler`. [호스트 안내 근거](stage-6-host-guidance.md) |
-| O1 | Discord 알림 한국어 전용 | 유지. Discord 알림 영어 판은 후속([OV170-013](../../plans/overhaul/0.17.0-overnight-loop.md) 작업 때 함께 검토) |
+| O1 | Discord 알림 한국어 전용 | 유지. Discord 알림 영어 판은 후속([OV170-013](../../plans/active/0.17.0-overnight-loop.md) 작업 때 함께 검토) |
 | O2 | 끝난 메시지와 같은 키 재전송의 안내 없음 | 끝난 메시지와 같은 키 재전송에 새 `--key` 안내. `msg_duplicate_of_an_expired_message_asks_for_a_new_key` |
 | O3 | 다른 세션 전달 결과의 복구 경로 미안내 | 중재 안내 Skill에 `msg status` 복구 경로 기록 |
 | O4 | `max_workers`가 템플릿·스키마에 없음 | 유지. 손으로 넣은 키만 이전, 템플릿·스키마 노출은 후속 검토 |
@@ -32,10 +32,10 @@
 
 | ID | 제안 | 처리 |
 | --- | --- | --- |
-| P1 | 남은 Skill 통합(31개, 안팎 15는 기본 묶음·Wiki 끔에서만) | 0.16.0은 승인된 통합 범위 완료로 수용. 후속은 [OV170-014](../../plans/overhaul/0.17.0-overnight-loop.md) |
-| P2 | 서명 소환과 파일 수신 상자의 두 봉투·확인증 모델 단일화 또는 ADR | 작업자 실행 추가 전 단계 7 첫 항목군 [OV170-012](../../plans/overhaul/0.17.0-overnight-loop.md) |
+| P1 | 남은 Skill 통합(31개, 안팎 15는 기본 묶음·Wiki 끔에서만) | 0.16.0은 승인된 통합 범위 완료로 수용. 후속은 [OV170-014](../../plans/active/0.17.0-overnight-loop.md) |
+| P2 | 서명 소환과 파일 수신 상자의 두 봉투·확인증 모델 단일화 또는 ADR | 작업자 실행 추가 전 단계 7 첫 항목군 [OV170-012](../../plans/active/0.17.0-overnight-loop.md) |
 | P3 | 호스트 쪽 안내 Skill과 참조 처리기 적합성 시험 | 정식 전 S10과 함께 이 단계에서 처리 |
-| P4 | 수신 상자 보존 정리와 1,000개 지연 예산 | S3의 일회 안내·상한은 이 단계, 정리 명령은 [OV170-013](../../plans/overhaul/0.17.0-overnight-loop.md) |
+| P4 | 수신 상자 보존 정리와 1,000개 지연 예산 | S3의 일회 안내·상한은 이 단계, 정리 명령은 [OV170-013](../../plans/active/0.17.0-overnight-loop.md) |
 | P5 | 실제 수용 전 실험 기능 표시 | 0.16.0-test.1 출시 노트·local 인계에 "실제 호스트 수용 전" 한계 명시 |
 
 ## 2차 재검토
