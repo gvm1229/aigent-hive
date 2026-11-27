@@ -126,3 +126,17 @@ aliases = []
 commands = ["storage", "prune", "uninstall"]
 skills = ["hades"]
 steps = ["Inspect exact storage, prune or uninstall candidates through existing CLI previews. Apply removal only with the required exact authority; cleanup planning grants no deletion authority."]
+
+[[gods]]
+name = "aphrodite"
+korean = "아프로디테"
+purpose_en = "design"
+purpose_ko = "디자인"
+summary_en = "Designs web interfaces, settles conflicts between design Skills and keeps them in step with their sources."
+summary_ko = "웹 화면을 디자인하고 디자인 Skill끼리 부딪히는 지시를 정리하며 원본에 맞춰 갱신"
+ownership_ko = "디자인"
+role = "hive-routine-implementer"
+aliases = ["Venus", "비너스"]
+commands = ["design"]
+skills = ["aphrodite", "design-curate"]
+steps = ["Use design-curate for design direction, conflict decisions or source sync; route each task to one lead and at most two supporting bundled design sources, apply the precedence ladder and conflict rulings, and record project decisions in DESIGN.md."]

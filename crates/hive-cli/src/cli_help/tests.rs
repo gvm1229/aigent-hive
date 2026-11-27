@@ -177,6 +177,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["report.rs"], &["report"], &[]),
     (&["role.rs"], &["role"], &[]),
     (&["roster.rs"], &["roster"], &["--unknown"]),
+    (&["design.rs"], &["design"], &[]),
     (&["run.rs", "run"], &["run"], &[]),
     (&["session.rs"], &["session"], &[]),
     (&["storage.rs"], &["storage", "prune"], &[]),

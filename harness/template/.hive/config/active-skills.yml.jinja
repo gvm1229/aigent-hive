@@ -34,6 +34,15 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
+{% if 'aphrodite' in selected_project_skills -%}
+- name: aphrodite
+  source_type: built-in
+  content_digest: sha256:105c8e946a3ef38799de95cea19b36a710d9347690451e67a63ddcbdd3a3ae6a
+  side_effect_class: read-only
+  capabilities:
+  - filesystem-read
+  consent_digest: null
+{% endif -%}
 {% if 'apollon' in selected_project_skills -%}
 - name: apollon
   source_type: built-in
@@ -92,6 +101,17 @@ skills:
   side_effect_class: read-only
   capabilities:
   - filesystem-read
+  consent_digest: null
+{% endif -%}
+{% if 'design-curate' in selected_project_skills -%}
+- name: design-curate
+  source_type: built-in
+  content_digest: sha256:6415fc0483e33cf89c76016180bef83ceaabb001e5e05ca6e27531621288c97a
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
   consent_digest: null
 {% endif -%}
 {% if 'eileithyia' in selected_project_skills -%}

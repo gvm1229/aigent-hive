@@ -82,7 +82,7 @@ class GodEntryTests(unittest.TestCase):
     def test_ownership_table_covers_every_public_command_and_skill_once(self):
         text = (ROOT / "docs/architecture/god-ownership.md").read_text(encoding="utf-8")
         rows = [line.split("|") for line in text.splitlines() if line.startswith("| ") and line.split("|")[1].strip() in CASES]
-        self.assertEqual(len(rows), 9)
+        self.assertEqual(len(rows), 10)
         commands = [name for row in rows for name in re.findall(r"`([^`]+)`", row[3])]
         skills = [name for row in rows for name in re.findall(r"`([^`]+)`", row[4])]
         catalog = yaml.safe_load((ROOT / "harness/skills/catalog.yml").read_text(encoding="utf-8"))

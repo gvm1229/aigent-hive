@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "skill": "design-curate",
+  "note": "Deterministic proxy for host invocation: design requests share the Skill's trigger terms, others do not. Real host invocation is checked at the public test.",
+  "trigger_terms": ["design", "디자인", "mockup", "시안", "page", "screen", "화면", "layout", "palette", "typography"],
+  "cases": [
+    {"prompt": "Set a design direction for our pricing page", "invoke": true},
+    {"prompt": "랜딩 화면 디자인 시안을 잡아 줘", "invoke": true},
+    {"prompt": "Review this dashboard screen design for AI-looking defaults", "invoke": true},
+    {"prompt": "Pick a palette and typography for the docs site", "invoke": true},
+    {"prompt": "Migrate the orders table to the new SQL schema", "invoke": false},
+    {"prompt": "Fix the failing unit test in the parser", "invoke": false},
+    {"prompt": "커밋 메시지를 정리해 줘", "invoke": false}
+  ]
+}

@@ -8936,8 +8936,10 @@ mod tests {
             "demeter",
             "aither",
             "hades",
+            "aphrodite",
             "quick-answer",
             "ai-slop-cleaner",
+            "design-curate",
             "humanize-kor",
             "autonomous-workflow",
             "knowledge-manage",
@@ -8983,6 +8985,7 @@ mod tests {
             "ai-slop-cleaner/references/design.md",
             "ai-slop-cleaner/references/hive-overrides.md",
             "ai-slop-cleaner/references/writing.md",
+            "design-curate/references/conflicts.md",
         ]
         .into_iter()
         .map(str::to_owned)
@@ -11082,7 +11085,7 @@ mod tests {
 
         // Vendored upstream files and ai-slop-cleaner references belong to the Claude projection.
         let upstream = hive_projection::upstream_resources::UPSTREAM_RESOURCES.len();
-        assert_eq!(deletions.len(), 47 + upstream);
+        assert_eq!(deletions.len(), 50 + upstream);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -12006,7 +12009,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 config["selected_project_skills"].as_array().unwrap().len(),
-                if wiki_enabled { 27 } else { 24 }
+                if wiki_enabled { 29 } else { 26 }
             );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));

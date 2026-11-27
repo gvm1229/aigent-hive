@@ -88,6 +88,8 @@ skill_dependencies:
   - { skill: demeter, requires: [humanize-kor] }
   - { skill: aither, requires: [usage-guard] }
   - { skill: hades, requires: [ai-slop-cleaner] }
+  - { skill: design-curate, requires: [] }
+  - { skill: aphrodite, requires: [design-curate] }
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []

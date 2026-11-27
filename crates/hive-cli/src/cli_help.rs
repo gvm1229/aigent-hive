@@ -464,6 +464,8 @@ pub(crate) const COMMANDS: &[Command] = &[
     command("roster", Group::Setup, "신 이름 목록과 역할 배정 보기", "Show named roles and assignments",
         &["check"], &["--capabilities", "--role", "--target", "--user-root"],
         &["hive roster --target . --user-root <user-root>"]),
+    command("design", Group::Setup, "동봉 디자인 묶음 보기", "Show the bundled design sources",
+        &["status"], &["--output"], &["hive design status"]),
     command("summon", Group::Setup, "신 이름으로 기능 호출", "Call a function by its named role",
         &[], SUMMON_OPTIONS, &["hive summon --help"]),
     command("msg", Group::Setup, "역할 사이 메시지 보내기·받기", "Send and read role messages",

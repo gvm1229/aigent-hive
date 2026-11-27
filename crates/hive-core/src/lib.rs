@@ -391,6 +391,7 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
                     "ai-slop-cleaner",
                     "code.md" | "design.md" | "hive-overrides.md" | "writing.md"
                 )
+                | ("design-curate", "conflicts.md")
                 // Retired before 0.16.0; kept so authenticated upgrades can remove it.
                 | ("run-checkpoint", "policy-review.md")
                 | ("amend-directive", "transplant.md")

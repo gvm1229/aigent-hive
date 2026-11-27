@@ -488,6 +488,16 @@ ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".agents/skills/design-curate/references/conflicts.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/conflicts.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".agents/skills/team-execution/references/mediation.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"

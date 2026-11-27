@@ -108,4 +108,16 @@ pub const GODS: &[God] = &[
         aliases: &[],
         commands: &["storage", "prune", "uninstall"],
     },
+    God {
+        name: "aphrodite",
+        korean: "아프로디테",
+        purpose_en: "design",
+        purpose_ko: "디자인",
+        role: "hive-routine-implementer",
+        display_name: "Aphrodite",
+        description_en: "(aphrodite) Designs web interfaces, settles conflicts between design Skills and keeps them in step with their sources. Use only when the user names aphrodite, 아프로디테, Venus, 비너스.",
+        description_ko: "(aphrodite) 웹 화면을 디자인하고 디자인 Skill끼리 부딪히는 지시를 정리하며 원본에 맞춰 갱신. 사용자가 aphrodite, 아프로디테, Venus, 비너스 중 하나를 부를 때만 사용.",
+        aliases: &["Venus", "비너스"],
+        commands: &["design"],
+    },
 ];

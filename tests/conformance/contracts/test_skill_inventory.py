@@ -152,7 +152,8 @@ CURRENT_CONSUMER_SKILLS = frozenset(
         "demeter",
         "aither",
         "hades",
-        "quick-answer", "project-setup", "ai-slop-cleaner", "humanize-kor", "autonomous-workflow",
+        "aphrodite",
+        "quick-answer", "project-setup", "ai-slop-cleaner", "design-curate", "humanize-kor", "autonomous-workflow",
         "knowledge-manage", "knowledge-capture", "prompt-refine", "research-best-practices",
         "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
         "run", "project-transition", "product-update", "project-refresh", "judge",
@@ -477,7 +478,7 @@ class V09SkillInventoryDocumentContract(unittest.TestCase):
         self.assertEqual(actual_source, CURRENT_SOURCE_SKILLS)
         self.assertEqual(actual_consumer, CURRENT_CONSUMER_SKILLS)
         self.assertEqual(len(CURRENT_SOURCE_SKILLS), 3)
-        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 31)
+        self.assertEqual(len(CURRENT_CONSUMER_SKILLS), 33)
         self.assertEqual(CURRENT_SHARED_SKILLS, frozenset({"autonomous-workflow"}))
 
         catalog_text = (REPOSITORY_ROOT / "docs/skills.md").read_text(encoding="utf-8")

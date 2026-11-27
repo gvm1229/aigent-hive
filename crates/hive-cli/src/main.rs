@@ -23,6 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 mod cli_help;
 mod custom_agent_cli;
+mod design;
 mod discord;
 mod display_options;
 mod gods;
@@ -347,6 +348,7 @@ fn dispatch(arguments: Vec<String>) -> ExitCode {
         Some("msg") => msg::run(&arguments[1..]),
         Some("stop") => msg::run_stop(&arguments[1..]),
         Some("roster") => roster::run(&arguments[1..]),
+        Some("design") => design::run(&arguments[1..]),
         Some("role") => role::run_role(&arguments[1..]),
         Some("agent") => custom_agent_cli::run(&arguments[1..]),
         Some("run") => run::run_run(&arguments[1..]),

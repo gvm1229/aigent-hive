@@ -76,8 +76,8 @@ def load_table(path: Path = TABLE) -> list[God]:
     names = [name.lower() for god in result for name in [god.name, god.korean, *god.aliases]]
     if len(names) != len(set(names)):
         raise ValueError("duplicate god alias")
-    if len(result) != 9 or any(god.name not in god.skills for god in result):
-        raise ValueError("expected nine self-owned god entries")
+    if len(result) != 10 or any(god.name not in god.skills for god in result):
+        raise ValueError("expected ten self-owned god entries")
     return result
 
 

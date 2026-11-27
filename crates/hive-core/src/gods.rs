@@ -1,4 +1,4 @@
-//! Names and display text for the nine functional entry points.
+//! Names and display text for the ten functional entry points.
 #[derive(Clone, Copy, Debug)]
 pub struct God {
     pub name: &'static str,
@@ -63,6 +63,7 @@ mod tests {
             ("Apollo", "apollon"),
             ("Eleuthia", "eileithyia"),
             ("Aether", "aither"),
+            ("Venus", "aphrodite"),
         ] {
             assert_eq!(find(alias).unwrap().name, canonical);
         }
@@ -88,7 +89,7 @@ mod tests {
         assert_eq!(command_owner("unknown"), None);
     }
     #[test]
-    fn gods_nine_by_two_language_display_snapshots() {
+    fn gods_ten_by_two_language_display_snapshots() {
         let expected_en = [
             "Calling upon Athena — planning",
             "Calling upon Artemis — research",
@@ -99,6 +100,7 @@ mod tests {
             "Calling upon Demeter — writing",
             "Calling upon Aither — usage controls",
             "Calling upon Hades — cleanup",
+            "Calling upon Aphrodite — design",
         ];
         let expected_ko = [
             "아테나 호출 — 계획",
@@ -110,6 +112,7 @@ mod tests {
             "데메테르 호출 — 글쓰기",
             "아이테르 호출 — 사용량 관리",
             "하데스 호출 — 정리",
+            "아프로디테 호출 — 디자인",
         ];
         for (i, god) in GODS.iter().enumerate() {
             assert_eq!(god.announcement(false), expected_en[i]);

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Aphrodite"
+  short_description: "(aphrodite) Designs web interfaces, settles conflicts between design Skills and keeps them in step with their sources. Use only when the user names aphrodite, 아프로디테, Venus, 비너스."
+  default_prompt: "Use $aigent-hive:aphrodite as explicitly requested."
+policy:
+  allow_implicit_invocation: true

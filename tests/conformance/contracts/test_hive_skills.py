@@ -27,9 +27,11 @@ EXPECTED_SKILLS = frozenset(
         "demeter",
         "aither",
         "hades",
+        "aphrodite",
         "quick-answer",
         "project-setup",
         "ai-slop-cleaner",
+        "design-curate",
         "humanize-kor",
         "custom-subagent-create",
         "autonomous-workflow",
@@ -256,6 +258,44 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertEqual(ledger["retired_names"]["clean-ai-slop"], "ai-slop-cleaner")
         self.assertNotIn("ai-slop-cleaner", ledger["retired_names"])
         self.assertFalse((SKILL_ROOT / "code-polish").exists())
+
+    def test_design_curate_bundles_exact_sources_and_names_only_real_ones(self) -> None:
+        import json
+        skill = SKILL_ROOT / "design-curate"
+        body = (skill / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("http", body, "source links stay out of SKILL.md")
+        lock = json.loads((ROOT / "harness/upstream/UPSTREAM.lock").read_text(encoding="utf-8"))
+        bundled = sorted(s["name"] for s in lock["sources"] if "design-curate" in s["used_by"])
+        self.assertEqual(bundled, ["frontend-design", "hallmark", "impeccable", "web-artifacts-builder"])
+        for name in bundled:
+            self.assertIn(f"`{name}`", body)
+            projected = skill / "references/upstream" / name
+            self.assertTrue((projected / "SKILL.md").is_file())
+            licenses = [path.name for path in projected.iterdir() if path.name.startswith("LICENSE")]
+            self.assertTrue(licenses, name)
+            for path in projected.rglob("*"):
+                if path.is_file():
+                    relative = path.relative_to(projected)
+                    self.assertEqual(path.read_bytes(), (ROOT / "harness/upstream" / name / relative).read_bytes())
+                    for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                        copy = destination / "design-curate/references/upstream" / name / relative
+                        self.assertEqual(copy.read_bytes(), path.read_bytes(), str(copy))
+        self.assertTrue((skill / "references/upstream/impeccable/NOTICE.md").is_file())
+        conflicts = (skill / "references/conflicts.md").read_text(encoding="utf-8")
+        cited = set()
+        for line in conflicts.splitlines()[2:]:
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if len(cells) == 5 and cells[0] not in ("Topic", "---"):
+                cited.update(name.strip() for name in cells[2].split(","))
+        self.assertTrue(cited)
+        self.assertLessEqual(cited, set(bundled), "conflict rulings may cite only bundled sources")
+        cases = json.loads((ROOT / "tests/fixtures/skills/invocation/design-curate.json").read_text(encoding="utf-8"))
+        description = yaml.safe_load(body.split("---", 2)[1])["description"].casefold()
+        for term in cases["trigger_terms"][:1]:
+            self.assertIn(term, description)
+        for case in cases["cases"]:
+            hit = any(term.casefold() in case["prompt"].casefold() for term in cases["trigger_terms"])
+            self.assertEqual(hit, case["invoke"], case["prompt"])
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

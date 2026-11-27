@@ -1,0 +1,6 @@
+interface:
+  display_name: "Design direction"
+  short_description: "(design-curate) Set web design direction and review designs with Hive's bundled design sources."
+  default_prompt: "Use $aigent-hive:design-curate to set the design direction for this page."
+policy:
+  allow_implicit_invocation: true

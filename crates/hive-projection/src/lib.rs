@@ -41,6 +41,7 @@ const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKI
 const CUSTOM_SUBAGENT_CREATE: &[u8] =
     include_bytes!("../../../harness/skills/custom-subagent-create/SKILL.md");
 const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/ai-slop-cleaner/SKILL.md");
+const DESIGN_CURATE: &[u8] = include_bytes!("../../../harness/skills/design-curate/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
@@ -1478,6 +1479,12 @@ fn localized_skill_text(
             "자율 진행",
             "사소한 질문 없이 끝까지 진행하고 진짜 질문은 마지막에 한 번에 묻습니다.",
         ),
+        "design-curate" => (
+            "Design direction",
+            "Set web design direction and review designs with Hive's bundled design sources.",
+            "디자인 방향",
+            "동봉한 디자인 원본으로 웹 디자인 방향을 정하고 결과를 점검합니다.",
+        ),
         "ai-slop-cleaner" => (
             "Clean AI slop",
             "Clean AI slop from selected code, documents or design after a confirmed plan.",
@@ -1641,6 +1648,10 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
             "references/mediation.md",
             include_bytes!("../../../harness/skills/team-execution/references/mediation.md"),
         )],
+        "design-curate" => &[(
+            "references/conflicts.md",
+            include_bytes!("../../../harness/skills/design-curate/references/conflicts.md"),
+        )],
         "ai-slop-cleaner" => &[
             (
                 "references/code.md",
@@ -1797,6 +1808,12 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "hades" => Some(include_bytes!(
             "../../../harness/skills/hades/agents/openai.yaml"
         )),
+        "aphrodite" => Some(include_bytes!(
+            "../../../harness/skills/aphrodite/agents/openai.yaml"
+        )),
+        "design-curate" => Some(include_bytes!(
+            "../../../harness/skills/design-curate/agents/openai.yaml"
+        )),
         "ship" => Some(include_bytes!(
             "../../../harness/skills/ship/agents/openai.yaml"
         )),
@@ -1810,7 +1827,7 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
+fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 33] {
     [
         ("user-setup", SETUP_HIVE),
         ("project-setup", SETUP_HARNESS),
@@ -1830,6 +1847,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
         ("multi-goal", MULTI_GOAL),
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
         ("ai-slop-cleaner", AI_SLOP_CLEANER),
+        ("design-curate", DESIGN_CURATE),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         (
             "athena",
@@ -1866,6 +1884,10 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
         (
             "hades",
             include_bytes!("../../../harness/skills/hades/SKILL.md"),
+        ),
+        (
+            "aphrodite",
+            include_bytes!("../../../harness/skills/aphrodite/SKILL.md"),
         ),
         ("ship", SHIP),
         ("amend-directive", AMEND_DIRECTIVE),
@@ -2506,6 +2528,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "knowledge-capture" | "knowledge-manage" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
         "ai-slop-cleaner"
+        | "design-curate"
         | "humanize-kor"
         | "research-best-practices"
         | "autonomous-workflow"
@@ -3267,13 +3290,13 @@ description: Inspect one local file without changing it.
             let first = compile_projection(host, &[]).expect("projection");
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
-            assert_eq!(first.active_skills.skills.len(), 27);
+            assert_eq!(first.active_skills.skills.len(), 29);
             // Vendored upstream files ride along with the Skills that use them.
             let upstream = upstream_resources::UPSTREAM_RESOURCES
                 .iter()
                 .filter(|(skill, _, _)| first.active_skills.skills.iter().any(|s| s.name == *skill))
                 .count();
-            let expected_file_count = upstream + if host == Host::Claude { 48 } else { 75 };
+            let expected_file_count = upstream + if host == Host::Claude { 51 } else { 80 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
                 "ai-slop-cleaner",
@@ -3813,7 +3836,7 @@ description: Inspect one local file without changing it.
     #[test]
     fn daily_work_excludes_setup_and_specialized_skills_but_allows_explicit_selection() {
         let default = super::project_default_skills().unwrap();
-        assert_eq!(default.len(), 27);
+        assert_eq!(default.len(), 29);
         let excluded = [
             "user-setup",
             "project-setup",
@@ -4088,6 +4111,7 @@ description: Inspect one local file without changing it.
             "demeter",
             "aither",
             "hades",
+            "aphrodite",
         ] {
             for explicit in [false, true] {
                 let mut request = routing_request();

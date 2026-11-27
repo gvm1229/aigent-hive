@@ -138,10 +138,20 @@ def upstream_projection(source: dict, skill: str) -> list[str]:
     """Return the vendored files one Skill carries: all, or the lock's per-Skill glob subset."""
     root = UPSTREAM / source["name"]
     files = sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+    # Hive project renderers handle UTF-8 text only; binary assets stay vendored in harness/upstream.
+    files = [name for name in files if is_utf8(root / name)]
     patterns = source.get("projection", {}).get(skill)
     if patterns is None:
         return files
     return [name for name in files if any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)]
+
+
+def is_utf8(path: Path) -> bool:
+    try:
+        path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return True
 
 
 def project_upstream_sources() -> list[tuple[str, str]]:
