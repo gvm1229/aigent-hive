@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import hashlib
 import time
 import os
@@ -46,6 +47,18 @@ BUILTIN_REFERENCE_PATHS = (
     "usage-guard/references/control.md",
     "usage-guard/references/sensors.md",
     "team-execution/references/mediation.md",
+    "ai-slop-cleaner/references/code.md",
+    "ai-slop-cleaner/references/design.md",
+    "ai-slop-cleaner/references/hive-overrides.md",
+    "ai-slop-cleaner/references/writing.md",
+    "design-curate/references/conflicts.md",
+) + tuple(
+    # Vendored upstream files carried by Skills, from the generated projection table.
+    f"{skill}/{relative}"
+    for skill, relative in re.findall(
+        r'\("([a-z0-9-]+)", "(references/upstream/[^"]+)", include_bytes!',
+        (Path(__file__).resolve().parents[3] / "crates/hive-projection/src/upstream_resources.rs").read_text(encoding="utf-8"),
+    )
 )
 FRESH_HOOK_CAPABILITIES_PATH = Path(
     ".hive/runtime/current-capability-resolution.json"

@@ -211,6 +211,11 @@ class Phase1CopierParity(Phase1CliTestCase):
                         expected_entries.add("references")
                         expected_resources = {relative.relative_to("references").as_posix():
                             ("file", (source.parent / relative).read_bytes()) for relative in resources}
+                        # Vendored upstream sources add their nested directories.
+                        for relative in resources:
+                            for parent in relative.relative_to("references").parents:
+                                if parent.as_posix() != ".":
+                                    expected_resources[parent.as_posix()] = ("directory", "")
                         self.assertEqual(snapshot_tree(projected.parent / "references"), expected_resources)
                     if projection_root == ".agents":
                         expected_entries.add("agents")
