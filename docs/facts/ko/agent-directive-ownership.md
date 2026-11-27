@@ -11,7 +11,7 @@ aliases: ["Directive 최적화"]
 sources:
   - "repo:.agents/directives/01-behavior.md#sha256:54f993c4403e7de3612efa12f499bbf1c3a957ee5893875cb0c50204505b1f40"
   - "repo:.agents/directives/04-documentation-state.md#sha256:468031856977484a5c5c39e1af40f4efbe7c953ded7bfc6fa7e4bdabcbc00d82"
-  - "repo:AGENTS.md#sha256:0588c67a687a50d00387ab18e2dda2d79a8bcf3344b67f63849cd5f8cab0dabb"
+  - "repo:AGENTS.md#sha256:214d39d1c6a871fce91f14dd543ebdfd46c7e61a448f4e9e88077355c5c648fa"
   - "repo:docs/architecture/agent-directive-ownership.md#sha256:db0d5c52f75c5ce82354cde25673a5ff701bf99b3458f4f311b7844555b0df05"
   - "repo:harness/template/AGENTS.md.jinja#sha256:fe7f06cc88b566a9ab1ef2919d8ca43830aa963a98208c084c56b5c12f26c864"
   - "repo:scripts/check-agent-directives.py#sha256:b575636bcb279f1839fbd57c0aec697da34cd4cdc4709ca66e2bc6e122442b00"

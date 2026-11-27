@@ -1,0 +1,6 @@
+interface:
+  display_name: "Independent Judge (judge)"
+  short_description: "(judge) Prepare an independent clean-context Judge request or validate signed Judge evidence. Formerly adversarial-judge, judge-evidence."
+  default_prompt: "Use $aigent-hive:judge to prepare or validate independent Judge review for this bounded subject."
+policy:
+  allow_implicit_invocation: true

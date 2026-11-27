@@ -9,7 +9,7 @@ summary: "Confirmed removal stops the owned monitor and preserves settings, know
 tags: [bootstrap, onboarding, preservation, uninstall]
 aliases: ["clean reinstall", "hive uninstall"]
 sources:
-  - "repo:crates/hive-cli/src/user_install.rs#sha256:a5230754ef154b932d4a3be84494ea54f4a82f99d3597c9e31ad787f309c9e3a"
+  - "repo:crates/hive-cli/src/user_install.rs#sha256:55ef30622eec809540d234114905762323bbf940761d41aa0d7e75df67fd9c57"
   - "repo:crates/hive-cli/src/user_setup.rs#sha256:ecb5eb8be00aa5902b1cf2d11d9bcdb51e76ceab68fce047c5463a9fc5920762"
   - "repo:docs/archive/plans/cli-uninstall-0.14.0.md#sha256:db50bb091eff11cd8ee1ee39667b992ac7a947a3ea7b0e7d3d74c020f41956d0"
   - "repo:docs/archive/plans/foundations/user-onboarding-shared-index.md#sha256:2253508f42511c793d5e96739eb3316d149e8112736926e6c04199232cf7326a"

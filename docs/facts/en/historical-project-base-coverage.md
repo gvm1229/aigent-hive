@@ -10,8 +10,8 @@ tags: [migration, project-upgrade, regression, release]
 aliases: ["Historical base parity"]
 sources:
   - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:b9439680a397b8459548cffabf6ebd0ff74f5e5ca4977ec8adda5e9676f92a0b"
-  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:bc1e3a0833984c5b67e13ef6490135d8db23fa8e83536268cdec08d23be653b9"
-  - "repo:crates/hive-render/src/lib.rs#sha256:23b7954dec7567430840b7f9b568bb519df9519693b905c9f7fda19fca13399b"
+  - "repo:crates/hive-cli/tests/historical_project_upgrade.rs#sha256:987cd6e755815bc00ead50d2e47ff8ed86157353c0976805256cb451334d1b07"
+  - "repo:crates/hive-render/src/lib.rs#sha256:57d3fc7b3e30d12292b1c224f3cdfbb408a7e4c566d7ad12eaaba3e63adc6a89"
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"

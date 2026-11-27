@@ -103,6 +103,10 @@ const PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS: &[(&str, &str)] = &[
         "0.16.0",
         "sha256:75e98af52458a52eb2868ad1e2cdc9cde4663ae3f2613e466e13c2a50976b82c",
     ),
+    (
+        "0.16.1",
+        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
+    ),
 ];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
@@ -5108,7 +5112,7 @@ fn historical_070_user_inventory(
     let mut entries = historical_070_host_entries(host);
     entries.push(historical_070_entry(
         guidance.clone(),
-        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
         false,
         "shared-marker",
     ));
@@ -5121,7 +5125,7 @@ fn historical_070_user_inventory(
     ] {
         entries.push(historical_070_entry(
             path.to_owned(),
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             false,
             "canonical-data-protected",
         ));
@@ -5294,7 +5298,7 @@ fn legacy_antigravity_directory_scan_inventory() -> AuthenticatedUserInventory {
     ] {
         entries.push(entry(
             path.to_owned(),
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             ownership,
         ));
     }
@@ -10622,7 +10626,7 @@ mod tests {
                     installed_guidance_path: Path::new(&manifest.guidance_path),
                     current_guidance_path: Path::new(&manifest.guidance_path),
                     current_source_release_digest:
-                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
                     current_entries: &[],
                     authenticated_prior: None,
                 },
@@ -10701,6 +10705,7 @@ mod tests {
                 ("0.15.2", 95),
                 ("0.15.3", 95),
                 ("0.16.0", 93),
+                ("0.16.1", 93),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10873,7 +10878,7 @@ mod tests {
                     installed_guidance_path: Path::new(&guidance),
                     current_guidance_path: Path::new(&guidance),
                     current_source_release_digest:
-                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
                     current_entries: &[],
                     authenticated_prior: None,
                 };
@@ -10928,6 +10933,7 @@ mod tests {
                         | "0.15.2"
                         | "0.15.3"
                         | "0.16.0"
+                        | "0.16.1"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -11001,6 +11007,11 @@ mod tests {
         // Every published stable needs its frozen Claude marketplace digest, or updating a real
         // installation of it fails authentication (found on the maintainer PC with 0.16.1-test.1).
         prior_published_user_install_updates_without_reinstall("0.16.0");
+    }
+
+    #[test]
+    fn prior_0_16_1_user_install_updates_without_reinstall() {
+        prior_published_user_install_updates_without_reinstall("0.16.1");
     }
 
     fn prior_published_user_install_updates_without_reinstall(version: &str) {
@@ -11445,7 +11456,7 @@ mod tests {
             installed_guidance_path: Path::new(".codex/AGENTS.md"),
             current_guidance_path: Path::new(".codex/AGENTS.md"),
             current_source_release_digest:
-                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             current_entries: &[],
             authenticated_prior: None,
         };
@@ -11498,7 +11509,7 @@ mod tests {
             installed_guidance_path: Path::new(".codex/AGENTS.md"),
             current_guidance_path: Path::new(".codex/AGENTS.md"),
             current_source_release_digest:
-                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             current_entries: &[],
             authenticated_prior: None,
         };
