@@ -118,6 +118,22 @@ class SyncUpstreamContract(unittest.TestCase):
             with self.assertRaises(sync_upstream.SyncError):
                 sync_upstream.load_lock(self.root)
 
+    def test_real_conflict_rulings_name_topics_to_revisit_for_each_design_source(self) -> None:
+        topics = {name: sync_upstream.conflict_topics(ROOT, name)
+                  for name in ("hallmark", "frontend-design", "web-artifacts-builder", "impeccable")}
+        self.assertIn("Labels and eyebrows", topics["hallmark"])
+        self.assertIn("Density and word count", topics["impeccable"])
+        self.assertIn("Typeface choice", topics["web-artifacts-builder"])
+        self.assertTrue(all(topics.values()), topics)
+        self.assertEqual(sync_upstream.conflict_topics(ROOT, "omc-ai-slop-cleaner"), [])
+        report = {"sources": [{"name": "hallmark", "repo": "nutlope/hallmark", "status": "changed",
+                               "previous_commit": "a" * 40, "commit": "b" * 40, "used_by": ["design-curate"],
+                               "changes": {"added": [], "modified": ["SKILL.md"], "removed": []},
+                               "conflict_topics": topics["hallmark"]}]}
+        body = sync_upstream.pull_request_body(report)
+        self.assertIn("`hallmark` (nutlope/hallmark)", body)
+        self.assertIn("Revisit conflict ruling: Labels and eyebrows", body)
+
     def test_checked_in_vendored_trees_carry_their_licenses(self) -> None:
         self.assertEqual(sync_upstream.verify(ROOT), [])
         lock = sync_upstream.load_lock(ROOT)

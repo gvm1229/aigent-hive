@@ -34,10 +34,12 @@
       "projection": {
         "ai-slop-cleaner": [
           "SKILL.md",
+          "LICENSE"
+        ],
+        "design-curate": [
+          "SKILL.md",
           "LICENSE",
-          "references/*.md",
-          "scripts/sloplint.mjs",
-          "scripts/sloplint-render.mjs"
+          "references/direction.md"
         ]
       }
     },
@@ -54,7 +56,13 @@
       "used_by": [
         "design-curate"
       ],
-      "synced_at": "2026-11-27"
+      "synced_at": "2026-11-27",
+      "projection": {
+        "design-curate": [
+          "SKILL.md",
+          "LICENSE.txt"
+        ]
+      }
     },
     {
       "name": "web-artifacts-builder",
@@ -69,7 +77,13 @@
       "used_by": [
         "design-curate"
       ],
-      "synced_at": "2026-11-27"
+      "synced_at": "2026-11-27",
+      "projection": {
+        "design-curate": [
+          "SKILL.md",
+          "LICENSE.txt"
+        ]
+      }
     },
     {
       "name": "impeccable",
@@ -85,7 +99,16 @@
       "used_by": [
         "design-curate"
       ],
-      "synced_at": "2026-11-27"
+      "synced_at": "2026-11-27",
+      "projection": {
+        "design-curate": [
+          "SKILL.md",
+          "LICENSE",
+          "NOTICE.md",
+          "reference/craft-floor.md",
+          "reference/shape.md"
+        ]
+      }
     }
   ]
 }

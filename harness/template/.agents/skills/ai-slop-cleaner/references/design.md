@@ -2,8 +2,8 @@
 
 Read only when the target is a built interface: HTML, CSS, components or a screenshot of them.
 Apply recorded `design/*` preferences and the project's `DESIGN.md` first; they override every
-item below. Bundled detail: `upstream/hallmark/` (SKILL.md "The Floor", `references/gates.md`) and
-the UI checklist in `upstream/omc-ai-slop-cleaner/SKILL.md`, with
+item below. Bundled detail: `upstream/hallmark/SKILL.md` ("The Floor") and the UI checklist in
+`upstream/omc-ai-slop-cleaner/SKILL.md`, with
 [hive-overrides.md](hive-overrides.md) applied.
 
 ## Keep fixed
@@ -24,5 +24,4 @@ states and interaction behavior.
 ## Check
 
 Compare the page before and after at desktop and phone width. Confirm focus states, reduced-motion
-fallbacks and contrast still pass. With Node available, `upstream/hallmark/scripts/sloplint.mjs`
-can list findings for the plan.
+fallbacks and contrast still pass.

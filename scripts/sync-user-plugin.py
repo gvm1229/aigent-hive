@@ -39,6 +39,7 @@ DIRECTIVE_DESTINATION = (
 )
 ACTIVE_SKILLS_LEDGER = ROOT / "harness" / "template" / ".hive" / "config" / "active-skills.yml.jinja"
 UPSTREAM = ROOT / "harness" / "upstream"
+MAX_PROJECTED_BYTES = 1024 * 1024
 UPSTREAM_RESOURCES_RS = ROOT / "crates" / "hive-projection" / "src" / "upstream_resources.rs"
 
 
@@ -138,8 +139,9 @@ def upstream_projection(source: dict, skill: str) -> list[str]:
     """Return the vendored files one Skill carries: all, or the lock's per-Skill glob subset."""
     root = UPSTREAM / source["name"]
     files = sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
-    # Hive project renderers handle UTF-8 text only; binary assets stay vendored in harness/upstream.
-    files = [name for name in files if is_utf8(root / name)]
+    # Hive project renderers handle UTF-8 text files up to the 1 MiB setup file cap; larger or
+    # binary assets stay vendored in harness/upstream only.
+    files = [name for name in files if is_utf8(root / name) and (root / name).stat().st_size <= MAX_PROJECTED_BYTES]
     patterns = source.get("projection", {}).get(skill)
     if patterns is None:
         return files

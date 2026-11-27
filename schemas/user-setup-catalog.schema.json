@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 31,
-      "maxItems": 31,
+      "minItems": 33,
+      "maxItems": 33,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },

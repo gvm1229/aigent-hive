@@ -20,8 +20,8 @@ file wins; when a recorded user preference disagrees with this file, the prefere
   theme or rebuild the page; new direction belongs to `design-curate`.
 - Skip its CSS stamp and critique-line requirement (Floor item 15) unless the project already uses
   Hallmark stamps.
-- Run `scripts/sloplint.mjs` only when Node is available and the target is HTML or CSS; report its
-  output as findings for the plan, not as automatic fixes.
+- Only Hallmark's `SKILL.md` and license are bundled here. Use "The Floor" as a checklist; skip
+  steps that need its other files or scripts, such as `sloplint.mjs`.
 - Do not install its hooks or call its image generation.
 
 ## Writing
