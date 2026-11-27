@@ -35,6 +35,11 @@
   "product_version": "0.17.0",
   "projections": [
     ".agents/skills/adversarial-judge/SKILL.md",
+    ".agents/skills/ai-slop-cleaner/SKILL.md",
+    ".agents/skills/ai-slop-cleaner/references/code.md",
+    ".agents/skills/ai-slop-cleaner/references/design.md",
+    ".agents/skills/ai-slop-cleaner/references/hive-overrides.md",
+    ".agents/skills/ai-slop-cleaner/references/writing.md",
     ".agents/skills/aither/SKILL.md",
     ".agents/skills/amend-directive/SKILL.md",
     ".agents/skills/apollon/SKILL.md",
@@ -173,6 +178,7 @@
   ],
   "skills": [
     "adversarial-judge",
+    "ai-slop-cleaner",
     "aither",
     "amend-directive",
     "apollon",

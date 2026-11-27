@@ -58,7 +58,7 @@ mandatory_skills:
 skill_dependencies:
   - { skill: quick-answer, requires: [] }
   - { skill: project-setup, requires: [] }
-  - { skill: code-polish, requires: [] }
+  - { skill: ai-slop-cleaner, requires: [] }
   - { skill: humanize-kor, requires: [] }
   - { skill: autonomous-workflow, requires: [] }
   - { skill: knowledge-capture, requires: [knowledge-recall] }
@@ -81,13 +81,13 @@ skill_dependencies:
 
   - { skill: athena, requires: [autonomous-workflow] }
   - { skill: artemis, requires: [research-best-practices] }
-  - { skill: hephaistos, requires: [code-polish] }
+  - { skill: hephaistos, requires: [ai-slop-cleaner] }
   - { skill: apollon, requires: [humanize-kor] }
   - { skill: eileithyia, requires: [project-setup] }
   - { skill: poseidon, requires: [team-execution] }
   - { skill: demeter, requires: [knowledge-recall] }
   - { skill: aither, requires: [usage-guard] }
-  - { skill: hades, requires: [code-polish] }
+  - { skill: hades, requires: [ai-slop-cleaner] }
 
 # Reserved for a future signed consent contract. This release supports built-in Skills only.
 optional_third_party_skills: []

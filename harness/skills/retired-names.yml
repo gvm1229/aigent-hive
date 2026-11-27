@@ -1,12 +1,12 @@
 schema_version: 1
 retired_names:
   adversarial-judge: judge
-  ai-slop-cleaner: code-polish
   answer: quick-answer
   auto-setup-harness: project-setup
   auto-setup-project: project-setup
   best-practice-research: research-best-practices
-  clean-ai-slop: code-polish
+  clean-ai-slop: ai-slop-cleaner
+  code-polish: ai-slop-cleaner
   configure: user-setup
   engineer-run: autonomous-workflow
   handoff-role: run
@@ -73,3 +73,4 @@ lifecycle:
   - { retired_name: adversarial-judge, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }
   - { retired_name: judge-evidence, introduced_in: 0.10.0, renamed_in: 0.16.0, deprecated_in: 0.16.0, removed_in: 0.16.0, replacement: judge, transition_kind: merge }
   - { retired_name: verified-workflow, introduced_in: 0.10.0, renamed_in: 0.17.0, deprecated_in: 0.17.0, removed_in: 0.17.0, replacement: autonomous-workflow, transition_kind: rename }
+  - { retired_name: code-polish, introduced_in: 0.9.0, renamed_in: 0.17.0, deprecated_in: 0.17.0, removed_in: 0.17.0, replacement: ai-slop-cleaner, transition_kind: rename }

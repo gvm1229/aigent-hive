@@ -5185,12 +5185,12 @@ usage_guard:
 
         assert_eq!(
             config.skills.selected,
-            ["code-polish", "knowledge-capture", "user-setup"]
+            ["ai-slop-cleaner", "knowledge-capture", "user-setup"]
         );
         let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
             .expect("UTF-8 canonical config");
-        assert!(canonical.contains("- code-polish"));
-        assert!(!canonical.contains("ai-slop-cleaner"));
+        assert!(canonical.contains("- ai-slop-cleaner"));
+        assert!(!canonical.contains("code-polish"));
     }
 
     #[test]

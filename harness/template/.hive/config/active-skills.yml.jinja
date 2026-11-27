@@ -3,6 +3,17 @@ schema_version: 1
 skills: []
 {% else -%}
 skills:
+{% if 'ai-slop-cleaner' in selected_project_skills -%}
+- name: ai-slop-cleaner
+  source_type: built-in
+  content_digest: sha256:b3e0616ab2d66e65d54f5b7312853398b77b94303286c32384aedd9962909604
+  side_effect_class: project-write
+  capabilities:
+  - filesystem-read
+  - filesystem-write
+  - shell
+  consent_digest: null
+{% endif -%}
 {% if 'aither' in selected_project_skills -%}
 - name: aither
   source_type: built-in
@@ -61,17 +72,6 @@ skills:
   - shell
   consent_digest: null
 {% endif -%}
-{% if 'code-polish' in selected_project_skills -%}
-- name: code-polish
-  source_type: built-in
-  content_digest: sha256:834fe741e1125b76f457ba3b421e73567b3bdcee475ddaa1b16997677bea5f43
-  side_effect_class: project-write
-  capabilities:
-  - filesystem-read
-  - filesystem-write
-  - shell
-  consent_digest: null
-{% endif -%}
 {% if 'custom-subagent-create' in selected_project_skills -%}
 - name: custom-subagent-create
   source_type: built-in
@@ -115,7 +115,7 @@ skills:
 {% if 'hephaistos' in selected_project_skills -%}
 - name: hephaistos
   source_type: built-in
-  content_digest: sha256:cf6ae542648adb151468eb877fa0d7ff8f5455d5cb972b111955a11cbd5e817d
+  content_digest: sha256:7200d051b93c7d35468155decd248dbd704ceaea03f63bb952b6bd8ae3517e71
   side_effect_class: read-only
   capabilities:
   - filesystem-read

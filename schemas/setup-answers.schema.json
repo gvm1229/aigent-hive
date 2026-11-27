@@ -731,6 +731,7 @@
     "skill_name": {
       "enum": [
         "adversarial-judge",
+        "ai-slop-cleaner",
         "amend-directive",
         "autonomous-workflow",
         "code-polish",

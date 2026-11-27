@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | athena | 계획·검증 | `roster`, `judge`, `report`, `release`, `discord` | `athena`, `autonomous-workflow`, `multi-goal`, `judge`, `run` |
 | artemis | 조사·진단 | `doctor`, `check-target`, `route` | `artemis`, `research-best-practices`, `quick-answer` |
-| hephaistos | 구현 | `role`, `agent`, `run`, `loop` | `hephaistos`, `code-polish`, `custom-subagent-create`, `ship` |
+| hephaistos | 구현 | `role`, `agent`, `run`, `loop` | `hephaistos`, `ai-slop-cleaner`, `custom-subagent-create`, `ship` |
 | apollon | 글쓰기 | `prompt`, `korean` | `apollon`, `humanize-kor`, `prompt-refine` |
 | eileithyia | 설정·갱신 | `setup`, `install`, `update`, `project` | `eileithyia`, `user-setup`, `project-setup`, `product-update`, `project-refresh`, `project-transition`, `amend-directive` |
 | poseidon | 조율 | `orchestration`, `session`, `hook`, `policy`, `summon`, `msg`, `stop` | `poseidon`, `team-execution` |

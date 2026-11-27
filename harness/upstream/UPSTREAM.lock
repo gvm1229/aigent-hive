@@ -30,7 +30,16 @@
         "ai-slop-cleaner",
         "design-curate"
       ],
-      "synced_at": "2026-11-27"
+      "synced_at": "2026-11-27",
+      "projection": {
+        "ai-slop-cleaner": [
+          "SKILL.md",
+          "LICENSE",
+          "references/*.md",
+          "scripts/sloplint.mjs",
+          "scripts/sloplint-render.mjs"
+        ]
+      }
     },
     {
       "name": "frontend-design",

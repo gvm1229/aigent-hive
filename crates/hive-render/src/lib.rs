@@ -8937,7 +8937,7 @@ mod tests {
             "aither",
             "hades",
             "quick-answer",
-            "code-polish",
+            "ai-slop-cleaner",
             "humanize-kor",
             "autonomous-workflow",
             "knowledge-manage",
@@ -8979,7 +8979,18 @@ mod tests {
             "judge/references/evidence.md",
             "amend-directive/references/transplant.md",
             "team-execution/references/mediation.md",
-        ] {
+            "ai-slop-cleaner/references/code.md",
+            "ai-slop-cleaner/references/design.md",
+            "ai-slop-cleaner/references/hive-overrides.md",
+            "ai-slop-cleaner/references/writing.md",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .chain(
+            hive_projection::upstream_resources::UPSTREAM_RESOURCES
+                .iter()
+                .map(|(skill, relative, _)| format!("{skill}/{relative}")),
+        ) {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
                 expected.push(format!(".claude/skills/{resource}"));
@@ -11069,7 +11080,9 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 43);
+        // Vendored upstream files and ai-slop-cleaner references belong to the Claude projection.
+        let upstream = hive_projection::upstream_resources::UPSTREAM_RESOURCES.len();
+        assert_eq!(deletions.len(), 47 + upstream);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));

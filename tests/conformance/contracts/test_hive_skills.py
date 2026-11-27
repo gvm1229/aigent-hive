@@ -29,7 +29,7 @@ EXPECTED_SKILLS = frozenset(
         "hades",
         "quick-answer",
         "project-setup",
-        "code-polish",
+        "ai-slop-cleaner",
         "humanize-kor",
         "custom-subagent-create",
         "autonomous-workflow",
@@ -226,6 +226,36 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertFalse((SKILL_ROOT / "verified-workflow").exists())
         for root in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
             self.assertFalse((root / "verified-workflow").exists())
+
+    def test_ai_slop_cleaner_has_target_checklists_and_exact_upstream_copies(self) -> None:
+        skill = SKILL_ROOT / "ai-slop-cleaner"
+        body = (skill / "SKILL.md").read_text(encoding="utf-8")
+        header = yaml.safe_load(body.split("---", 2)[1])
+        self.assertIn("code-polish", header["description"])
+        self.assertIn("say the new name `ai-slop-cleaner`", body)
+        for rule in ("Plan first; confirm before editing", "autonomous-workflow", "Review mode"):
+            self.assertIn(rule, body)
+        self.assertNotIn("http", body, "source links stay out of SKILL.md")
+        for name in ("code.md", "writing.md", "design.md", "hive-overrides.md"):
+            source = (skill / "references" / name).read_bytes()
+            for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                self.assertEqual((destination / "ai-slop-cleaner/references" / name).read_bytes(), source)
+        upstream = ROOT / "harness/upstream"
+        for vendored in ("omc-ai-slop-cleaner", "hallmark"):
+            projected = skill / "references/upstream" / vendored
+            self.assertTrue((projected / "LICENSE").is_file())
+            for path in projected.rglob("*"):
+                if path.is_file():
+                    relative = path.relative_to(projected)
+                    self.assertEqual(path.read_bytes(), (upstream / vendored / relative).read_bytes(), str(relative))
+                    for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                        copy = destination / "ai-slop-cleaner/references/upstream" / vendored / relative
+                        self.assertEqual(copy.read_bytes(), path.read_bytes(), str(copy))
+        ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))
+        self.assertEqual(ledger["retired_names"]["code-polish"], "ai-slop-cleaner")
+        self.assertEqual(ledger["retired_names"]["clean-ai-slop"], "ai-slop-cleaner")
+        self.assertNotIn("ai-slop-cleaner", ledger["retired_names"])
+        self.assertFalse((SKILL_ROOT / "code-polish").exists())
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

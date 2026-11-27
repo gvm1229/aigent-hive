@@ -52,8 +52,8 @@
 
 기능
   기능 묶음 : 개별 선택 27개
-              aither, amend-directive, apollon, artemis, athena,
-              autonomous-workflow, code-polish, demeter, eileithyia, hades,
+              ai-slop-cleaner, aither, amend-directive, apollon, artemis,
+              athena, autonomous-workflow, demeter, eileithyia, hades,
               hephaistos, humanize-kor, judge, knowledge-capture,
               knowledge-manage, knowledge-recall, multi-goal, poseidon,
               product-update, project-refresh, prompt-refine, quick-answer,

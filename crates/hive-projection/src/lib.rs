@@ -12,6 +12,7 @@ use hive_core::sha256_digest;
 use serde::{Deserialize, Serialize};
 
 pub mod hook_config;
+pub mod upstream_resources;
 
 const CATALOG_YAML: &str = include_str!("../../../harness/skills/catalog.yml");
 const PROJECT_SUITES_YAML: &str = include_str!("../../../harness/project-setup/skill-suites.yml");
@@ -39,7 +40,7 @@ const TEAM_EXECUTION: &[u8] = include_bytes!("../../../harness/skills/team-execu
 const MULTI_GOAL: &[u8] = include_bytes!("../../../harness/skills/multi-goal/SKILL.md");
 const CUSTOM_SUBAGENT_CREATE: &[u8] =
     include_bytes!("../../../harness/skills/custom-subagent-create/SKILL.md");
-const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/code-polish/SKILL.md");
+const AI_SLOP_CLEANER: &[u8] = include_bytes!("../../../harness/skills/ai-slop-cleaner/SKILL.md");
 const BEST_PRACTICE_RESEARCH: &[u8] =
     include_bytes!("../../../harness/skills/research-best-practices/SKILL.md");
 const SHIP: &[u8] = include_bytes!("../../../harness/skills/ship/SKILL.md");
@@ -394,6 +395,7 @@ pub fn retired_builtin_skill_names() -> Result<BTreeMap<String, String>, Project
         "adversarial-judge",
         "judge-evidence",
         "verified-workflow",
+        "code-polish",
     ]);
     if lifecycle_names != required_lifecycle {
         return Err(ProjectionError::new(
@@ -1476,11 +1478,11 @@ fn localized_skill_text(
             "자율 진행",
             "사소한 질문 없이 끝까지 진행하고 진짜 질문은 마지막에 한 번에 묻습니다.",
         ),
-        "code-polish" => (
+        "ai-slop-cleaner" => (
             "Clean AI slop",
-            "Review and clean unnecessary AI-generated wording and structure.",
-            "AI 군더더기 정리",
-            "AI가 만든 불필요한 표현과 구조를 검토해 정리합니다.",
+            "Clean AI slop from selected code, documents or design after a confirmed plan.",
+            "AI 티 정리",
+            "고른 코드·문서·디자인에서 AI 티를 정리합니다. 수정 전 계획을 보여 주고 확인을 받습니다.",
         ),
         "research-best-practices" => (
             "Research practices",
@@ -1639,9 +1641,33 @@ fn add_skill_resources(files: &mut BTreeMap<String, Vec<u8>>, host: Host, name: 
             "references/mediation.md",
             include_bytes!("../../../harness/skills/team-execution/references/mediation.md"),
         )],
+        "ai-slop-cleaner" => &[
+            (
+                "references/code.md",
+                include_bytes!("../../../harness/skills/ai-slop-cleaner/references/code.md"),
+            ),
+            (
+                "references/design.md",
+                include_bytes!("../../../harness/skills/ai-slop-cleaner/references/design.md"),
+            ),
+            (
+                "references/hive-overrides.md",
+                include_bytes!(
+                    "../../../harness/skills/ai-slop-cleaner/references/hive-overrides.md"
+                ),
+            ),
+            (
+                "references/writing.md",
+                include_bytes!("../../../harness/skills/ai-slop-cleaner/references/writing.md"),
+            ),
+        ],
         _ => &[],
     };
-    for (relative, bytes) in resources {
+    let upstream = upstream_resources::UPSTREAM_RESOURCES
+        .iter()
+        .filter(|(skill, _, _)| *skill == name)
+        .map(|(_, relative, bytes)| (*relative, *bytes));
+    for (relative, bytes) in resources.iter().copied().chain(upstream) {
         files.insert(
             format!("{}/{name}/{relative}", host.skill_root()),
             bytes.to_vec(),
@@ -1738,8 +1764,8 @@ fn embedded_skill_metadata(name: &str) -> Option<&'static [u8]> {
         "custom-subagent-create" => Some(include_bytes!(
             "../../../harness/skills/custom-subagent-create/agents/openai.yaml"
         )),
-        "code-polish" => Some(include_bytes!(
-            "../../../harness/skills/code-polish/agents/openai.yaml"
+        "ai-slop-cleaner" => Some(include_bytes!(
+            "../../../harness/skills/ai-slop-cleaner/agents/openai.yaml"
         )),
         "research-best-practices" => Some(include_bytes!(
             "../../../harness/skills/research-best-practices/agents/openai.yaml"
@@ -1803,7 +1829,7 @@ fn embedded_skill_sources() -> [(&'static str, &'static [u8]); 31] {
         ("team-execution", TEAM_EXECUTION),
         ("multi-goal", MULTI_GOAL),
         ("custom-subagent-create", CUSTOM_SUBAGENT_CREATE),
-        ("code-polish", AI_SLOP_CLEANER),
+        ("ai-slop-cleaner", AI_SLOP_CLEANER),
         ("research-best-practices", BEST_PRACTICE_RESEARCH),
         (
             "athena",
@@ -2479,7 +2505,7 @@ fn action_for_skill(skill: &str) -> Option<LogicalAction> {
         "prompt-refine" => Some(LogicalAction::RefinePrompt),
         "knowledge-capture" | "knowledge-manage" => Some(LogicalAction::IngestKnowledge),
         "knowledge-recall" => Some(LogicalAction::QueryKnowledge),
-        "code-polish"
+        "ai-slop-cleaner"
         | "humanize-kor"
         | "research-best-practices"
         | "autonomous-workflow"
@@ -3242,10 +3268,15 @@ description: Inspect one local file without changing it.
             let second = compile_projection(host, &[]).expect("projection");
             assert_eq!(first, second);
             assert_eq!(first.active_skills.skills.len(), 27);
-            let expected_file_count = if host == Host::Claude { 44 } else { 71 };
+            // Vendored upstream files ride along with the Skills that use them.
+            let upstream = upstream_resources::UPSTREAM_RESOURCES
+                .iter()
+                .filter(|(skill, _, _)| first.active_skills.skills.iter().any(|s| s.name == *skill))
+                .count();
+            let expected_file_count = upstream + if host == Host::Claude { 48 } else { 75 };
             assert_eq!(first.files.len(), expected_file_count);
             for skill in [
-                "code-polish",
+                "ai-slop-cleaner",
                 "research-best-practices",
                 "judge",
                 "knowledge-capture",
@@ -3436,13 +3467,16 @@ description: Inspect one local file without changing it.
             .iter()
             .map(|skill| skill.name.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(names, ["code-polish", "knowledge-capture", "user-setup"]);
+        assert_eq!(
+            names,
+            ["ai-slop-cleaner", "knowledge-capture", "user-setup"]
+        );
         assert!(projection
             .files
-            .contains_key(".agents/skills/code-polish/SKILL.md"));
+            .contains_key(".agents/skills/ai-slop-cleaner/SKILL.md"));
         assert!(!projection
             .files
-            .contains_key(".agents/skills/ai-slop-cleaner/SKILL.md"));
+            .contains_key(".agents/skills/code-polish/SKILL.md"));
     }
 
     #[test]
@@ -3899,9 +3933,9 @@ description: Inspect one local file without changing it.
     fn v09_skill_sources_templates_embeddings_and_digests_match() {
         let expected = [
             (
-                "code-polish",
+                "ai-slop-cleaner",
                 AI_SLOP_CLEANER,
-                include_bytes!("../../../harness/skills/code-polish/SKILL.md").as_slice(),
+                include_bytes!("../../../harness/skills/ai-slop-cleaner/SKILL.md").as_slice(),
             ),
             (
                 "research-best-practices",

@@ -116,7 +116,7 @@
       "enum": [
         "quick-answer",
         "project-setup",
-        "code-polish",
+        "ai-slop-cleaner",
         "autonomous-workflow",
         "knowledge-capture",
         "knowledge-manage",

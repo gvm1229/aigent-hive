@@ -40,8 +40,8 @@ ownership_ko = "구현"
 role = "hive-routine-implementer"
 aliases = ["Hephaestus"]
 commands = ["role", "agent", "run", "loop"]
-skills = ["hephaistos", "code-polish", "custom-subagent-create", "ship"]
-steps = ["Follow the saved implementation plan and required checks. Use code-polish only for selected code review or cleanup, and ship only for verified focused commits."]
+skills = ["hephaistos", "ai-slop-cleaner", "custom-subagent-create", "ship"]
+steps = ["Follow the saved implementation plan and required checks. Use ai-slop-cleaner only for selected code review or cleanup, and ship only for verified focused commits."]
 
 [[gods]]
 name = "apollon"

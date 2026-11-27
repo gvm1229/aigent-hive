@@ -52,9 +52,9 @@ General
 
 Features
   Feature bundle    : Individual, 27
-                      aither, amend-directive, apollon, artemis, athena,
-                      autonomous-workflow, code-polish, demeter, eileithyia,
-                      hades, hephaistos, humanize-kor, judge,
+                      ai-slop-cleaner, aither, amend-directive, apollon,
+                      artemis, athena, autonomous-workflow, demeter,
+                      eileithyia, hades, hephaistos, humanize-kor, judge,
                       knowledge-capture, knowledge-manage, knowledge-recall,
                       multi-goal, poseidon, product-update, project-refresh,
                       prompt-refine, quick-answer, research-best-practices,

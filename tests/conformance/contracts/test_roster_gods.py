@@ -39,7 +39,7 @@ class GodEntryTests(unittest.TestCase):
             self.assertEqual(policy["interface"]["short_description"], god.description_en)
             self.assertTrue(policy["policy"]["allow_implicit_invocation"])
         hades = (ROOT / "harness/skills/hades/SKILL.md").read_text(encoding="utf-8")
-        self.assertNotIn("code-polish", hades)
+        self.assertNotIn("ai-slop-cleaner", hades)
         self.assertNotIn("ship", hades)
         poseidon = (ROOT / "harness/skills/poseidon/SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("cleanup", poseidon)

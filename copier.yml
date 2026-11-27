@@ -29,12 +29,12 @@ _exclude:
   - "{% if 'hephaistos' not in selected_project_skills %}.claude/skills/hephaistos{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.agents/skills/poseidon{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.claude/skills/poseidon{% endif %}"
+  - "{% if 'ai-slop-cleaner' not in selected_project_skills %}.agents/skills/ai-slop-cleaner{% endif %}"
+  - "{% if 'ai-slop-cleaner' not in selected_project_skills %}.claude/skills/ai-slop-cleaner{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.agents/skills/amend-directive{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.claude/skills/amend-directive{% endif %}"
   - "{% if 'autonomous-workflow' not in selected_project_skills %}.agents/skills/autonomous-workflow{% endif %}"
   - "{% if 'autonomous-workflow' not in selected_project_skills %}.claude/skills/autonomous-workflow{% endif %}"
-  - "{% if 'code-polish' not in selected_project_skills %}.agents/skills/code-polish{% endif %}"
-  - "{% if 'code-polish' not in selected_project_skills %}.claude/skills/code-polish{% endif %}"
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.agents/skills/custom-subagent-create{% endif %}"
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.claude/skills/custom-subagent-create{% endif %}"
   - "{% if 'humanize-kor' not in selected_project_skills %}.agents/skills/humanize-kor{% endif %}"
@@ -302,13 +302,13 @@ selected_project_skills:
   type: yaml
   when: false
   default:
+    - ai-slop-cleaner
     - aither
     - amend-directive
     - apollon
     - artemis
     - athena
     - autonomous-workflow
-    - code-polish
     - demeter
     - eileithyia
     - hades
