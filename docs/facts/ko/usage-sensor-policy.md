@@ -9,7 +9,7 @@ summary: "검증된 기본 조회·동의한 보조 조회와 v2 비활성 보�
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:9ba3432d1374deb45c60bdd6a6b7b0ad52cf2f98d3274c55c5ee24c8d86c09e1"
+  - "repo:crates/hive-cli/src/main.rs#sha256:80eef72b676bab2bceaed789f57fb9181f89df18f74aeebc5d22a62c54f7ac77"
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:crates/hive-cli/src/usage_control/manual.rs#sha256:56dfd0b134074e7797d3ab27b203800fce2809758460a40f0500e1ad7b39bd80"

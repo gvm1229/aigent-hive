@@ -17,6 +17,7 @@
 | demeter | 글쓰기 | `prompt`, `korean` | `demeter`, `humanize-kor`, `prompt-refine` |
 | aither | 사용량 관리 | `usage` | `aither`, `usage-guard` |
 | hades | 정리 | `storage`, `prune`, `uninstall` | `hades` |
+| aphrodite | 디자인 | `design` | `aphrodite`, `design-curate` |
 
 ## 역할 기본값과 이전
 
