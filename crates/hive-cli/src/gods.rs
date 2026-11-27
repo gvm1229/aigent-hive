@@ -28,7 +28,50 @@ pub(crate) fn decorate(
     Ok(())
 }
 
+/// 0.17.0 swapped Apollon (now knowledge) and Demeter (now writing). During 0.17.x an old call
+/// prints one notice on stderr and runs under the new owner. Remove this table in 0.18.0.
+fn transferred_owner(god: &str, command: &str) -> Option<&'static str> {
+    match (god, command) {
+        ("demeter", "knowledge" | "source-wiki" | "index") => Some("apollon"),
+        ("apollon", "prompt" | "korean") => Some("demeter"),
+        _ => None,
+    }
+}
+
+fn transfer_notice(command: &str, owner: &God, korean: bool) -> String {
+    let name = owner.display_name();
+    if korean {
+        format!("0.17.0부터 {command}은 {name} 담당입니다. {name}로 실행합니다.")
+    } else {
+        format!("Since 0.17.0, {command} belongs to {name}. Running it with {name}.")
+    }
+}
+
+/// Resolve the god that runs an alias call, following the 0.17.x transition table.
+fn alias_owner<'a>(god: &'a God, args: &[String]) -> (&'a God, Option<&'static God>) {
+    let Some(command) = args.first() else {
+        return (god, None);
+    };
+    match transferred_owner(god.name, command).and_then(hive_core::gods::find) {
+        Some(owner) => (owner, Some(owner)),
+        None => (god, None),
+    }
+}
+
 pub(crate) fn run_alias(god: &God, args: &[String]) -> std::process::ExitCode {
+    let (god, transferred) = alias_owner(god, args);
+    if let Some(owner) = transferred {
+        let korean = crate::user_install::resolve_user_root_path()
+            .ok()
+            .and_then(|user| PinnedTarget::open_usage(&user).ok())
+            .and_then(|root| load_operational_config(root.target_dir()).ok().flatten())
+            .is_some_and(|config| config.interface_language == InterfaceLanguage::Ko);
+        eprintln!(
+            "{} {}",
+            owner.prefix(),
+            transfer_notice(&args[0], owner, korean)
+        );
+    }
     let expanded = match alias_arguments(god, args) {
         Ok(args) => args,
         Err(error) => {
@@ -161,14 +204,44 @@ mod alias_tests {
             .unwrap(),
             ["advanced", "route", "--request", "r.json"]
         );
-        let apollon = hive_core::gods::find("apollon").unwrap();
+        let demeter = hive_core::gods::find("demeter").unwrap();
         assert_eq!(
-            alias_arguments(apollon, &["prompt".into(), "validate".into()]).unwrap(),
+            alias_arguments(demeter, &["prompt".into(), "validate".into()]).unwrap(),
             ["advanced", "prompt", "validate"]
         );
         assert_eq!(
-            alias_arguments(apollon, &["korean".into()]).unwrap(),
+            alias_arguments(demeter, &["korean".into()]).unwrap(),
             ["korean"]
         );
+    }
+
+    #[test]
+    fn gods_swapped_commands_run_under_the_new_owner_during_0_17() {
+        let apollon = hive_core::gods::find("apollon").unwrap();
+        let demeter = hive_core::gods::find("demeter").unwrap();
+        for command in ["knowledge", "source-wiki", "index"] {
+            let args = vec![command.to_owned(), "status".to_owned()];
+            let (owner, transferred) = alias_owner(demeter, &args);
+            assert_eq!(owner.name, "apollon");
+            assert_eq!(transferred.map(|god| god.name), Some("apollon"));
+            assert_eq!(alias_arguments(owner, &args).unwrap()[0], command);
+        }
+        for command in ["prompt", "korean"] {
+            let (owner, transferred) = alias_owner(apollon, &[command.to_owned()]);
+            assert_eq!(owner.name, "demeter");
+            assert!(transferred.is_some());
+        }
+        assert!(transfer_notice("knowledge", apollon, false)
+            .starts_with("Since 0.17.0, knowledge belongs to Apollon"));
+        assert!(transfer_notice("prompt", demeter, true)
+            .starts_with("0.17.0부터 prompt은 Demeter 담당"));
+        // Commands outside the transition table keep failing.
+        let (owner, transferred) = alias_owner(demeter, &["install".to_owned()]);
+        assert_eq!(owner.name, "demeter");
+        assert!(transferred.is_none());
+        assert!(alias_arguments(owner, &["install".into()]).is_err());
+        let (owner, transferred) = alias_owner(apollon, &["knowledge".to_owned()]);
+        assert_eq!(owner.name, "apollon");
+        assert!(transferred.is_none(), "the new owner itself gets no notice");
     }
 }

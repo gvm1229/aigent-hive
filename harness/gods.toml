@@ -46,16 +46,16 @@ steps = ["Follow the saved implementation plan and required checks. Use ai-slop-
 [[gods]]
 name = "apollon"
 korean = "아폴론"
-purpose_en = "writing"
-purpose_ko = "글쓰기"
-summary_en = "Writes and polishes text, and refines requests and prompts."
-summary_ko = "글을 쓰고 다듬으며 요청문과 프롬프트를 정리"
-ownership_ko = "글쓰기"
-role = "hive-article-writer"
+purpose_en = "knowledge"
+purpose_ko = "지식"
+summary_en = "Saves, searches and maintains Hive knowledge and moves it to another computer."
+summary_ko = "Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전"
+ownership_ko = "지식"
+role = "hive-research-specialist"
 aliases = ["Apollo", "아폴로"]
-commands = ["prompt", "korean"]
-skills = ["apollon", "humanize-kor", "prompt-refine"]
-steps = ["Use humanize-kor for selected Korean prose or prompt-refine for an explicit prompt-authoring request; preserve meaning and protected literals."]
+commands = ["knowledge", "source-wiki", "index"]
+skills = ["apollon", "knowledge-capture", "knowledge-recall", "knowledge-manage"]
+steps = ["Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts.", "During 0.17.x, if the request is writing, Korean prose or prompt refinement, say that since 0.17.0 this work belongs to Demeter, then open the demeter Skill."]
 
 [[gods]]
 name = "eileithyia"
@@ -88,16 +88,16 @@ steps = ["Use team-execution for bounded team coordination; record a role handof
 [[gods]]
 name = "demeter"
 korean = "데메테르"
-purpose_en = "knowledge"
-purpose_ko = "지식"
-summary_en = "Saves, searches and maintains Hive knowledge and moves it to another computer."
-summary_ko = "Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전"
-ownership_ko = "지식"
-role = "hive-research-specialist"
+purpose_en = "writing"
+purpose_ko = "글쓰기"
+summary_en = "Writes and polishes text, and refines requests and prompts."
+summary_ko = "글을 쓰고 다듬으며 요청문과 프롬프트를 정리"
+ownership_ko = "글쓰기"
+role = "hive-article-writer"
 aliases = []
-commands = ["knowledge", "source-wiki", "index"]
-skills = ["demeter", "knowledge-capture", "knowledge-recall", "knowledge-manage"]
-steps = ["Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts."]
+commands = ["prompt", "korean"]
+skills = ["demeter", "humanize-kor", "prompt-refine"]
+steps = ["Use humanize-kor for selected Korean prose or prompt-refine for an explicit prompt-authoring request; preserve meaning and protected literals.", "During 0.17.x, if the request is about saving, searching or maintaining Hive knowledge, say that since 0.17.0 this work belongs to Apollon, then open the apollon Skill."]
 
 [[gods]]
 name = "aither"

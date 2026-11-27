@@ -82,10 +82,10 @@ skill_dependencies:
   - { skill: athena, requires: [autonomous-workflow] }
   - { skill: artemis, requires: [research-best-practices] }
   - { skill: hephaistos, requires: [ai-slop-cleaner] }
-  - { skill: apollon, requires: [humanize-kor] }
+  - { skill: apollon, requires: [knowledge-recall] }
   - { skill: eileithyia, requires: [project-setup] }
   - { skill: poseidon, requires: [team-execution] }
-  - { skill: demeter, requires: [knowledge-recall] }
+  - { skill: demeter, requires: [humanize-kor] }
   - { skill: aither, requires: [usage-guard] }
   - { skill: hades, requires: [ai-slop-cleaner] }
 
