@@ -9,7 +9,7 @@ summary: "Qualified native reads precede consented fallback; disabled v2 protect
 tags: [sensor, usage]
 aliases: ["Native-first usage"]
 sources:
-  - "repo:crates/hive-cli/src/main.rs#sha256:faf826bee157e4bc89eaca09eec04bf246a03fe61c17afe4c21e7767e7420ce2"
+  - "repo:crates/hive-cli/src/main.rs#sha256:d0eac7091189856f43a68cf8c80c02d829b85f01829f5cc4663c90ad17bd213c"
   - "repo:crates/hive-cli/src/usage.rs#sha256:ce45a82f02376c71b9bd25a7daf377c11fa1c9b55a4f08098098f97cd7ae920f"
   - "repo:crates/hive-cli/src/usage_control.rs#sha256:50bbe234dff657b08dca42bc8cb17330a75d6aee436b5debd318fb039fd787c4"
   - "repo:crates/hive-cli/src/usage_control/manual.rs#sha256:56dfd0b134074e7797d3ab27b203800fce2809758460a40f0500e1ad7b39bd80"
