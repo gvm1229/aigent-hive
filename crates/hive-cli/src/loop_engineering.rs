@@ -239,6 +239,9 @@ impl LoadedGraphChain {
 }
 
 pub(crate) fn run_loop(arguments: &[String]) -> ExitCode {
+    if crate::overnight::handles(arguments) {
+        return crate::overnight::run(arguments);
+    }
     if arguments.first().map(String::as_str) == Some("--help") {
         print!("{LOOP_USAGE}");
         return ExitCode::SUCCESS;
