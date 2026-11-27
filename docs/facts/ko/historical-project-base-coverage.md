@@ -15,7 +15,7 @@ sources:
   - "repo:docs/archive/plans/releases/0.9.5/release-0.9.5-stable-publication.md#sha256:70ed823701fa0ae8be728d97b8705846f0eaa50e6e8758425d439bfee4d1334c"
   - "repo:scripts/accept-public-hive.py#sha256:b951e079d0974d4bf2a80e37337f2acf95d03e2e42a4bc428dd9fbde89a538a3"
   - "repo:scripts/check-project-base-coverage.py#sha256:9fb5bf18a2bc89f0f990c89d5dda633455e22fa5e3fbf527f83f08ae0519dff2"
-  - "repo:scripts/qualify-project-predecessors.py#sha256:670e7d1963f111e31e107a4a6a37225c5f2b9c28f406d9aafb4e718bed03cf02"
+  - "repo:scripts/qualify-project-predecessors.py#sha256:df5be492c56c1b932e9f9e4507bac97bd4583150e048b1d4004e5170472aac9f"
 links: [projection-upgrade-purge, update-transaction, version-policy]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

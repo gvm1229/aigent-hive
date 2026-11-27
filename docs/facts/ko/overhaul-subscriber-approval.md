@@ -9,7 +9,7 @@ summary: "재정비 전체 완료까지 구독자 안내 자동 승인."
 tags: [overhaul, release, subscriber]
 aliases: [overhaul-subscriber-approval]
 sources:
-  - "repo:docs/plans/overhaul/README.md#sha256:656fb97cb69c58d7d5f9a65abf4485813637c8c70d3a0e89ffda25edf7ce5b4f"
+  - "repo:docs/plans/overhaul/README.md#sha256:bd3869ee8aaae22e79425e34462151f60b953ac157ac33b6425a6aa52a21ca12"
 links: [stable-release-discord-subscriber-notification]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

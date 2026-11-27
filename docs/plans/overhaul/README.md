@@ -105,7 +105,7 @@
 | 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 10/10·정식 |
 | 5 0.15.3 기억 | [0.15.3-memory.md](../active/0.15.3-memory.md) | 있음 | 0.15.2 정식 | 17/17·정식 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 10/12 |
-| 7 0.17.0 호스트 야간 반복·신 역할 재배치 | [0.17.0-overnight-loop.md](../active/0.17.0-overnight-loop.md)·[0.17.0-gods-realign.md](../active/0.17.0-gods-realign.md)·[0.17.0-skills-browser.md](../active/0.17.0-skills-browser.md) | 있음 | 0.16.0 정식·2026-11-28 승인 | 15/27 |
+| 7 0.17.0 호스트 야간 반복·신 역할 재배치 | [0.17.0-overnight-loop.md](../active/0.17.0-overnight-loop.md)·[0.17.0-gods-realign.md](../active/0.17.0-gods-realign.md)·[0.17.0-skills-browser.md](../active/0.17.0-skills-browser.md) | 있음 | 0.16.0 정식·2026-11-28 승인 | 16/27 |
 
 ## 불변 조건
 
