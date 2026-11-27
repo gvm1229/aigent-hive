@@ -50,3 +50,8 @@ harness/project-bases/0.16.0/** -text
 harness/user-bases/0.16.0/** -text
 harness/project-bases/0.16.1/** -text
 harness/user-bases/0.16.1/** -text
+harness/upstream/** -text
+harness/skills/*/references/upstream/** -text
+harness/plugins/aigent-hive/skills/*/references/upstream/** -text
+harness/template/.agents/skills/*/references/upstream/** -text
+harness/template/.claude/skills/*/references/upstream/** -text

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "name": "omc-ai-slop-cleaner",
+      "repo": "Yeachan-Heo/oh-my-claudecode",
+      "ref": "main",
+      "path": "skills/ai-slop-cleaner",
+      "commit": "b8fe8682ae5b3696d96ef43225c06b7461327a26",
+      "license": "MIT",
+      "license_files": [
+        "LICENSE"
+      ],
+      "used_by": [
+        "ai-slop-cleaner"
+      ],
+      "synced_at": "2026-11-27"
+    },
+    {
+      "name": "hallmark",
+      "repo": "nutlope/hallmark",
+      "ref": "main",
+      "path": "skills/hallmark",
+      "commit": "04977e15f3dfd6ee4b74c887dac3eb52665d6c92",
+      "license": "MIT",
+      "license_files": [
+        "skills/hallmark/LICENSE"
+      ],
+      "used_by": [
+        "ai-slop-cleaner",
+        "design-curate"
+      ],
+      "synced_at": "2026-11-27"
+    },
+    {
+      "name": "frontend-design",
+      "repo": "anthropics/skills",
+      "ref": "main",
+      "path": "skills/frontend-design",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "license": "Apache-2.0",
+      "license_files": [
+        "skills/frontend-design/LICENSE.txt"
+      ],
+      "used_by": [
+        "design-curate"
+      ],
+      "synced_at": "2026-11-27"
+    },
+    {
+      "name": "web-artifacts-builder",
+      "repo": "anthropics/skills",
+      "ref": "main",
+      "path": "skills/web-artifacts-builder",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "license": "Apache-2.0",
+      "license_files": [
+        "skills/web-artifacts-builder/LICENSE.txt"
+      ],
+      "used_by": [
+        "design-curate"
+      ],
+      "synced_at": "2026-11-27"
+    },
+    {
+      "name": "impeccable",
+      "repo": "pbakaus/impeccable",
+      "ref": "main",
+      "path": "plugin/skills/impeccable",
+      "commit": "2fc5e1459efbbf06d92c7306517c286bf12490cf",
+      "license": "Apache-2.0",
+      "license_files": [
+        "LICENSE",
+        "NOTICE.md"
+      ],
+      "used_by": [
+        "design-curate"
+      ],
+      "synced_at": "2026-11-27"
+    }
+  ]
+}
