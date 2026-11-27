@@ -23,8 +23,8 @@
 | --- | ---: | ---: | ---: |
 | 야간 루프와 넘어온 항목 | 1 | 17 | 5.6% |
 | 신 역할 재배치 | 0 | 5 | 0.0% |
-| 자율 진행·정리 Skill·브라우저 | 2 | 2 | 50.0% |
-| **현재 범위 합계** | **3** | **24** | **11.1%** |
+| 자율 진행·정리 Skill·브라우저 | 3 | 1 | 75.0% |
+| **현재 범위 합계** | **4** | **23** | **14.8%** |
 <!-- HIVE:PLAN-STATE:END -->
 
 ## Active fragments
@@ -37,5 +37,5 @@
 
 ## 이전 근거
 
-- [재정비 순서](overhaul/README.md)·[정식 0.16.1 근거](../research/overhaul/OV161-007.md)·[정식 0.16.0 근거](../research/overhaul/OV160-011.md)
+- [재정비 순서](overhaul/README.md)·[0.16.1 계획](active/0.16.1-knowledge-fixes.md)·[정식 0.16.1 근거](../research/overhaul/OV161-007.md)·[정식 0.16.0 근거](../research/overhaul/OV160-011.md)·[단계 5 근거 색인](../research/overhaul/stage-5-closeout.md)
 - [이전 활성 계획 색인](../archive/plans/0.16.1-closeout.md)

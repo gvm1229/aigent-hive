@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `quick-answer` | 별도 조사 없는 독립 질문 응답 | `rehash` 명령 의미 설명 |
 | `project-setup` | 저장소 근거를 활용한 안내형·자동 프로젝트 설정 | 저장소 최소 질문 설정 |
-| `code-polish` | 동작·회귀 시험을 보존하는 생성 코드 정리 | 변경 파일의 중복 wrapper 정리 |
+| `ai-slop-cleaner` | 코드·문서·디자인의 AI 티 정리, 수정 전 계획 확인 | 변경 파일의 중복 wrapper·반복 문단·카드 속 카드 정리 |
 | `humanize-kor` | 의미·수치·인용·링크를 보존하는 기존 한국어 text 윤문 | 번역투가 있는 한국어 문서의 보수적 윤문 |
 | `autonomous-workflow` | 중간 질문 없이 끝까지 진행, 진짜 질문은 마지막에 한 번 | 자리를 비운 동안 작업 끝내기 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
@@ -58,7 +58,7 @@
 | --- | --- |
 | `source-answer` | `quick-answer` |
 | `source-project-setup` | `project-setup` |
-| `source-code-polish` | `code-polish` |
+| `source-code-polish` | `ai-slop-cleaner` |
 | `source-ralph-loop` | `autonomous-workflow` |
 | `source-knowledge-import` | `knowledge-capture` |
 | `source-knowledge-maintain` | `knowledge-manage` |
@@ -133,3 +133,4 @@
 ## `0.17.0` 이름 이관
 
 - `verified-workflow` → `autonomous-workflow`(이름 변경, 유지관리자 2026-11-28 결정: 두 달간 사용 기록 없음)
+- `code-polish` → `ai-slop-cleaner`(이름 복원과 대상 확대: 코드·문서·디자인, 유지관리자 2026-11-28 결정). `clean-ai-slop`도 새 이름으로

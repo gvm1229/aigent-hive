@@ -27,7 +27,4 @@ retry·별도 host-owned Judge receipt·새 process/session 복구·terminal 취
 검증. 증명 범위는 CLI process 복구이며 Codex desktop 재시작과 단일 Judge의 인증 quorum
 완료 권한은 제외.
 
-0.17.0 변경: 제품 Skill 이름 `verified-workflow`는 `autonomous-workflow`로 교체(유지관리자 2026-11-28
-결정). 옛 이름 호출은 새 이름으로 route되고 결정 결과의 `renamed_from`에 옛 이름 표시. 같은
-routing 조건(workflow signal 2개 이상)은 유지, 반복 상태 기계는 `hive loop`·`hive orchestration`
-CLI에 유지.
+0.17.0: 제품 Skill은 `autonomous-workflow`로 교체. 옛 이름 호출은 새 이름과 `renamed_from`으로 route, 반복 상태 기계는 `hive loop` CLI에 유지.

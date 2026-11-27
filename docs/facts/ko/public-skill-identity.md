@@ -9,10 +9,10 @@ summary: "28개 제품 Skill과 직접 이름 이관, 지식 스캔·이전 역�
 tags: [localization, migration, plugin, skill]
 aliases: ["Skill naming"]
 sources:
-  - "repo:crates/hive-projection/src/lib.rs#sha256:231667ff59ebdf77e225a02c36e12a911a4aa4ce23eb5290d94f7f560306b662"
+  - "repo:crates/hive-projection/src/lib.rs#sha256:2ebda9014906433468b9b07a89627938f32aedfe08f56e0203539d8b9e3a3ad9"
   - "repo:docs/archive/plans/foundations/knowledge-skill-display-names-next-release.md#sha256:517f1f10a17537698d1e4e1a30b59bda9fd2488e3062576d01b4cf641dea0e76"
-  - "repo:docs/skills.md#sha256:c8a9253f37738a5031244de86ea5fc53ae2814ea9b76e1f4eef081741f26401e"
-  - "repo:harness/skills/catalog.yml#sha256:6e817b733d042b45e8f1700d948c91fb58d75bb619e1c47ab381b9bd446ac652"
+  - "repo:docs/skills.md#sha256:c8436b3c92a4b0e3b11ea57d4cb1ea9b9f410b518a83feff81a31685d1cc0559"
+  - "repo:harness/skills/catalog.yml#sha256:c0b54d4bd885f7f40cca464be778c30d5c594d7ffa94b9c09952297b8d5b6f51"
 links: [global-onboarding, skill-routing]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

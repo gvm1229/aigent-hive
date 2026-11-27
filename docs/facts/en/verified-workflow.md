@@ -27,7 +27,4 @@ canonical run creation, intentional failure then successful retry, a separate ho
 receipt, fresh-process/session recovery, and terminal cancellation in one receipt. It proves CLI
 process recovery, not a Codex desktop restart, and gives no quorum authority to one Judge receipt.
 
-0.17.0 change: the product Skill `verified-workflow` is replaced by `autonomous-workflow`
-(maintainer decision, 2026-11-28). A call with the old name routes to the new name and the
-decision reports the old name in `renamed_from`. The routing condition (two or more workflow
-signals) stays; the loop state machine stays in the `hive loop` and `hive orchestration` CLI.
+0.17.0: the product Skill became `autonomous-workflow`. The old name routes to it with `renamed_from`; the loop state machine stays in the `hive loop` CLI.

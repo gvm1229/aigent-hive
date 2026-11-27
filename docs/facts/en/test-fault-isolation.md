@@ -10,7 +10,7 @@ tags: [release, test, update]
 aliases: ["activation fault scope"]
 sources:
   - "repo:crates/hive-render/src/activation.rs#sha256:33b2d062ff0344069aff6fe9bf682f3fd1f69043903a3a5755649df729d9e18f"
-  - "repo:crates/hive-render/src/lib.rs#sha256:bd58a2ef9a317149e6c76b0d23632f67174e139a9f339770247ffb458e0e9c39"
+  - "repo:crates/hive-render/src/lib.rs#sha256:95986fc182da052aa80fb7d2e57dae3d1b65cb3a8f9226932ca2914e32050132"
   - "repo:crates/hive-update/src/transaction.rs#sha256:9b6b1f0d01bd69c287783f4d4089e3a580d848a7ff9b97cd13ee3445540edca4"
 links: [test-distribution]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"

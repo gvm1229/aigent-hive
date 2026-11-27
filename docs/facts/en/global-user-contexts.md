@@ -10,10 +10,10 @@ tags: [bootstrap, communication, onboarding]
 aliases: ["User contexts", "User profile"]
 sources:
   - "repo:README.md#sha256:05c2f90b0096663c3c8ded051eec7d7632df4b99442d90a77faca4f26b5bf80b"
-  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ecb5eb8be00aa5902b1cf2d11d9bcdb51e76ceab68fce047c5463a9fc5920762"
+  - "repo:crates/hive-cli/src/user_setup.rs#sha256:ca92f0e78e139dec5062080f354d5d22ff49ad529b83aaef6f8e7ba3f0a6bb39"
   - "repo:harness/skills/user-setup/SKILL.md#sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848"
-  - "repo:harness/user-setup/catalog.yml#sha256:289353eff461fae903b00a4fcc2c536dcfe03ddecbf43191b510c32ea2ef76ad"
-  - "repo:schemas/user-setup.schema.json#sha256:9c050b5a8597a4fc9a73b0d04d53fbdc28e12c7f3fa6a17e341c7e34311b5c53"
+  - "repo:harness/user-setup/catalog.yml#sha256:b5e91926bf309dfbfdb91504179fecfd92cc47e01ec969c342c58b828be2f108"
+  - "repo:schemas/user-setup.schema.json#sha256:b99f5f407d0c939de48ec8f540868bcc42928a91c88115cecfca97e1ae0c4fec"
 links: [global-onboarding, language-consistency]
 reviewed_revision: "git:2c804e7809832adcdd9cba8ec1cfd8f4e0bffb6e"
 status: active
