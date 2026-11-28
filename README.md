@@ -137,6 +137,26 @@ authorizes dispatch by itself. Ordinary answers and manual work do not run it:
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
 ```
 
+## Gemini Antigravity support
+
+Hive works with Gemini Antigravity in a narrower way than with Codex and Claude Code.
+
+- **What works:** Hive installs its Skills and instructions into Antigravity. You then use `agy`
+  or the Antigravity app yourself, just like the other apps, and Hive reads the usage numbers that
+  Antigravity sends on its own.
+- **What Hive never does with Antigravity:** start it or steer it by itself. That means no handing
+  it a task as a worker, no using it to review or judge another app's work, no overnight loops,
+  and no automatic restarts. Codex and Claude Code can do these jobs because their own official
+  command-line and hook features allow it.
+- **Why:** Google's [Antigravity FAQ](https://antigravity.google/docs/faq/) says that using third-party software to access
+  Antigravity breaks its terms and can get the account suspended or closed. If Hive drove `agy`,
+  Hive would be that third-party software. People have reported suspensions after a single use
+  from another tool, and appeals are limited. Hive refuses these jobs so your Google account stays
+  safe; it does not depend on any setting you could switch on by mistake.
+- **Gemini models in other tools:** Google points third-party tools to a Gemini Enterprise or
+  Google AI Studio API key instead. Hive never asks for or stores model-provider API keys, so it
+  does not offer that route.
+
 ## Supported platforms
 
 macOS (Apple Silicon, Intel), Linux (x86_64, arm64) and Windows x86_64. Public test acceptance
