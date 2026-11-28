@@ -111,8 +111,23 @@ pub(super) fn run_remember(arguments: &[String]) -> Result<KnowledgeResult, Wiki
         changed_paths,
         SHARED_INDEX_RELATIVE,
         &committed.manifest_digest,
-        json!({"plan": plan, "store": committed, "graph_update": graph_update, "subjects": subjects}),
+        json!({"plan": plan, "store": committed, "graph_update": graph_update, "subjects": subjects,
+               "facts": [notice_fact(&request, plan.disposition)]}),
     ))
+}
+
+/// What the god notice lists for one remembered fact (OV170-034).
+fn notice_fact(
+    request: &RememberRequest,
+    disposition: hive_wiki::rag::RememberDisposition,
+) -> serde_json::Value {
+    json!({
+        "kind": request.kind,
+        "subject": request.subject,
+        "normalized_fact": request.normalized_fact,
+        "visibility": request.visibility,
+        "disposition": disposition,
+    })
 }
 
 /// One user-root fact inside a `--batch` file.
@@ -203,7 +218,10 @@ fn run_remember_batch(user_root: &Path, path: &Path) -> Result<KnowledgeResult, 
         changed_paths,
         SHARED_INDEX_RELATIVE,
         &committed.manifest_digest,
-        json!({"plans": plans, "store": committed, "graph_update": graph_update, "subjects": subjects}),
+        json!({"plans": plans, "store": committed, "graph_update": graph_update, "subjects": subjects,
+               "facts": requests.iter().zip(&plans)
+                   .map(|(request, plan)| notice_fact(request, plan.disposition))
+                   .collect::<Vec<_>>()}),
     ))
 }
 

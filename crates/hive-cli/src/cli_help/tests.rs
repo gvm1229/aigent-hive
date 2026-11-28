@@ -187,7 +187,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["usage.rs", "usage"], &[], &["--all-accounts", "--format", "--json-only", "--provider",
        "--source", "--stdio", "--version"]),
     (&["cli_help.rs", "cli_help", "display_options.rs", "gods.rs", "human_output.rs",
-       "human_output", "user_directives.rs", "browser.rs"], &[], &[]),
+       "human_output", "user_directives.rs", "browser.rs", "notice.rs"], &[], &["--output"]),
 ];
 
 #[test]
