@@ -9,7 +9,7 @@ summary: "User-facing commands use readable defaults while explicit machine prot
 tags: [cli, compatibility, output]
 aliases: ["human-readable CLI"]
 sources:
-  - "repo:.agents/directives/02-architecture.md#sha256:1a2382dc375a5983f994a9180cda03355e8b79c69cb9a3195c0d4353331ef4ed"
+  - "repo:.agents/directives/02-architecture.md#sha256:b2a6a7eb65b8382b59dd2a2c5599bdb0c1ceb1fd3f8ee1caaa1b2511a86c9db5"
   - "repo:crates/hive-cli/src/human_output.rs#sha256:bf38581607b1cf16698c8b1a13ef6028dd42e5c963187299e3e452ce6ce77bc9"
   - "repo:crates/hive-cli/src/main.rs#sha256:0e64d62a5fd1a6d3586714d422107eb7def1a726c6cf4852bf3412c5ce56c42a"
   - "repo:crates/hive-cli/tests/human_output.rs#sha256:ed87bc2cfbf8ccfac0a3e4a8aeb779903dfdca2f0728f7647244e6bec650f65b"

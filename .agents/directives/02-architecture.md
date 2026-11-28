@@ -8,6 +8,8 @@ Keep source (code/tests/directives/docs), release bundles (reproducible binaries
 projections), and installed harnesses (generated files in independent consumer projects) separate.
 No consumer state in source, source directives in releases, or user data in releases/plugin caches.
 `harness/` alone owns consumer templates/Skills; host files are thin projections.
+Project setup stays manual forever: no automatic path may create, restore, prompt for, or suggest
+`.hive/` where it is absent. Automatic project refresh applies only where `.hive/` already exists.
 
 ## Runtime and orchestration
 
