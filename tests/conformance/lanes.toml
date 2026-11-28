@@ -93,6 +93,7 @@ modules = [
   "tests.conformance.integration.test_connected_setup_lifecycle",
   "tests.conformance.integration.test_wiki_lifecycle",
   "tests.conformance.integration.test_project_lifecycle",
+  "tests.conformance.integration.test_project_sync",
   "tests.conformance.integration.test_root_knowledge_promotion",
   "tests.conformance.integration.test_shared_knowledge_index",
   "tests.conformance.integration.test_source_wiki",

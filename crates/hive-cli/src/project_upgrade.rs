@@ -42,6 +42,7 @@ const LEGACY_DERIVED_INDEX_PATHS: [&str; 4] = [
 const MAX_LEDGER_BYTES: u64 = 8 * 1024 * 1024;
 mod reconfiguration;
 mod skill_merge;
+mod sync;
 pub(crate) use reconfiguration::prepare as prepare_reconfiguration;
 use skill_merge::SkillMergeRequest;
 const CLAIMED_JOURNAL_LOCATOR_MARKER: &str = "; claimed journal retained at ";
@@ -165,6 +166,9 @@ struct JournalChange {
 }
 
 pub(crate) fn run(arguments: &[String]) -> ExitCode {
+    if arguments.first().is_some_and(|action| action == "sync") {
+        return sync::run(&arguments[1..]);
+    }
     let result = parse(arguments).and_then(|(target, mode, user_root, skill_merges, approval)| match mode {
         CommandMode::Recover => {
             ensure_consumer_target(&target)

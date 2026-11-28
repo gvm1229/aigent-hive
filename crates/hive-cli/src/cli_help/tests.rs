@@ -173,7 +173,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["loop_engineering.rs", "overnight.rs"], &["loop"], &[]),
     (&["orchestration.rs"], &["orchestration"], &[]),
     (&["policy.rs", "policy"], &["policy"], &[]),
-    (&["project_upgrade.rs", "project_upgrade"], &["project"], &[]),
+    (&["project_upgrade.rs", "project_upgrade"], &["project"], &["--absolute-git-dir", "--porcelain", "--untracked-files=no"]),
     (&["report.rs"], &["report"], &[]),
     (&["role.rs"], &["role"], &[]),
     (&["roster.rs"], &["roster"], &["--unknown"]),

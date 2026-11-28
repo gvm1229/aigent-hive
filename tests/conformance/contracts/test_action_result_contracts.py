@@ -122,6 +122,7 @@ EXPECTED_ACTIONS = {
     "QuerySourceWiki",
     "RebuildSourceWikiIndex",
     "UpdateHarness",
+    "SyncProjectHarness",
 }
 
 EXPECTED_KNOWLEDGE_ACTIONS = {action for action in EXPECTED_ACTIONS if "Knowledge" in action}

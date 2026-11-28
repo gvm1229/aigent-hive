@@ -119,7 +119,8 @@
         "OrchestrationAuthorityIssue",
         "OrchestrationAuthorityRevoke",
         "OrchestrationMigrate",
-        "UpdateHarness"
+        "UpdateHarness",
+        "SyncProjectHarness"
       ]
     },
     "status": {
@@ -189,7 +190,6 @@
     },
     "data": {
       "type": "object"
-    }
     },
     "actor": {
       "description": "God that performed a write action, from the command family owner in harness/gods.toml; null means Hive itself.",
@@ -214,6 +214,7 @@
           "secret": { "const": true }
         }
       }
+    }
   },
   "oneOf": [
     {

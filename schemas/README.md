@@ -23,6 +23,8 @@
 | `migration-table.schema.json` | compiled Rust migration route |
 | `release-surface-inventory.schema.json` | shipped schema·Skill·template·projection inventory |
 | `historical-surfaces.schema.json` | updater에 compile되는 이전 release surface baseline |
+| `project-settings.schema.json` | 사람이 고치는 `.hive/project.toml`: 자동 맞춤 버전 범위와 설정 파일별 보호 등급 |
+| `project-lock.schema.json` | Hive만 쓰는 `.hive/project.lock`: Hive 버전·기준 장부 지문·관리 파일 지문 |
 | `update-state.schema.json` | 마지막 수락 release version·sequence·manifest digest |
 | `update-journal.schema.json` | crash recovery의 exact mutation·backup·next-state binding |
 | `backup-manifest.schema.json` | exact seven-day update recovery snapshot |
