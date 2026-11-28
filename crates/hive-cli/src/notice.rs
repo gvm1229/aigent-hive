@@ -408,29 +408,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage) -> Option<Strin
     } else {
         format!("{called} · {operation}: {total}")
     };
-    for item in items.iter().take(MAX_SHOWN) {
-        let target = if item.secret {
-            pick(("비밀 정보라 표시 안 함", "hidden: secret")).to_owned()
-        } else if action == "RememberKnowledge" {
-            relabel_kind(&item.target, ko)
-        } else {
-            item.target.clone()
-        };
-        out.push_str("\n- ");
-        out.push_str(&target);
-        let mark = match item.outcome {
-            Outcome::Skipped => Some(pick(("건너뜀", "skipped"))),
-            Outcome::Failed => Some(pick(("실패", "failed"))),
-            Outcome::Done | Outcome::Planned => None,
-        };
-        if let Some(mark) = mark.filter(|_| action != "RememberKnowledge") {
-            write!(out, " ({mark}").expect("formatting a String");
-            if let Some(reason) = &item.reason {
-                write!(out, ": {reason}").expect("formatting a String");
-            }
-            out.push(')');
-        }
-    }
+    push_items(&mut out, &items, action, ko);
     if total > MAX_SHOWN {
         let rest = total - MAX_SHOWN;
         if ko {
@@ -457,6 +435,34 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage) -> Option<Strin
     write!(out, "\n{} {}", pick(("결과:", "Result:")), parts.join(", "))
         .expect("formatting a String");
     Some(out)
+}
+
+/// One line per shown item; skipped and failed items carry their reason.
+fn push_items(out: &mut String, items: &[Item], action: &str, ko: bool) {
+    let pick = |pair: (&'static str, &'static str)| if ko { pair.0 } else { pair.1 };
+    for item in items.iter().take(MAX_SHOWN) {
+        let target = if item.secret {
+            pick(("비밀 정보라 표시 안 함", "hidden: secret")).to_owned()
+        } else if action == "RememberKnowledge" {
+            relabel_kind(&item.target, ko)
+        } else {
+            item.target.clone()
+        };
+        out.push_str("\n- ");
+        out.push_str(&target);
+        let mark = match item.outcome {
+            Outcome::Skipped => Some(pick(("건너뜀", "skipped"))),
+            Outcome::Failed => Some(pick(("실패", "failed"))),
+            Outcome::Done | Outcome::Planned => None,
+        };
+        if let Some(mark) = mark.filter(|_| action != "RememberKnowledge") {
+            write!(out, " ({mark}").expect("formatting a String");
+            if let Some(reason) = &item.reason {
+                write!(out, ": {reason}").expect("formatting a String");
+            }
+            out.push(')');
+        }
+    }
 }
 
 fn relabel_kind(target: &str, ko: bool) -> String {
