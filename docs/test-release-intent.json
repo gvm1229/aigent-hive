@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
-  "product_version": "0.16.1",
-  "package_version": "0.16.1-test.2",
+  "product_version": "0.17.0",
+  "package_version": "0.17.0-test.1",
   "plan_ids": [
-    "OV161-001",
-    "OV161-002",
-    "OV161-003",
-    "OV161-004",
-    "OV161-005"
+    "OV170-001",
+    "OV170-002",
+    "OV170-003",
+    "OV170-004",
+    "OV170-006",
+    "OV170-007",
+    "OV170-012",
+    "OV170-015",
+    "OV170-016",
+    "OV170-017",
+    "OV170-018",
+    "OV170-019",
+    "OV170-020",
+    "OV170-021",
+    "OV170-023",
+    "OV170-025",
+    "OV170-028"
   ],
-  "product_tree_sha256": "sha256:8832ff7f7f79585aa4d2e5a32a7ddd18148bee110007cfbf820e74c546b76b7c"
+  "product_tree_sha256": "sha256:204097ea78e097deb4a0a19ff7936c34d51580d3e9e28cddcdb191b9eeec8b42"
 }
