@@ -67,6 +67,7 @@ const SETUP_OPTIONS: &[&str] = &[
     "--answers",
     "--apply",
     "--capabilities",
+    "--claude-browser-deny",
     "--claude-statusline",
     "--confirm",
     "--describe",

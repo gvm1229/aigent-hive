@@ -33,6 +33,7 @@ const HOST_FILES: &[&str] = &[
 const HIVE_FILES: &[&str] = &[
     ".hive/roster.toml",
     ".hive/state/claude-statusline.json",
+    ".hive/state/claude-browser-deny.json",
     ".hive/runtime/usage-monitor/config.json",
     ".hive/runtime/usage-monitor/disable.json",
     ".hive/install/codex.json",
@@ -520,6 +521,17 @@ fn restore(
 pub(crate) fn before_update(user_root: &Path) -> Result<Option<PathBuf>, String> {
     open_canonical_user_root(user_root)
         .and_then(|(_, root)| create(&root, "update", Vec::new()))
+        .map_err(|error| error.message().to_owned())
+}
+
+/// A verified copy taken before Hive edits one host settings file after the user's approval.
+pub(crate) fn before_host_settings_change(
+    user_root: &Path,
+    operation: &str,
+    settings: &str,
+) -> Result<Option<PathBuf>, String> {
+    open_canonical_user_root(user_root)
+        .and_then(|(_, root)| create(&root, operation, vec![PathBuf::from(settings)]))
         .map_err(|error| error.message().to_owned())
 }
 
