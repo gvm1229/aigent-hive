@@ -683,7 +683,9 @@ pub fn authorize_hook_with_resolution(
     let fresh = load_resolution(&fresh_path)?;
     validate_resolution_host(&fresh.host, &fresh)?;
     let _ = derive_resolution(&fresh)?;
-    if !host_native_hook_event_supported(&fresh, event) {
+    if !host_native_hook_event_supported(&fresh, event)
+        || automatic_reinvocation_refused(&fresh, capability)
+    {
         return Ok(HookAuthorization::Inert);
     }
     ensure_consumer_target(target).map_err(|error| RenderError::Safety(error.to_string()))?;
@@ -2953,6 +2955,90 @@ fn frozen_project_base_0_16_0(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u
     Ok(files)
 }
 
+// Exact public stable v0.16.1 baseline.
+frozen_project_base_0_9_release!(
+    frozen_project_base_0_16_1_without_resources,
+    "0.16.1",
+    [
+        "00-project-harness.md",
+        "01-project-knowledge.md",
+        "02-project-upgrade.md",
+        "03-session-coordination.md",
+        "04-korean-language.md"
+    ],
+    [
+        "aither",
+        "amend-directive",
+        "apollon",
+        "artemis",
+        "athena",
+        "code-polish",
+        "custom-subagent-create",
+        "demeter",
+        "eileithyia",
+        "hades",
+        "hephaistos",
+        "humanize-kor",
+        "judge",
+        "knowledge-capture",
+        "knowledge-manage",
+        "knowledge-recall",
+        "multi-goal",
+        "poseidon",
+        "product-update",
+        "project-refresh",
+        "project-setup",
+        "project-transition",
+        "prompt-refine",
+        "quick-answer",
+        "research-best-practices",
+        "run",
+        "ship",
+        "team-execution",
+        "usage-guard",
+        "user-setup",
+        "verified-workflow"
+    ]
+);
+
+fn frozen_project_base_0_16_1(target_dir: &Dir) -> Result<BTreeMap<String, Vec<u8>>, RenderError> {
+    let mut files = frozen_project_base_0_16_1_without_resources(target_dir)?;
+    let host = read_installed_harness(target_dir)?.primary_host;
+    for (name, suffix, bytes) in [
+        ("amend-directive", "references/transplant.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/amend-directive/references/transplant.md").as_slice()),
+        ("judge", "references/adversarial.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/judge/references/adversarial.md").as_slice()),
+        ("judge", "references/evidence.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/judge/references/evidence.md").as_slice()),
+        ("knowledge-capture", "references/ingest.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-capture/references/ingest.md").as_slice()),
+        ("knowledge-capture", "references/scan.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-capture/references/scan.md").as_slice()),
+        ("knowledge-manage", "references/maintenance.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-manage/references/maintenance.md").as_slice()),
+        ("knowledge-manage", "references/promote.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-manage/references/promote.md").as_slice()),
+        ("knowledge-manage", "references/transfer.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-manage/references/transfer.md").as_slice()),
+        ("knowledge-recall", "references/confidential.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/knowledge-recall/references/confidential.md").as_slice()),
+        ("project-setup", "references/advanced-setup.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/project-setup/references/advanced-setup.md").as_slice()),
+        ("project-setup", "references/directive-recovery.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/project-setup/references/directive-recovery.md").as_slice()),
+        ("project-setup", "references/structured-choices.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/project-setup/references/structured-choices.md").as_slice()),
+        ("run", "references/checkpoint.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/run/references/checkpoint.md").as_slice()),
+        ("run", "references/handoff.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/run/references/handoff.md").as_slice()),
+        ("run", "references/policy-review.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/run/references/policy-review.md").as_slice()),
+        ("run", "references/resume.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/run/references/resume.md").as_slice()),
+        ("team-execution", "references/mediation.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/team-execution/references/mediation.md").as_slice()),
+        ("usage-guard", "references/control.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/usage-guard/references/control.md").as_slice()),
+        ("usage-guard", "references/sensors.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/usage-guard/references/sensors.md").as_slice()),
+        ("user-setup", "references/language.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/references/language.md").as_slice()),
+        ("user-setup", "references/questions.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/references/questions.md").as_slice()),
+        ("user-setup", "references/reconfiguration.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/references/reconfiguration.md").as_slice()),
+        ("user-setup", "references/recovery.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/references/recovery.md").as_slice()),
+        ("user-setup", "references/workflow.md", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/references/workflow.md").as_slice()),
+        ("user-setup", "scripts/resolve-hive.ps1", include_bytes!("../../../harness/project-bases/0.16.1/skills/user-setup/scripts/resolve-hive.ps1").as_slice()),
+    ] {
+        if files.contains_key(&format!(".agents/skills/{name}/SKILL.md")) {
+            files.insert(format!(".agents/skills/{name}/{suffix}"), bytes.to_vec());
+            if host == "claude" { files.insert(format!(".claude/skills/{name}/{suffix}"), bytes.to_vec()); }
+        }
+    }
+    Ok(files)
+}
+
 fn default_markdown_wiki_backend() -> String {
     "markdown".to_owned()
 }
@@ -4721,6 +4807,11 @@ fn validate_hook_approvals(
                 )));
             }
         };
+        if automatic_reinvocation_refused(resolution, &hook.capability) {
+            return Err(RenderError::Safety(
+                hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.to_owned(),
+            ));
+        }
         if !host_native_hook_event_supported(resolution, expected_event) {
             return Err(RenderError::Safety(format!(
                 "optional hook requires a supported host-native event: {expected_event}"
@@ -4751,6 +4842,13 @@ fn validate_hook_approvals(
         verify_consent_digest(hook, &hook.consent_digest, "fallback hook")?;
     }
     Ok(())
+}
+
+/// Hooks that make the host run again on its own. Antigravity never receives them, because
+/// Google's Antigravity terms prohibit third-party tools from driving Antigravity.
+fn automatic_reinvocation_refused(resolution: &CapabilityResolution, capability: &str) -> bool {
+    hive_core::automation_terms::is_terms_restricted(&resolution.host)
+        && matches!(capability, "continue-active-run" | "validate-korean-output")
 }
 
 fn host_native_hook_event_supported(resolution: &CapabilityResolution, event: &str) -> bool {
@@ -8852,10 +8950,12 @@ mod tests {
             "demeter",
             "aither",
             "hades",
+            "aphrodite",
             "quick-answer",
-            "code-polish",
+            "ai-slop-cleaner",
+            "design-curate",
             "humanize-kor",
-            "verified-workflow",
+            "autonomous-workflow",
             "knowledge-manage",
             "knowledge-capture",
             "prompt-refine",
@@ -8895,7 +8995,19 @@ mod tests {
             "judge/references/evidence.md",
             "amend-directive/references/transplant.md",
             "team-execution/references/mediation.md",
-        ] {
+            "ai-slop-cleaner/references/code.md",
+            "ai-slop-cleaner/references/design.md",
+            "ai-slop-cleaner/references/hive-overrides.md",
+            "ai-slop-cleaner/references/writing.md",
+            "design-curate/references/conflicts.md",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .chain(
+            hive_projection::upstream_resources::UPSTREAM_RESOURCES
+                .iter()
+                .map(|(skill, relative, _)| format!("{skill}/{relative}")),
+        ) {
             expected.push(format!(".agents/skills/{resource}"));
             if capabilities == "capabilities-claude-omc.json" {
                 expected.push(format!(".claude/skills/{resource}"));
@@ -9992,6 +10104,35 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_never_receives_automatic_reinvocation_hooks() {
+        let mut resolution = supported_host_native_hook_resolution();
+        resolution.host = "antigravity".to_owned();
+        resolution.external_runtime = None;
+        let Err(RenderError::Safety(message)) =
+            validate_hook_approvals(&[signed_continuation_hook()], &resolution)
+        else {
+            panic!("Antigravity continuation hook must be refused");
+        };
+        assert_eq!(
+            message,
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        assert!(super::automatic_reinvocation_refused(
+            &resolution,
+            "validate-korean-output"
+        ));
+        assert!(!super::automatic_reinvocation_refused(
+            &resolution,
+            "checkpoint-reminder"
+        ));
+        resolution.host = "codex".to_owned();
+        assert!(!super::automatic_reinvocation_refused(
+            &resolution,
+            "continue-active-run"
+        ));
+    }
+
+    #[test]
     fn continuation_hook_projects_only_from_exact_approved_consent() {
         let temporary = tempfile::tempdir().expect("temporary directory");
         let target = temporary.path().canonicalize().expect("canonical target");
@@ -10985,7 +11126,9 @@ mod tests {
             .expect("old Claude projection ownership should verify");
         let deletions = &transition.deletions;
 
-        assert_eq!(deletions.len(), 43);
+        // Vendored upstream files and ai-slop-cleaner references belong to the Claude projection.
+        let upstream = hive_projection::upstream_resources::UPSTREAM_RESOURCES.len();
+        assert_eq!(deletions.len(), 50 + upstream);
         assert!(deletions
             .iter()
             .all(|path| path.starts_with(".claude/skills")));
@@ -11909,7 +12052,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 config["selected_project_skills"].as_array().unwrap().len(),
-                if wiki_enabled { 27 } else { 24 }
+                if wiki_enabled { 29 } else { 26 }
             );
             assert_eq!(config["interface_language"].as_str(), Some("ko"));
             assert_eq!(config["project_skill_policy_version"].as_integer(), Some(1));

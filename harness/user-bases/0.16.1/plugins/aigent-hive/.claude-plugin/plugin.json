@@ -1,0 +1,26 @@
+{
+  "name": "aigent-hive",
+  "version": "0.16.1",
+  "description": "Install and maintain project-local Aigent Hive harnesses without provider API credentials.",
+  "author": {
+    "name": "Hojin (Tom) Jeong",
+    "url": "https://github.com/gvm1229/aigent-hive"
+  },
+  "homepage": "https://github.com/gvm1229/aigent-hive",
+  "repository": "https://github.com/gvm1229/aigent-hive",
+  "license": "Apache-2.0",
+  "keywords": ["agent-harness", "claude-code", "knowledge", "skills"],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hive knowledge prompt-context --stdin-json 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

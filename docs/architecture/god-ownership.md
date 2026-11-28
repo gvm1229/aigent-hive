@@ -8,15 +8,16 @@
 
 | 정본 | 맡는 일 | CLI 명령 | Skill |
 | --- | --- | --- | --- |
-| athena | 계획·검증 | `roster`, `judge`, `report`, `release`, `discord` | `athena`, `verified-workflow`, `multi-goal`, `judge`, `run` |
+| athena | 계획·검증 | `roster`, `judge`, `report`, `release`, `discord` | `athena`, `autonomous-workflow`, `multi-goal`, `judge`, `run` |
 | artemis | 조사·진단 | `doctor`, `check-target`, `route` | `artemis`, `research-best-practices`, `quick-answer` |
-| hephaistos | 구현 | `role`, `agent`, `run`, `loop` | `hephaistos`, `code-polish`, `custom-subagent-create`, `ship` |
-| apollon | 글쓰기 | `prompt`, `korean` | `apollon`, `humanize-kor`, `prompt-refine` |
+| hephaistos | 구현 | `role`, `agent`, `run`, `loop` | `hephaistos`, `ai-slop-cleaner`, `custom-subagent-create`, `ship` |
+| apollon | 지식 | `knowledge`, `source-wiki`, `index` | `apollon`, `knowledge-capture`, `knowledge-recall`, `knowledge-manage` |
 | eileithyia | 설정·갱신 | `setup`, `install`, `update`, `project` | `eileithyia`, `user-setup`, `project-setup`, `product-update`, `project-refresh`, `project-transition`, `amend-directive` |
 | poseidon | 조율 | `orchestration`, `session`, `hook`, `policy`, `summon`, `msg`, `stop` | `poseidon`, `team-execution` |
-| demeter | 지식 | `knowledge`, `source-wiki`, `index` | `demeter`, `knowledge-capture`, `knowledge-recall`, `knowledge-manage` |
+| demeter | 글쓰기 | `prompt`, `korean` | `demeter`, `humanize-kor`, `prompt-refine` |
 | aither | 사용량 관리 | `usage` | `aither`, `usage-guard` |
 | hades | 정리 | `storage`, `prune`, `uninstall` | `hades` |
+| aphrodite | 디자인 | `design` | `aphrodite`, `design-curate` |
 
 ## 역할 기본값과 이전
 

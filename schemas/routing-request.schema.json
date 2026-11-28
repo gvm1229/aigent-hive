@@ -94,7 +94,7 @@
     },
     "workflow_override": {
       "type": ["string", "null"],
-      "enum": ["simple-continuation", "verified-workflow", "no-retry", null]
+      "enum": ["simple-continuation", "autonomous-workflow", "verified-workflow", "no-retry", null]
     }
   },
   "$defs": {

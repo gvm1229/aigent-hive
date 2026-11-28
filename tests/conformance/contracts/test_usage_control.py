@@ -1279,7 +1279,9 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
         self.assertNotEqual(process.returncode, 0)
         self.assertEqual(capture_path.read_bytes(), before)
 
-    def test_antigravity_native_unsupported_uses_codexbar_fallback(self) -> None:
+    def test_antigravity_native_unsupported_never_uses_codexbar(self) -> None:
+        # Google's Antigravity terms prohibit third-party tools such as CodexBar from
+        # accessing Antigravity, so only its own statusLine callback counts.
         config = self.consumer / ".hive/config/harness.toml"
         config.write_text(
             config.read_text(encoding="utf-8").replace(
@@ -1289,7 +1291,6 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
             encoding="utf-8",
         )
         sensor_log = self.work_root / "antigravity-sensor.log"
-
         process, result = self.invoke(
             "usage",
             "enforce",
@@ -1307,91 +1308,18 @@ class ShippingUsageControlConformance(Phase1CliTestCase):
                 "FAKE_CODEXBAR_PROVIDER": "antigravity",
             },
         )
+        self.assertNotEqual(result.get("code"), "hive.usage-allowed", result)
+        self.assertFalse(sensor_log.exists(), "Antigravity must never call CodexBar")
 
-        self.assert_result(
-            process,
-            result,
-            action="CheckUsage",
-            exit_code=0,
-            status="success",
-            code="hive.usage-allowed",
-        )
-        self.assertEqual(result["data"]["host_scope"], "antigravity")
-        self.assertEqual(result["data"]["selected_window"], "multiple")
-        self.assertEqual(
-            [
-                json.loads(line)
-                for line in sensor_log.read_text(encoding="utf-8").splitlines()
-            ],
-            [
-                ["--version"],
-                [
-                    "usage",
-                    "--provider",
-                    "antigravity",
-                    "--source",
-                    "cli",
-                    "--format",
-                    "json",
-                    "--json-only",
-                ],
-            ],
-        )
-
-        limited, limited_result = self.invoke(
+        process, result = self.invoke(
             "usage",
-            "enforce",
-            "--target",
-            str(self.consumer),
-            "--session-id",
-            "antigravity-limited-session",
-            "--process-id",
-            "992",
-            "--account-digest",
-            ACCOUNT_DIGEST,
-            sensor_case="secondary-pool-low",
-            extra_environment={
-                "FAKE_CODEXBAR_PROVIDER": "antigravity",
-            },
+            "fallback-install",
+            "--host",
+            "antigravity",
+            "--dry-run",
         )
-        self.assert_result(
-            limited,
-            limited_result,
-            action="CheckUsage",
-            exit_code=3,
-            status="blocked",
-            code="hive.usage-limited",
-        )
-        self.assertEqual(limited_result["data"]["selected_window"], "multiple")
-
-        default_limited, default_limited_result = self.invoke(
-            "usage",
-            "enforce",
-            "--target",
-            str(self.consumer),
-            "--session-id",
-            "antigravity-default-limited-session",
-            "--process-id",
-            "993",
-            "--account-digest",
-            ACCOUNT_DIGEST,
-            sensor_case="one-window-low",
-            extra_environment={
-                "FAKE_CODEXBAR_PROVIDER": "antigravity",
-            },
-        )
-        self.assert_result(
-            default_limited,
-            default_limited_result,
-            action="CheckUsage",
-            exit_code=3,
-            status="blocked",
-            code="hive.usage-limited",
-        )
-        self.assertEqual(
-            default_limited_result["data"]["selected_window"],
-            "multiple",
-        )
+        self.assertNotEqual(process.returncode, 0, result)
+        self.assertIn("Antigravity terms", json.dumps(result))
 
     def test_enforce_rechecks_a_latched_marker_and_blocks_quota_increase(
         self,

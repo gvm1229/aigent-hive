@@ -212,20 +212,20 @@ class Phase3RoutingContract(Phase1CliTestCase):
         self.assertIsNone(decision["selected_skill"])
         self.assertEqual(decision["load_skill_bodies"], [])
 
-    def test_complex_work_routes_to_verified_workflow_with_reason_codes(self) -> None:
-        process, result = self.invoke_route("complex-verified-workflow.json")
+    def test_complex_work_routes_to_autonomous_workflow_with_reason_codes(self) -> None:
+        process, result = self.invoke_route("complex-autonomous-workflow.json")
         self.assertEqual(process.returncode, 0, process.stderr)
         decision = self.decision(result)
         self.assertEqual(decision["route"], "hive-skill")
-        self.assertEqual(decision["selected_skill"], "verified-workflow")
-        self.assertEqual(decision["workflow_route"], "verified-workflow")
+        self.assertEqual(decision["selected_skill"], "autonomous-workflow")
+        self.assertEqual(decision["workflow_route"], "autonomous-workflow")
         self.assertEqual(
             decision["workflow_reason_codes"],
             ["dependency-graph", "independent-verifier"],
         )
 
-    def test_complex_work_blocks_when_verified_workflow_is_inactive(self) -> None:
-        process, result = self.invoke_route("complex-verified-workflow-inactive.json")
+    def test_complex_work_blocks_when_autonomous_workflow_is_inactive(self) -> None:
+        process, result = self.invoke_route("complex-autonomous-workflow-inactive.json")
         self.assertEqual(process.returncode, 3, process.stderr)
         decision = self.decision(result)
         self.assertEqual(decision["route"], "blocked")

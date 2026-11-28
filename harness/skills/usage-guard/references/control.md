@@ -288,3 +288,12 @@ promise zero credit consumption from periodic client-side interruption.
 - Enable intent includes requests to restore the guard, enforce the limit again, stop at the configured threshold, or remove the bypass.
 - Threshold mutation requires the requested percentage. Never guess a value.
 - A bare `continue`, `resume`, `finish`, urgency, or an active run does not authorize disable.
+
+## Delegated workers
+
+While delegated workers (for example parallel `codex exec` runs) use the same subscription, run
+`enforce` for that host again before preparing each additional worker, and keep each reading.
+Prepare no new worker when the remaining percent fell 20 points or more within 10 minutes, or is at
+or below the stop threshold; let running workers finish and report the drop. Otherwise split the
+headroom above the threshold evenly across running workers plus the new one and give each worker
+that share as its usage budget.

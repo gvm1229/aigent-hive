@@ -1,0 +1,6 @@
+interface:
+  display_name: "Autonomous workflow"
+  short_description: "(autonomous-workflow) Finish the work without mid-task questions and ask real questions once at the end."
+  default_prompt: "Use $aigent-hive:autonomous-workflow: finish everything you can without stopping to ask, decide trivial choices yourself, and ask only the questions you truly cannot answer once at the end."
+policy:
+  allow_implicit_invocation: true

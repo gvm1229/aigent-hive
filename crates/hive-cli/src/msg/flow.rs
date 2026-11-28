@@ -261,10 +261,9 @@ fn selected_provider_names(user_root: &str, except: &str) -> Result<Vec<String>,
     Ok(config
         .selected_hosts
         .iter()
-        .map(|host| match host.as_str() {
-            "antigravity" => "gemini",
-            provider => provider,
-        })
+        .map(|host| host.as_str())
+        // Antigravity is a human-selected host only; it is never a reviewer candidate.
+        .filter(|provider| !hive_core::automation_terms::is_terms_restricted(provider))
         .filter(|provider| *provider != except)
         .map(str::to_owned)
         .collect::<BTreeSet<_>>()
@@ -653,9 +652,14 @@ fn start(arguments: &[String]) -> Result<ActionResult, MsgError> {
     let reviewer_name = required(&options, "--reviewer")?;
     let reviewer_provider =
         if let Some(provider) = option(&options, "--reviewer-provider") {
-            if !matches!(provider, "codex" | "claude" | "gemini") {
+            if hive_core::automation_terms::is_terms_restricted(provider) {
                 return Err(MsgError::input(
-                    "--reviewer-provider must be codex, claude or gemini",
+                    hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL,
+                ));
+            }
+            if !matches!(provider, "codex" | "claude") {
+                return Err(MsgError::input(
+                    "--reviewer-provider must be codex or claude",
                 ));
             }
             Some(provider.to_owned())

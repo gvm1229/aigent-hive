@@ -27,12 +27,14 @@ EXPECTED_SKILLS = frozenset(
         "demeter",
         "aither",
         "hades",
+        "aphrodite",
         "quick-answer",
         "project-setup",
-        "code-polish",
+        "ai-slop-cleaner",
+        "design-curate",
         "humanize-kor",
         "custom-subagent-create",
-        "verified-workflow",
+        "autonomous-workflow",
         "knowledge-manage",
         "knowledge-capture",
         "prompt-refine",
@@ -213,16 +215,87 @@ class V09HiveSkillProjectionTests(unittest.TestCase):
         self.assertIn("Antigravity context recovery is unavailable", recovery)
         self.assertIn("4,096 UTF-8 byte limit", recovery)
 
-    def test_verified_workflow_keeps_role_parity_on_one_strict_judge_path(self) -> None:
-        text = (SKILL_ROOT / "verified-workflow" / "SKILL.md").read_text(encoding="utf-8")
-        for route in (
-            "dependency edges",
-            "Lost\n   acknowledgement is `dispatch-uncertain`",
-            "A Judge node or\n   elevated risk uses the adversarial mode of `$aigent-hive:judge`",
-            "repeated failure fingerprints",
-            "independent verifier",
-        ):
-            self.assertIn(route.casefold(), text.casefold())
+    def test_autonomous_workflow_product_body_matches_the_source_project_copy(self) -> None:
+        source = (ROOT / ".agents/skills/autonomous-workflow/SKILL.md").read_bytes()
+        self.assertEqual((SKILL_ROOT / "autonomous-workflow" / "SKILL.md").read_bytes(), source)
+        for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+            self.assertEqual((destination / "autonomous-workflow" / "SKILL.md").read_bytes(), source)
+        text = source.decode("utf-8")
+        for rule in ("Never stop midway to ask", "Ask once, at the end", "Approval-required actions stay"):
+            self.assertIn(rule, text)
+        ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))
+        self.assertEqual(ledger["retired_names"]["verified-workflow"], "autonomous-workflow")
+        self.assertFalse((SKILL_ROOT / "verified-workflow").exists())
+        for root in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+            self.assertFalse((root / "verified-workflow").exists())
+
+    def test_ai_slop_cleaner_has_target_checklists_and_exact_upstream_copies(self) -> None:
+        skill = SKILL_ROOT / "ai-slop-cleaner"
+        body = (skill / "SKILL.md").read_text(encoding="utf-8")
+        header = yaml.safe_load(body.split("---", 2)[1])
+        self.assertIn("code-polish", header["description"])
+        self.assertIn("say the new name `ai-slop-cleaner`", body)
+        for rule in ("Plan first; confirm before editing", "autonomous-workflow", "Review mode"):
+            self.assertIn(rule, body)
+        self.assertNotIn("http", body, "source links stay out of SKILL.md")
+        for name in ("code.md", "writing.md", "design.md", "hive-overrides.md"):
+            source = (skill / "references" / name).read_bytes()
+            for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                self.assertEqual((destination / "ai-slop-cleaner/references" / name).read_bytes(), source)
+        upstream = ROOT / "harness/upstream"
+        for vendored in ("omc-ai-slop-cleaner", "hallmark"):
+            projected = skill / "references/upstream" / vendored
+            self.assertTrue((projected / "LICENSE").is_file())
+            for path in projected.rglob("*"):
+                if path.is_file():
+                    relative = path.relative_to(projected)
+                    self.assertEqual(path.read_bytes(), (upstream / vendored / relative).read_bytes(), str(relative))
+                    for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                        copy = destination / "ai-slop-cleaner/references/upstream" / vendored / relative
+                        self.assertEqual(copy.read_bytes(), path.read_bytes(), str(copy))
+        ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))
+        self.assertEqual(ledger["retired_names"]["code-polish"], "ai-slop-cleaner")
+        self.assertEqual(ledger["retired_names"]["clean-ai-slop"], "ai-slop-cleaner")
+        self.assertNotIn("ai-slop-cleaner", ledger["retired_names"])
+        self.assertFalse((SKILL_ROOT / "code-polish").exists())
+
+    def test_design_curate_bundles_exact_sources_and_names_only_real_ones(self) -> None:
+        import json
+        skill = SKILL_ROOT / "design-curate"
+        body = (skill / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("http", body, "source links stay out of SKILL.md")
+        lock = json.loads((ROOT / "harness/upstream/UPSTREAM.lock").read_text(encoding="utf-8"))
+        bundled = sorted(s["name"] for s in lock["sources"] if "design-curate" in s["used_by"])
+        self.assertEqual(bundled, ["frontend-design", "hallmark", "impeccable", "web-artifacts-builder"])
+        for name in bundled:
+            self.assertIn(f"`{name}`", body)
+            projected = skill / "references/upstream" / name
+            self.assertTrue((projected / "SKILL.md").is_file())
+            licenses = [path.name for path in projected.iterdir() if path.name.startswith("LICENSE")]
+            self.assertTrue(licenses, name)
+            for path in projected.rglob("*"):
+                if path.is_file():
+                    relative = path.relative_to(projected)
+                    self.assertEqual(path.read_bytes(), (ROOT / "harness/upstream" / name / relative).read_bytes())
+                    for destination in (PLUGIN_ROOT, TEMPLATE_ROOT, CLAUDE_TEMPLATE_ROOT):
+                        copy = destination / "design-curate/references/upstream" / name / relative
+                        self.assertEqual(copy.read_bytes(), path.read_bytes(), str(copy))
+        self.assertTrue((skill / "references/upstream/impeccable/NOTICE.md").is_file())
+        conflicts = (skill / "references/conflicts.md").read_text(encoding="utf-8")
+        cited = set()
+        for line in conflicts.splitlines()[2:]:
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if len(cells) == 5 and cells[0] not in ("Topic", "---"):
+                cited.update(name.strip() for name in cells[2].split(","))
+        self.assertTrue(cited)
+        self.assertLessEqual(cited, set(bundled), "conflict rulings may cite only bundled sources")
+        cases = json.loads((ROOT / "tests/fixtures/skills/invocation/design-curate.json").read_text(encoding="utf-8"))
+        description = yaml.safe_load(body.split("---", 2)[1])["description"].casefold()
+        for term in cases["trigger_terms"][:1]:
+            self.assertIn(term, description)
+        for case in cases["cases"]:
+            hit = any(term.casefold() in case["prompt"].casefold() for term in cases["trigger_terms"])
+            self.assertEqual(hit, case["invoke"], case["prompt"])
 
     def test_rename_ledger_is_stable_and_complete_for_the_last_public_inventory(self) -> None:
         ledger = yaml.safe_load((SKILL_ROOT / "retired-names.yml").read_text(encoding="utf-8"))

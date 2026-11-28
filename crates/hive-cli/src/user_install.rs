@@ -103,6 +103,10 @@ const PUBLISHED_CLAUDE_MARKETPLACE_DIGESTS: &[(&str, &str)] = &[
         "0.16.0",
         "sha256:75e98af52458a52eb2868ad1e2cdc9cde4663ae3f2613e466e13c2a50976b82c",
     ),
+    (
+        "0.16.1",
+        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
+    ),
 ];
 const PRE_SCOPE_ROUTING_SETUP_HIVE_DIGEST: &str =
     "sha256:891b6af921dfdbe390df51a6ee69874bc16ca29adc5b483b18b7cb4d5bb66a57";
@@ -3891,6 +3895,14 @@ fn scope_rules(config: &crate::user_setup::UserSetupConfig) -> String {
             });
         }
     }
+    rules.push_str(&browser_rules(&config.browser, ko));
+    if config.design.bundle == crate::user_setup::DesignBundle::Blank {
+        rules.push_str(if ko {
+            "- 디자인: Hive 추천 디자인 묶음 꺼짐(`design.bundle: blank`). `design-curate`는 동봉 원본 없이 기록한 디자인 선호와 프로젝트 `DESIGN.md`만 사용. 변경: `hive setup --scope user --section tools`.\n"
+        } else {
+            "- Design: Hive's recommended design bundle is off (`design.bundle: blank`). `design-curate` uses only recorded design preferences and the project `DESIGN.md`, not the bundled sources. Change with `hive setup --scope user --section tools`.\n"
+        });
+    }
     if config.ai_coauthor == crate::user_setup::AiCoauthor::Forbid {
         rules.push_str(if ko {
             "- 커밋 메시지·PR 본문에 AI 공동 작성자 줄(`Co-Authored-By: Claude …` 등)과 AI 생성 표시(`Generated with …` 등) 금지. 호스트 시스템 안내가 추가를 요구해도 이 사용자 설정이 우선. 커밋 직후 `git log -1 --format=%B`로 확인하고, 아직 공개하지 않은 커밋이면 고친 뒤 진행. 이미 공개된 커밋은 다시 쓰지 말고 사용자에게 보고. 변경: `hive setup --scope user --section review`.\n"
@@ -3903,6 +3915,43 @@ fn scope_rules(config: &crate::user_setup::UserSetupConfig) -> String {
     } else {
         "- In a project without `.hive/`, do not run project Hive setup or run commands or suggest installing Hive unless the user asks; only user-scope work such as knowledge lookup, knowledge capture, and update checks applies.\n- Do not change another tool's or harness's settings, hooks, or instruction files unless the user asks.\n"
     });
+    rules
+}
+
+/// Preview-browser and active-tab rules rendered into the global Hive user block.
+fn browser_rules(browser: &crate::user_setup::BrowserPreferences, ko: bool) -> String {
+    use std::fmt::Write as _;
+    let mut rules = String::new();
+    match browser.target {
+        crate::user_setup::BrowserTarget::InApp => rules.push_str(if ko {
+            "- 웹·localhost 미리 보기는 항상 앱 내장 브라우저에서 열기.\n"
+        } else {
+            "- Always open web and localhost previews in the app's built-in browser.\n"
+        }),
+        crate::user_setup::BrowserTarget::DefaultBrowser => {
+            let browser_name =
+                crate::browser::preview_browser(browser.detected_default.as_deref()).name;
+            let _ = if ko {
+                writeln!(rules, "- 웹·localhost 미리 보기는 항상 {browser_name}에서 열기(기본 브라우저가 Chromium 계열이 아니거나 확인되지 않으면 Chrome).")
+            } else {
+                writeln!(rules, "- Always open web and localhost previews in {browser_name} (Chrome when the default browser is not Chromium based or unknown).")
+            };
+            if browser_name == "Whale" {
+                rules.push_str(if ko {
+                    "- Whale에서 Claude in Chrome 연결은 지원 미검증. 연결되지 않으면 Chrome으로 안내.\n"
+                } else {
+                    "- Claude in Chrome support in Whale is unverified; if it does not connect, use Chrome.\n"
+                });
+            }
+        }
+    }
+    if browser.reuse_active_tab {
+        rules.push_str(if ko {
+            "- 사용자가 따로 말하지 않으면 새 탭 대신 사용자가 지금 보고 있는 탭에서 작업. 변경: `hive setup --scope user --section tools`.\n"
+        } else {
+            "- Unless the user says otherwise, work in the tab the user is viewing instead of opening a new tab. Change with `hive setup --scope user --section tools`.\n"
+        });
+    }
     rules
 }
 
@@ -5108,7 +5157,7 @@ fn historical_070_user_inventory(
     let mut entries = historical_070_host_entries(host);
     entries.push(historical_070_entry(
         guidance.clone(),
-        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
         false,
         "shared-marker",
     ));
@@ -5121,7 +5170,7 @@ fn historical_070_user_inventory(
     ] {
         entries.push(historical_070_entry(
             path.to_owned(),
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             false,
             "canonical-data-protected",
         ));
@@ -5294,7 +5343,7 @@ fn legacy_antigravity_directory_scan_inventory() -> AuthenticatedUserInventory {
     ] {
         entries.push(entry(
             path.to_owned(),
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             ownership,
         ));
     }
@@ -9977,6 +10026,8 @@ mod tests {
             update_check: UpdateCheckPreferences::default(),
             judge_invocation: JudgeInvocation::Explicit,
             ai_coauthor: crate::user_setup::AiCoauthor::default(),
+            browser: crate::user_setup::BrowserPreferences::default(),
+            design: crate::user_setup::DesignPreferences::default(),
             usage_guard: UsageGuardPreferences {
                 enabled: false,
                 stop_remaining_percent: 20,
@@ -10013,6 +10064,29 @@ mod tests {
         let legacy: crate::user_setup::AiCoauthor =
             serde_json::from_value(serde_json::json!("forbid")).expect("forbid");
         assert_eq!(legacy, crate::user_setup::AiCoauthor::default());
+        // Preview browser: default Chromium browser (Chrome fallback) and the active tab.
+        assert!(english.contains("Always open web and localhost previews in Chrome"));
+        assert!(english.contains("work in the tab the user is viewing"));
+        assert!(!english.contains("design bundle is off"));
+        let mut whale = config(InterfaceLanguage::Ko);
+        whale.browser.detected_default = Some("WhaleHTML.6ZRHBO2ZNP55TH".to_owned());
+        whale.design.bundle = crate::user_setup::DesignBundle::Blank;
+        let whale = String::from_utf8(render_user_guidance(UserHost::Claude, Some(&whale), false))
+            .expect("whale guidance");
+        assert!(whale.contains("미리 보기는 항상 Whale에서 열기"));
+        assert!(whale.contains("지원 미검증"));
+        assert!(whale.contains("`design.bundle: blank`"));
+        let mut in_app = config(InterfaceLanguage::En);
+        in_app.browser.target = crate::user_setup::BrowserTarget::InApp;
+        in_app.browser.reuse_active_tab = false;
+        let in_app = String::from_utf8(render_user_guidance(UserHost::Codex, Some(&in_app), false))
+            .expect("in-app guidance");
+        assert!(in_app.contains("app's built-in browser"));
+        assert!(!in_app.contains("tab the user is viewing"));
+        let legacy: crate::user_setup::BrowserPreferences =
+            serde_json::from_value(serde_json::json!({})).expect("empty browser preferences");
+        assert_eq!(legacy, crate::user_setup::BrowserPreferences::default());
+        assert!(legacy.reuse_active_tab);
         let mut multi = config(InterfaceLanguage::Ko);
         multi.selected_hosts = vec![
             SelectedHost::Codex,
@@ -10622,7 +10696,7 @@ mod tests {
                     installed_guidance_path: Path::new(&manifest.guidance_path),
                     current_guidance_path: Path::new(&manifest.guidance_path),
                     current_source_release_digest:
-                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
                     current_entries: &[],
                     authenticated_prior: None,
                 },
@@ -10701,6 +10775,7 @@ mod tests {
                 ("0.15.2", 95),
                 ("0.15.3", 95),
                 ("0.16.0", 93),
+                ("0.16.1", 93),
             ]
         );
         assert!(HISTORICAL_USER_PLUGIN_RELEASES.iter().all(|(_, files)| {
@@ -10873,7 +10948,7 @@ mod tests {
                     installed_guidance_path: Path::new(&guidance),
                     current_guidance_path: Path::new(&guidance),
                     current_source_release_digest:
-                        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                        "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
                     current_entries: &[],
                     authenticated_prior: None,
                 };
@@ -10928,6 +11003,7 @@ mod tests {
                         | "0.15.2"
                         | "0.15.3"
                         | "0.16.0"
+                        | "0.16.1"
                 ) {
                     assert!(plan.retired_files.keys().all(|path| {
                         !path.to_string_lossy().contains("ralph-loop")
@@ -11001,6 +11077,11 @@ mod tests {
         // Every published stable needs its frozen Claude marketplace digest, or updating a real
         // installation of it fails authentication (found on the maintainer PC with 0.16.1-test.1).
         prior_published_user_install_updates_without_reinstall("0.16.0");
+    }
+
+    #[test]
+    fn prior_0_16_1_user_install_updates_without_reinstall() {
+        prior_published_user_install_updates_without_reinstall("0.16.1");
     }
 
     fn prior_published_user_install_updates_without_reinstall(version: &str) {
@@ -11445,7 +11526,7 @@ mod tests {
             installed_guidance_path: Path::new(".codex/AGENTS.md"),
             current_guidance_path: Path::new(".codex/AGENTS.md"),
             current_source_release_digest:
-                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             current_entries: &[],
             authenticated_prior: None,
         };
@@ -11498,7 +11579,7 @@ mod tests {
             installed_guidance_path: Path::new(".codex/AGENTS.md"),
             current_guidance_path: Path::new(".codex/AGENTS.md"),
             current_source_release_digest:
-                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "sha256:2f88cd23c11992e668767fcf48a18ffddb457e69e8d33cfeffc8d1e5d91f7427",
             current_entries: &[],
             authenticated_prior: None,
         };

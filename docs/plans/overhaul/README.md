@@ -16,6 +16,7 @@
 
 - 단계 5: 2026-11-15 cloud 세션 시작, `feature/overhaul-5-0.15.3-memory`. [시작 근거](../../research/overhaul/OV153-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV153-001–009 완료(검토·develop 병합·0.15.3-test.1 세 OS 수용), OV153-010–017 완료, 2026-11-20 정식 0.15.3·PC 설치·단계 브랜치 삭제([정식 근거](../../research/overhaul/OV153-010.md))
 - 단계 6: 2026-11-20 cloud 세션 시작, `feature/overhaul-6-0.16.0-mediation`. [시작 근거](../../research/overhaul/OV160-001.md), local 단계는 [실행 장소](venue.md) 넘기기. OV160-001–010 완료(검토·develop 병합·0.16.0-test.1 세 OS 수용), OV160-012는 [local 넘기기](../../research/overhaul/OV160-local-handoff.md)
+- 단계 7: 2026-11-28 유지관리자 0.17.0 승인, cloud 세션 시작, `feature/overhaul-7-0.17.0-overnight-loop`. 행동 기준 `autonomous-workflow`, local 단계는 [실행 장소](venue.md) 넘기기, 정식은 별도 승인
 - 단계 4: 기존 구현 8/8·검토 수정 012 완료, 계획 14/17, [최우선 CLI·설명·정정 013–017](../active/0.15.1-human-output.md) 추가. [검토 전 근거](../../research/overhaul/stage-4-implementation.md)·[REQUEST CHANGES 수정과 측정](../../research/overhaul/stage-4-review.md), 현재 요청의 태그·게시·병합 제외
 
 ## 승인
@@ -104,13 +105,13 @@
 | 4b 0.15.2 호스트 설치 복구 | [0.15.2-host-install.md](../active/0.15.2-host-install.md) | 없음 | 0.15.1 정식 뒤 실제 PC 결함·2026-11-15 요청 | 10/10·정식 |
 | 5 0.15.3 기억 | [0.15.3-memory.md](../active/0.15.3-memory.md) | 있음 | 0.15.2 정식 | 17/17·정식 |
 | 6 0.16.0 메시지 중재 | [0.16.0-mediation.md](../active/0.16.0-mediation.md) | 있음 | 0.15.3 정식 | 10/12 |
-| 7 0.17.0 호스트 야간 반복·신 역할 재배치 | [0.17.0-overnight-loop.md](0.17.0-overnight-loop.md)·[0.17.0-gods-realign.md](0.17.0-gods-realign.md)·[0.17.0-skills-browser.md](0.17.0-skills-browser.md) | 있음 | 0.16.0 정식 | 0/23 |
+| 7 0.17.0 호스트 야간 반복·신 역할 재배치 | [0.17.0-overnight-loop.md](../active/0.17.0-overnight-loop.md)·[0.17.0-gods-realign.md](../active/0.17.0-gods-realign.md)·[0.17.0-skills-browser.md](../active/0.17.0-skills-browser.md) | 있음 | 0.16.0 정식·2026-11-28 승인 | 16/27 |
 
 ## 불변 조건
 
 - 공식 문서의 CLI 확장점만 사용. 제공자 CLI 키 주입·화면 캡처 금지, tmux·psmux `send-keys`/`capture-pane`·cmux 경로 제외
 - Claude는 사람이 쓰는 대화형 호스트: 자체 훅·하위 에이전트·`/loop`·예약. 비대화형·`claude -p` 금지
-- Codex·Gemini는 구독 로그인 공식 비대화형 작업자. Claude+Codex 먼저, Gemini도 동등한 작업자. Hive는 파일 봉투·수신 상자·훅 조율, 호스트가 실제 호출
+- Codex는 구독 로그인 공식 비대화형 작업자. Gemini·Antigravity는 2026-11-28부터 약관 위험으로 작업자 제외([OV170-028](../../research/overhaul/OV170-028.md)). Hive는 파일 봉투·수신 상자·훅 조율, 호스트가 실제 호출
 - Hive 자체 모델·프로세스 실행·제공자 API·자격 증명 요청·파일 읽기·복사 없음. 공식 기능 문서와 실제 동작 수용 구분
 - 실험: `tests/work/`·프로젝트 한정 훅. 전역 호스트 설정·훅·인증 변경 금지
 - Markdown·YAML·TOML 정본, SQLite 재생성 파생물. 사용자 바이트·과거 기준본 보존, 적용 전 미리보기·확인

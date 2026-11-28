@@ -5,3 +5,28 @@ path = "**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Hojin (Tom) Jeong"
 SPDX-License-Identifier = "Apache-2.0"
+
+# Vendored upstream Skill sources keep their own licenses (harness/upstream/UPSTREAM.lock).
+[[annotations]]
+path = ["harness/upstream/omc-ai-slop-cleaner/**", "harness/skills/ai-slop-cleaner/references/upstream/omc-ai-slop-cleaner/**", "harness/plugins/aigent-hive/skills/ai-slop-cleaner/references/upstream/omc-ai-slop-cleaner/**", "harness/template/.agents/skills/ai-slop-cleaner/references/upstream/omc-ai-slop-cleaner/**", "harness/template/.claude/skills/ai-slop-cleaner/references/upstream/omc-ai-slop-cleaner/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Yeachan Heo"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["harness/upstream/hallmark/**", "harness/skills/*/references/upstream/hallmark/**", "harness/plugins/aigent-hive/skills/*/references/upstream/hallmark/**", "harness/template/.agents/skills/*/references/upstream/hallmark/**", "harness/template/.claude/skills/*/references/upstream/hallmark/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Hallmark contributors"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["harness/upstream/frontend-design/**", "harness/upstream/web-artifacts-builder/**", "harness/skills/design-curate/references/upstream/frontend-design/**", "harness/skills/design-curate/references/upstream/web-artifacts-builder/**", "harness/plugins/aigent-hive/skills/design-curate/references/upstream/frontend-design/**", "harness/plugins/aigent-hive/skills/design-curate/references/upstream/web-artifacts-builder/**", "harness/template/.agents/skills/design-curate/references/upstream/frontend-design/**", "harness/template/.agents/skills/design-curate/references/upstream/web-artifacts-builder/**", "harness/template/.claude/skills/design-curate/references/upstream/frontend-design/**", "harness/template/.claude/skills/design-curate/references/upstream/web-artifacts-builder/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "Anthropic, PBC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["harness/upstream/impeccable/**", "harness/skills/design-curate/references/upstream/impeccable/**", "harness/plugins/aigent-hive/skills/design-curate/references/upstream/impeccable/**", "harness/template/.agents/skills/design-curate/references/upstream/impeccable/**", "harness/template/.claude/skills/design-curate/references/upstream/impeccable/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Paul Bakaus"
+SPDX-License-Identifier = "Apache-2.0"

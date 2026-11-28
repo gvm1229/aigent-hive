@@ -1,22 +1,22 @@
 # 현재 상태
 
-- 제품 버전: `0.16.1`
-- 공개 안정판: `0.16.1`(2026-11-26 출시). PC 설치: `0.16.1`(2026-11-26 갱신, 자료 보존 확인)
-- 작업: 0.16.1 지식 작업 비차단 수정. [소유 계획](../plans/active/0.16.1-knowledge-fixes.md)
-- 현재 요청(2026-11-26 유지관리자, local 세션): 0.16.1 정식 출시까지 사람 개입 없이 진행. 스스로 풀 수 없는 차단이 있으면 정식 보류 뒤 질문
-- 현재 위치: OV161-001–007 완료(PR [#106](https://github.com/gvm1229/aigent-hive/pull/106)·[#107](https://github.com/gvm1229/aigent-hive/pull/107)·[#108](https://github.com/gvm1229/aigent-hive/pull/108), [시험 근거](../research/overhaul/OV161-006.md), [정식 근거](../research/overhaul/OV161-007.md))
-- **다음 시작점**: 다음 버전 시작. 후속: 제거 미리보기 실행 파일 경합 수정(브랜치 `fix/uninstall-vanished-runtime-entry`)
-- [0.16.0 종료 상태](../archive/state/0.16.0-closeout.md) 보존
+- 제품 버전: `0.17.0`
+- 공개 안정판: `0.16.1`(2026-11-26 출시). PC 설치: `0.16.1`
+- 작업: 단계 7 0.17.0. [활성 계획](../plans/PLAN.md), 브랜치 `feature/overhaul-7-0.17.0-overnight-loop`
+- 현재 요청(2026-11-28 유지관리자): 0.17.0 승인, cloud에서 `autonomous-workflow` 기준으로 진행. 중간 질문 없이 끝까지, 질문은 마지막에 한 번. 정식 출시는 준비만
+- 현재 위치: OV170-001–004·006·007·012·015–021·023·025 완료, OV170-014는 local 확인 대기([근거](../research/overhaul/OV170-001.md)·[야간 루프](../research/overhaul/OV170-loop.md)·[OV170-012](../research/overhaul/OV170-012.md)·[OV170-025](../research/overhaul/OV170-025.md)·[OV170-015](../research/overhaul/OV170-015.md)·[OV170-016](../research/overhaul/OV170-016.md)·[OV170-017](../research/overhaul/OV170-017.md)·[OV170-018](../research/overhaul/OV170-018.md)·[OV170-019](../research/overhaul/OV170-019.md)·[OV170-020](../research/overhaul/OV170-020.md)·[OV170-021](../research/overhaul/OV170-021.md)·[OV170-023](../research/overhaul/OV170-023.md)). [local 인계](../research/overhaul/OV170-local-handoff.md)
+- **다음 시작점**: 남은 cloud 항목 OV170-013(수신 상자 보존 정리)·OV170-022 강제 겹·OV170-024(Hive 전용 위치 규칙, 인증 완화라 검토 필요)·OV170-026. OV170-009 공개 시험은 OV170-008(local, 사용자 동의) 뒤. [local 인계](../research/overhaul/OV170-local-handoff.md)
+- [0.16.1 종료 상태](../archive/state/0.16.1-closeout.md) 보존
 
 ## 생성된 구현·수용 항목
 
 <!-- HIVE:PLAN-STATE:START -->
-- 구현 목표: `0.16.1`
-- 현재 등록 항목: 7/7 완료
+- 구현 목표: `0.17.0`
+- 현재 등록 항목: 17/28 완료
 
-- `agent-owned`: 없음
-- `awaiting-user-authority`: 없음
-- `awaiting-external-evidence`: 없음
+- `agent-owned`: `OV170-009`, `OV170-010`, `OV170-013`, `OV170-024`, `OV170-026`, `OV170-022`
+- `awaiting-user-authority`: `OV170-005`, `OV170-008`, `OV170-011`, `OV170-027`
+- `awaiting-external-evidence`: `OV170-014`
 - `blocked`: 없음
 - `reopened`: 없음
 <!-- HIVE:PLAN-STATE:END -->

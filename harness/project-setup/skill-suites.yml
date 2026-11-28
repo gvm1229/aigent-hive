@@ -1,20 +1,20 @@
 schema_version: 1
 project_skill_suites:
   - id: daily-work
-    skills: [athena, artemis, hephaistos, apollon, eileithyia, poseidon, demeter, aither, hades, amend-directive, code-polish, humanize-kor, judge, knowledge-capture, knowledge-manage, knowledge-recall, multi-goal, product-update, project-refresh, prompt-refine, quick-answer, research-best-practices, run, ship, team-execution, usage-guard, verified-workflow]
+    skills: [athena, artemis, hephaistos, apollon, eileithyia, poseidon, demeter, aither, hades, aphrodite, ai-slop-cleaner, amend-directive, autonomous-workflow, design-curate, humanize-kor, judge, knowledge-capture, knowledge-manage, knowledge-recall, multi-goal, product-update, project-refresh, prompt-refine, quick-answer, research-best-practices, run, ship, team-execution, usage-guard]
   - id: web-developer
-    skills: [project-setup, code-polish, humanize-kor, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-capture, knowledge-manage, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run, product-update, project-refresh, judge]
+    skills: [project-setup, ai-slop-cleaner, humanize-kor, autonomous-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-capture, knowledge-manage, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run, product-update, project-refresh, judge]
   - id: game-developer
-    skills: [project-setup, code-polish, humanize-kor, verified-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-capture, knowledge-manage, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run, project-transition, product-update, project-refresh, judge]
+    skills: [project-setup, ai-slop-cleaner, humanize-kor, autonomous-workflow, team-execution, multi-goal, custom-subagent-create, knowledge-capture, knowledge-manage, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, run, project-transition, product-update, project-refresh, judge]
   - id: non-developer
     skills: [quick-answer, project-setup, humanize-kor, custom-subagent-create, knowledge-capture, knowledge-manage, prompt-refine, research-best-practices, knowledge-recall, usage-guard, ship, amend-directive, product-update, judge]
 mandatory_skills: []
 skill_dependencies:
   - { skill: quick-answer, requires: [] }
   - { skill: project-setup, requires: [] }
-  - { skill: code-polish, requires: [] }
+  - { skill: ai-slop-cleaner, requires: [] }
   - { skill: humanize-kor, requires: [] }
-  - { skill: verified-workflow, requires: [judge, run, usage-guard] }
+  - { skill: autonomous-workflow, requires: [] }
   - { skill: knowledge-capture, requires: [knowledge-recall] }
   - { skill: knowledge-manage, requires: [knowledge-recall, knowledge-capture] }
   - { skill: prompt-refine, requires: [] }
@@ -28,15 +28,17 @@ skill_dependencies:
   - { skill: product-update, requires: [] }
   - { skill: project-refresh, requires: [product-update] }
   - { skill: judge, requires: [] }
-  - { skill: team-execution, requires: [verified-workflow] }
-  - { skill: multi-goal, requires: [verified-workflow, team-execution] }
+  - { skill: team-execution, requires: [autonomous-workflow] }
+  - { skill: multi-goal, requires: [autonomous-workflow, team-execution] }
   - { skill: custom-subagent-create, requires: [] }
-  - { skill: athena, requires: [verified-workflow] }
+  - { skill: athena, requires: [autonomous-workflow] }
   - { skill: artemis, requires: [research-best-practices] }
-  - { skill: hephaistos, requires: [code-polish] }
-  - { skill: apollon, requires: [humanize-kor] }
+  - { skill: hephaistos, requires: [ai-slop-cleaner] }
+  - { skill: apollon, requires: [knowledge-recall] }
   - { skill: eileithyia, requires: [project-setup] }
   - { skill: poseidon, requires: [team-execution] }
-  - { skill: demeter, requires: [knowledge-recall] }
+  - { skill: demeter, requires: [humanize-kor] }
   - { skill: aither, requires: [usage-guard] }
   - { skill: hades, requires: [] }
+  - { skill: design-curate, requires: [] }
+  - { skill: aphrodite, requires: [design-curate] }

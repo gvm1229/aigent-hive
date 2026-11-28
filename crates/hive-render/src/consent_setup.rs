@@ -1,8 +1,9 @@
 //! Data-only preparation for explicit optional-feature consent. No installation or model calls.
 use super::{
-    calculate_consent_digest, hook_descriptor_bytes, host_native_hook_event_supported,
-    load_optional_skill_sources, parse_answers, sha256_digest, validate_hook_approvals,
-    validate_skill_approvals, CapabilityResolution, HookApproval, RenderError, SkillApproval,
+    automatic_reinvocation_refused, calculate_consent_digest, hook_descriptor_bytes,
+    host_native_hook_event_supported, load_optional_skill_sources, parse_answers, sha256_digest,
+    validate_hook_approvals, validate_skill_approvals, CapabilityResolution, HookApproval,
+    RenderError, SkillApproval,
 };
 use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
 use serde::Deserialize;
@@ -60,7 +61,10 @@ pub fn supported_setup_hooks(capabilities: &[u8]) -> Result<Value, RenderError> 
     let resolution = resolution(capabilities)?;
     Ok(json!(HOOKS
         .iter()
-        .filter(|(_, event)| host_native_hook_event_supported(&resolution, event))
+        .filter(|(capability, event)| {
+            host_native_hook_event_supported(&resolution, event)
+                && !automatic_reinvocation_refused(&resolution, capability)
+        })
         .map(|(capability, event)| json!({"capability":capability,"event":event}))
         .collect::<Vec<_>>()))
 }

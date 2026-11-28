@@ -328,6 +328,176 @@ ownership = "hive-skill-projection"
 source = "compiled-skill-projection"
 
 [[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/code.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/design.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/hive-overrides.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/writing.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/upstream/*/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/code.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/design.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/hive-overrides.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/writing.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/ai-slop-cleaner/references/upstream/*/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/upstream/*/*/*/*/*/*/*"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".agents/skills/design-curate/references/conflicts.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
+pattern = ".claude/skills/design-curate/references/conflicts.md"
+ownership = "hive-skill-projection"
+source = "compiled-skill-projection"
+
+[[paths]]
 pattern = ".agents/skills/team-execution/references/mediation.md"
 ownership = "hive-skill-projection"
 source = "compiled-skill-projection"

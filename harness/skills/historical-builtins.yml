@@ -5348,3 +5348,212 @@ releases:
       side_effect_class: read-only
       capabilities:
       - filesystem-read
+
+  - version: 0.16.1
+    skills:
+    - name: humanize-kor
+      content_digest: sha256:b356691df025bb30def279528450be5c5c9085adf11457efcda87834ef452f67
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: quick-answer
+      content_digest: sha256:c0c9e6a8f23861e8c316c9e38091430fda5125ea0d371ed57b14f9f1631ac1a1
+      side_effect_class: none
+      capabilities: []
+    - name: project-setup
+      content_digest: sha256:01cf16fb17646efbb3fa714d6f851dcb6b19b22914547f5316136fafb145611a
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: code-polish
+      content_digest: sha256:834fe741e1125b76f457ba3b421e73567b3bdcee475ddaa1b16997677bea5f43
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: verified-workflow
+      content_digest: sha256:f06e29b9f7738d4ef33c16bd45fea4844e9408b87ee287c611d152d2f6c76cf6
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+      - subagents
+    - name: team-execution
+      content_digest: sha256:64be6b47a882ec8aa43b3bcc5357923a65f98edf7dcc58cf2ed68c6babcc776e
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+      - subagents
+    - name: multi-goal
+      content_digest: sha256:78519d508ec6b8836c67e2e608c07398aa093bbd70fe0bf5ed69e77f824c7f94
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+      - subagents
+    - name: knowledge-manage
+      content_digest: sha256:b1b7ad59c87dd00925c9f48b523d56fe5123a2e4ed2d4a051b7a832beeed33ef
+      side_effect_class: external-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
+      - shell
+    - name: knowledge-capture
+      content_digest: sha256:3ddc5bf3e58c774266ce2bb11654fa54c80e0a09c519347b9de54d61eedaaa11
+      side_effect_class: external-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - memory-read
+      - memory-write
+      - shell
+    - name: prompt-refine
+      content_digest: sha256:bbd9a76fed57e1276aa94266709d79f656eafebc98e58723c5f8286b979399ed
+      side_effect_class: none
+      capabilities: []
+    - name: research-best-practices
+      content_digest: sha256:f413df87cfea8b938414550a9045463bda277780f9200ed45eda1d2b4f0822e6
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+      - network
+      - shell
+    - name: knowledge-recall
+      content_digest: sha256:d80f5871428941be1d05b12d488857f40bb894752c0c4354cee12f15a46578f6
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+      - memory-read
+      - shell
+    - name: usage-guard
+      content_digest: sha256:26852e1a4681177d0451f22085229d54a1df872b29fa53376b35bc564a07800d
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+    - name: ship
+      content_digest: sha256:4b37fb1da9359f17bdc4a066c0fdf0c03494067c01567f8eacf9a7ce0f6ece47
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: amend-directive
+      content_digest: sha256:8e9ad50eb58c10d535c7773e58d95a40b07e84da47a223fbd9655e15969ac15c
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: user-setup
+      content_digest: sha256:005f05fa4631834f57fd4e8524e51a839d030e88ad1cf193c831a176fce03848
+      side_effect_class: external-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: run
+      content_digest: sha256:b0163dc5734d08fd4e999d3e214cb9c8a846c8ce1dd6fa4c794ba9e0945366e0
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+    - name: project-transition
+      content_digest: sha256:61f42b55c441f9683d1f1023d2586b3143849aa35bfe42977c76ba0d55ee167a
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: product-update
+      content_digest: sha256:4f701367ef653b5119ae2927d20e35986c498df23aee84d0e6f5adb5b8ee97b6
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: project-refresh
+      content_digest: sha256:8c252fa5ef5c4c40647cc11127a404f0bac7c096648e8b3ca9f8af9655203067
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - shell
+    - name: judge
+      content_digest: sha256:eff261723439586f4b8e0b5b78b6976c33f56a6bfb38f13439e56fe140ca13e9
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+      - run-state
+      - subagents
+    - name: custom-subagent-create
+      content_digest: sha256:d879e384a9869eaa2873bf00ff4f53c5b4995976b38f850df6fb9a777b31e754
+      side_effect_class: project-write
+      capabilities:
+      - filesystem-read
+      - filesystem-write
+      - run-state
+      - shell
+      - subagents
+    - name: athena
+      content_digest: sha256:736754bdf14368b61f01c74e3f3bd3bd9d285416e22d2ac843f07ecb316a34a0
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: artemis
+      content_digest: sha256:61fe63605839f01b33df24ee565192929b4b2315819ff5fa4ad5d0d403e62beb
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: hephaistos
+      content_digest: sha256:cf6ae542648adb151468eb877fa0d7ff8f5455d5cb972b111955a11cbd5e817d
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: apollon
+      content_digest: sha256:9c3834217cb2a0a13e86a8342de08045aa59ceeedc6ec4eaf44b88dc38b7d859
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: eileithyia
+      content_digest: sha256:3a612ba82af99404402e500f2826ce6ceafa2cbd064f0464e4b657b1781384c7
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: poseidon
+      content_digest: sha256:d68986cffd108857365eae115bba9ef4ddfd2d42f93e7c9195f4290fbd4b5266
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: demeter
+      content_digest: sha256:69db6ec2c15836bdba3d930584077f8250e96939d846de1be841d45eca17cabe
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: aither
+      content_digest: sha256:9d3ab36dfb86853cb3589a8591bcfdc393ed2eb29a179e0f386a2309f0b86e87
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read
+    - name: hades
+      content_digest: sha256:8e592bd1e3899d32353cb4ec93b00bad5e3cdd096ec685bcbd7110aa7c299a19
+      side_effect_class: read-only
+      capabilities:
+      - filesystem-read

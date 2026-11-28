@@ -1,0 +1,59 @@
+name: Upstream sync
+
+# Weekly byte-for-byte refresh of vendored upstream Skill sources (harness/upstream/UPSTREAM.lock).
+# Opens or updates one pull request into develop; it never merges.
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Upstream sync
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: chore/upstream-sync
+      # Pull requests opened with the default token do not start CI. A maintainer may add
+      # UPSTREAM_SYNC_TOKEN (contents and pull-requests write) so the sync pull request runs checks.
+      GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check -r requirements-conformance.txt
+      - name: Sync vendored sources
+        run: |
+          python scripts/sync-upstream.py --pr-body "$RUNNER_TEMP/upstream-body.md" | tee "$RUNNER_TEMP/upstream-report.json"
+          python scripts/sync-user-plugin.py
+      - name: Open or update the sync pull request
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No upstream change."
+            exit 0
+          fi
+          git config user.name "Hojin Jeong"
+          git config user.email "hojini1229@gmail.com"
+          git switch -C "$BRANCH"
+          git add -A harness crates
+          git commit -q -m "chore: 상류 원본 주간 동기화"
+          git push --force-with-lease origin "$BRANCH"
+          title="chore: 상류 원본 주간 동기화"
+          number=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --body-file "$RUNNER_TEMP/upstream-body.md"
+          else
+            gh pr create --base develop --head "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/upstream-body.md"
+          fi

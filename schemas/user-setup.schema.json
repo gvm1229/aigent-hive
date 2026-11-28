@@ -60,6 +60,12 @@
     "ai_coauthor": {
       "$ref": "#/$defs/ai_coauthor"
     },
+    "browser": {
+      "$ref": "#/$defs/browser"
+    },
+    "design": {
+      "$ref": "#/$defs/design"
+    },
     "usage_guard": {
       "type": "object"
     },
@@ -175,8 +181,8 @@
       "enum": [
         "quick-answer",
         "project-setup",
-        "code-polish",
-        "verified-workflow",
+        "ai-slop-cleaner",
+        "autonomous-workflow",
         "knowledge-capture",
         "knowledge-manage",
         "prompt-refine",
@@ -203,7 +209,9 @@
         "poseidon",
         "demeter",
         "aither",
-        "hades"
+        "hades",
+        "aphrodite",
+        "design-curate"
       ]
     },
     "skill_selection": {
@@ -259,6 +267,22 @@
         "implicit"
       ],
       "default": "explicit"
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": { "enum": ["default-browser", "in-app"], "default": "default-browser" },
+        "reuse_active_tab": { "type": "boolean", "default": true },
+        "detected_default": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bundle": { "enum": ["recommended", "blank"], "default": "recommended" }
+      }
     },
     "ai_coauthor": {
       "enum": [

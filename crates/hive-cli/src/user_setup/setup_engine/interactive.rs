@@ -139,6 +139,10 @@ pub(in crate::user_setup) fn run(arguments: &[String], summary: bool) -> ExitCod
             if options.section.as_deref() == Some("usage") && result.exit_code == 0 {
                 crate::user_setup::claude_statusline::offer(&options.root, &mut result);
             }
+            // OV170-022: the tools section offers the consented Claude browser enforcement.
+            if options.section.as_deref() == Some("tools") && result.exit_code == 0 {
+                crate::user_setup::claude_browser_deny::offer(&options.root, &mut result);
+            }
             Ok(result)
         })
         .unwrap_or_else(|error| super::messages::failure(&error, terminal.language));
@@ -1154,7 +1158,7 @@ pub(super) fn display_preview<R: BufRead, W: Write>(
             "일반",
             "General",
             &[
-                "language", "setup", "persona", "review", "profile", "hosts", "updates",
+                "language", "setup", "persona", "review", "tools", "profile", "hosts", "updates",
             ],
         ),
         ("기능", "Features", &["skills"]),

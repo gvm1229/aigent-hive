@@ -418,14 +418,20 @@ def validate_license_boundary() -> None:
     reuse = read_toml(REPOSITORY_ROOT / "REUSE.toml")
     annotations = reuse["annotations"]
     assert isinstance(annotations, list)
-    assert annotations == [
-        {
-            "path": "**",
-            "precedence": "override",
-            "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
-            "SPDX-License-Identifier": "Apache-2.0",
-        },
-    ]
+    assert annotations[0] == {
+        "path": "**",
+        "precedence": "override",
+        "SPDX-FileCopyrightText": "2026 Hojin (Tom) Jeong",
+        "SPDX-License-Identifier": "Apache-2.0",
+    }
+    # Later annotations only relabel vendored upstream Skill sources with their own licenses.
+    for annotation in annotations[1:]:
+        assert annotation["precedence"] == "override"
+        assert annotation["SPDX-License-Identifier"] in ("MIT", "Apache-2.0")
+        assert annotation["path"] and all(
+            path.startswith("harness/upstream/") or "/references/upstream/" in path
+            for path in annotation["path"]
+        )
 
     workspace = read_toml(REPOSITORY_ROOT / "Cargo.toml")
     assert workspace["workspace"]["package"]["license"] == "Apache-2.0"

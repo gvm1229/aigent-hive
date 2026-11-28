@@ -16,6 +16,7 @@ Aigent Hive: AI 코딩 도구에 지침·지식·안전 장치를 더하는 로�
   agent           사용자 정의 에이전트 관리
   role            역할 확인과 인계 기록
   roster          신 이름 목록과 역할 배정 보기
+  design          동봉 디자인 묶음 보기
   summon          신 이름으로 기능 호출
   msg             역할 사이 메시지 보내기·받기
   stop            새 메시지 중지와 취소 요청
@@ -41,7 +42,7 @@ Aigent Hive: AI 코딩 도구에 지침·지식·안전 장치를 더하는 로�
 고급
   session         자동 편집 세션 예약·확인
   run             작업 체크포인트·재개·종료 확인
-  loop            반복 작업 그래프 관리
+  loop            야간 반복과 작업 그래프 관리
   orchestration   여러 작업 배정·조율
   judge           독립 검증 패키지·판정
   advanced        요청 경로 결정·프롬프트 검증 (에이전트용)
@@ -277,10 +278,9 @@ export, import, transfer, scan, graph, vector
         [--user-root <dir>] [--format json|html] [--output json]
     hive knowledge graph preview|enable|disable|status|prepare|apply|query
         --engine host-semantic --target <dir> --user-root <dir> --collection
-        <id> --visibility shared|project-private|confidential --host
-        codex|antigravity [--consent-digest <digest>] [--request-digest <digest>
-        --input <result.json> --receipt <receipt.json>] [--node-id <id>]
-        [--output json]
+        <id> --visibility shared|project-private|confidential --host codex
+        [--consent-digest <digest>] [--request-digest <digest> --input
+        <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
 
 === hive knowledge retrieve --help (ko)
 hive knowledge retrieve
@@ -349,8 +349,8 @@ check, probe-native, capture, summarize-tokens, fallback-install
         <dir>|--target-from-stdin) --stdin-json [--output json]
     hive usage summarize-tokens --request <normalized-events.json> [--output
         json]
-    hive usage fallback-install --host codex|claude|antigravity
-        (--dry-run|--apply) [--confirm-install] [--output json]
+    hive usage fallback-install --host codex|claude (--dry-run|--apply)
+        [--confirm-install] [--output json]
 
 === hive project upgrade --help (ko)
 hive project upgrade: 프로젝트 Hive 지침 갱신
@@ -400,6 +400,7 @@ Configuration
   agent           Manage custom agents
   role            Validate roles and record handoffs
   roster          Show named roles and assignments
+  design          Show the bundled design sources
   summon          Call a function by its named role
   msg             Send and read role messages
   stop            Stop new messages and request cancel
@@ -425,7 +426,7 @@ Diagnostics
 Advanced
   session         Reserve or check edit sessions
   run             Checkpoint, resume or close work
-  loop            Manage loop work graphs
+  loop            Run overnight loops and manage loop graphs
   orchestration   Assign and coordinate work
   judge           Package and judge independent checks
   advanced        Route requests or check prompts (for agents)
@@ -661,10 +662,9 @@ Full syntax
         [--user-root <dir>] [--format json|html] [--output json]
     hive knowledge graph preview|enable|disable|status|prepare|apply|query
         --engine host-semantic --target <dir> --user-root <dir> --collection
-        <id> --visibility shared|project-private|confidential --host
-        codex|antigravity [--consent-digest <digest>] [--request-digest <digest>
-        --input <result.json> --receipt <receipt.json>] [--node-id <id>]
-        [--output json]
+        <id> --visibility shared|project-private|confidential --host codex
+        [--consent-digest <digest>] [--request-digest <digest> --input
+        <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
 
 === hive knowledge retrieve --help (en)
 hive knowledge retrieve
@@ -733,8 +733,8 @@ Full syntax
         <dir>|--target-from-stdin) --stdin-json [--output json]
     hive usage summarize-tokens --request <normalized-events.json> [--output
         json]
-    hive usage fallback-install --host codex|claude|antigravity
-        (--dry-run|--apply) [--confirm-install] [--output json]
+    hive usage fallback-install --host codex|claude (--dry-run|--apply)
+        [--confirm-install] [--output json]
 
 === hive project upgrade --help (en)
 hive project upgrade: upgrade a project's Hive harness

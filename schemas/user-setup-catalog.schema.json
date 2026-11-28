@@ -40,8 +40,8 @@
     "mandatory_skills": { "const": ["user-setup"] },
     "skill_dependencies": {
       "type": "array",
-      "minItems": 31,
-      "maxItems": 31,
+      "minItems": 33,
+      "maxItems": 33,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/skill_dependency" }
     },
@@ -116,8 +116,8 @@
       "enum": [
         "quick-answer",
         "project-setup",
-        "code-polish",
-        "verified-workflow",
+        "ai-slop-cleaner",
+        "autonomous-workflow",
         "knowledge-capture",
         "knowledge-manage",
         "prompt-refine",
@@ -144,7 +144,9 @@
         "poseidon",
         "demeter",
         "aither",
-        "hades"
+        "hades",
+        "aphrodite",
+        "design-curate"
       ]
     },
     "skill_dependency": {

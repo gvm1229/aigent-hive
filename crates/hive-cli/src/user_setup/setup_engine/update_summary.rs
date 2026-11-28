@@ -28,12 +28,32 @@ pub(super) fn incomplete(root: &Path, result: &mut ActionResult) {
     data["resume_command"] = json!(result.next_action);
 }
 
+/// A vendored upstream source is copied as one unit, so the compact update result names its
+/// folder once instead of every file under `references/upstream/<source>/`.
+fn compact_vendored_paths(paths: &mut Vec<String>) {
+    let mut compacted = Vec::with_capacity(paths.len());
+    for path in paths.drain(..) {
+        let entry = match path.split_once("/references/upstream/") {
+            Some((skill, rest)) => match rest.split_once('/') {
+                Some((source, _)) => format!("{skill}/references/upstream/{source}/"),
+                None => path,
+            },
+            None => path,
+        };
+        if !compacted.contains(&entry) {
+            compacted.push(entry);
+        }
+    }
+    *paths = compacted;
+}
+
 pub(super) fn complete(
     root: &Path,
     before: Option<&Value>,
     saved: &UserSetupConfig,
     result: &mut ActionResult,
 ) -> Result<(), SetupError> {
+    compact_vendored_paths(&mut result.changed_paths);
     let current = serde_json::to_value(saved).map_err(|e| SetupError::Internal(e.to_string()))?;
     let keys = super::catalog()?
         .questions
@@ -129,6 +149,27 @@ mod tests {
         );
         assert_eq!(data["monitor_state"]["controller_state"], "not-configured");
         assert!(!root.path().join(".hive").exists());
+    }
+
+    #[test]
+    fn vendored_upstream_files_are_named_once_per_source() {
+        let mut paths = vec![
+            ".agents/skills/ai-slop-cleaner/SKILL.md".to_owned(),
+            ".agents/skills/ai-slop-cleaner/references/upstream/hallmark/LICENSE".to_owned(),
+            ".agents/skills/ai-slop-cleaner/references/upstream/hallmark/SKILL.md".to_owned(),
+            ".agents/skills/design-curate/references/upstream/hallmark/SKILL.md".to_owned(),
+            ".agents/skills/design-curate/references/conflicts.md".to_owned(),
+        ];
+        compact_vendored_paths(&mut paths);
+        assert_eq!(
+            paths,
+            [
+                ".agents/skills/ai-slop-cleaner/SKILL.md",
+                ".agents/skills/ai-slop-cleaner/references/upstream/hallmark/",
+                ".agents/skills/design-curate/references/upstream/hallmark/",
+                ".agents/skills/design-curate/references/conflicts.md",
+            ]
+        );
     }
 
     #[test]

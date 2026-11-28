@@ -7,6 +7,7 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod automation_terms;
 pub mod containment;
 pub mod custom_agent;
 pub mod decision;
@@ -21,6 +22,7 @@ pub mod loop_graph;
 pub mod mediation;
 pub mod native_workflow;
 pub mod orchestration;
+pub mod overnight;
 pub mod policy;
 pub mod preferences;
 pub mod project_profile;
@@ -354,6 +356,18 @@ pub fn is_hive_directive_projection_path(path: &Path) -> bool {
 
 fn is_hive_skill_projection_portable(path: &str) -> bool {
     let parts = path.split('/').collect::<Vec<_>>();
+    // Vendored upstream sources travel byte-for-byte under `references/upstream/<source>/`.
+    if parts.len() >= 7
+        && matches!(parts[0], ".agents" | ".claude")
+        && parts[1] == "skills"
+        && matches!(parts[2], "ai-slop-cleaner" | "design-curate")
+        && parts[3] == "references"
+        && parts[4] == "upstream"
+        && parts.len() <= 12
+    {
+        return valid_skill_projection_name(parts[5])
+            && parts[6..].iter().all(|part| valid_vendored_component(part));
+    }
     if parts.len() == 5
         && matches!(parts[0], ".agents" | ".claude")
         && parts[1] == "skills"
@@ -375,6 +389,11 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
                 )
                 | ("judge", "adversarial.md" | "evidence.md")
                 | ("team-execution", "mediation.md")
+                | (
+                    "ai-slop-cleaner",
+                    "code.md" | "design.md" | "hive-overrides.md" | "writing.md"
+                )
+                | ("design-curate", "conflicts.md")
                 // Retired before 0.16.0; kept so authenticated upgrades can remove it.
                 | ("run-checkpoint", "policy-review.md")
                 | ("amend-directive", "transplant.md")
@@ -391,6 +410,18 @@ fn is_hive_skill_projection_portable(path: &str) -> bool {
             && valid_skill_projection_name(parts[2])
             && parts[3] == "agents"
             && parts[4] == "openai.yaml")
+}
+
+fn valid_vendored_component(name: &str) -> bool {
+    (1..=128).contains(&name.len())
+        && name
+            .bytes()
+            .next()
+            .is_some_and(|byte| byte.is_ascii_alphanumeric())
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+        && !name.contains("..")
 }
 
 fn valid_skill_projection_name(name: &str) -> bool {
@@ -609,6 +640,10 @@ mod tests {
             ".agents/skills/project-setup/references/advanced-setup.md",
             ".claude/skills/project-setup/references/directive-recovery.md",
             ".agents/skills/project-setup/references/structured-choices.md",
+            ".agents/skills/ai-slop-cleaner/references/hive-overrides.md",
+            ".claude/skills/ai-slop-cleaner/references/upstream/hallmark/scripts/sloplint.mjs",
+            ".agents/skills/design-curate/references/upstream/impeccable/scripts/impeccable.cmd",
+            ".agents/skills/design-curate/references/upstream/hallmark/references/themes/riso.jpg",
         ] {
             let path = PathBuf::from(path);
             assert!(is_hive_skill_projection_path(&path));
@@ -627,6 +662,12 @@ mod tests {
             ".agents/skills/local-inspect/references/extra.md",
             ".agents/skills/amend-directive/references/extra.md",
             ".agents/skills/project-setup/references/extra.md",
+            ".agents/skills/ai-slop-cleaner/references/extra.md",
+            ".agents/skills/local-inspect/references/upstream/hallmark/SKILL.md",
+            ".agents/skills/design-curate/references/upstream/Bad/SKILL.md",
+            ".agents/skills/design-curate/references/upstream/hallmark/.hidden",
+            ".agents/skills/design-curate/references/upstream/hallmark/a..b",
+            ".agents/skills/design-curate/references/upstream/hallmark",
             ".agents/skills/local-inspect/agents",
             ".agents/skills/local-inspect/agents/other.yaml",
             ".claude/skills/local-inspect/agents/openai.yaml",

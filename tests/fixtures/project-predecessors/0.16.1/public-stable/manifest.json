@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "product_version": "0.16.1",
+  "archive": "codex-native.zip",
+  "sha256": "7a158089abaff509953f7f381c403f169f249ecc31d88934a332b48eb33c0339",
+  "file_count": 99,
+  "generation": "Public npm 0.16.1 Linux x64 executable (@aigent-hive/linux-x64); npm registry SRI sha512-7QWr/SGet2v64vVkqDkO1M24c6cj9kIB6eMjZJwMEBQ+eJlMqzI1uJ4yOtua+Qwrii+Xem31g+LphxOUqJmk2Q== verified at pack and tarball SHA-256 a881b73ddf1991c1d97ebc011273d729eb1cf82bb3eff12405c800d8bdb4b4a7; SHA-256 9ba8abe2335025bd7ae3ad501ab2649bee3a0ce5e3a1fb3739edb64b238a3b14; synthetic setup only; no user installation or settings changed",
+  "source_asset": "git:v0.16.1",
+  "source_binary_sha256": "9ba8abe2335025bd7ae3ad501ab2649bee3a0ce5e3a1fb3739edb64b238a3b14",
+  "capability_fixture": "tests/fixtures/setup/capabilities-codex-host-native.json",
+  "answers_fixture": "tests/fixtures/setup/answers-no-role-no-hook.yml"
+}

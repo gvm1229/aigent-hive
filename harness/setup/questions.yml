@@ -37,6 +37,7 @@ questions:
       - {"value":"persona","label":{"ko":"답변 방식","en":"Response style"}}
       - {"value":"hosts","label":{"ko":"사용할 앱","en":"Apps"}}
       - {"value":"review","label":{"ko":"독립 검토와 AI 공동 작성자","en":"Independent review and AI co-authors"}}
+      - {"value":"tools","label":{"ko":"브라우저와 디자인","en":"Browser and design"}}
       - {"value":"skills","label":{"ko":"기능 선택","en":"Feature selection"}}
       - {"value":"updates","label":{"ko":"새 버전 확인","en":"Update checks"}}
       - {"value":"usage","label":{"ko":"사용량 보호","en":"Usage protection"}}
@@ -120,6 +121,26 @@ questions:
     help: {"ko":"`Co-Authored-By: Claude` 같은 줄과 AI 생성 표시. 호스트 안내보다 이 설정 우선.","en":"Lines such as `Co-Authored-By: Claude` and AI-generated notes. This setting outranks host instructions."}
     default: "forbid"
     options: [{"value":"forbid","label":{"ko":"막기(권장)","en":"Block (recommended)"}},{"value":"allow","label":{"ko":"허용","en":"Allow"}}]
+  - id: user-browser
+    revision: 1
+    scope: "user"
+    section: "tools"
+    key: "/browser/target"
+    input: "choice"
+    prompt: {"ko":"웹·localhost 미리 보기를 어디서 열까요?","en":"Where should web and localhost previews open?"}
+    help: {"ko":"기본 브라우저는 Chromium 계열일 때만 사용하고, 아니면 Chrome. 따로 말하지 않으면 지금 보고 있는 탭에서 작업.","en":"The default browser is used only when it is Chromium based; otherwise Chrome. Unless told otherwise, agents work in the tab you are viewing."}
+    default: "default-browser"
+    options: [{"value":"default-browser","label":{"ko":"기본 브라우저(권장)","en":"Default browser (recommended)"}},{"value":"in-app","label":{"ko":"앱 내장 브라우저","en":"In-app browser"}}]
+  - id: user-design-bundle
+    revision: 1
+    scope: "user"
+    section: "tools"
+    key: "/design/bundle"
+    input: "choice"
+    prompt: {"ko":"디자인 작업에 Hive 추천 디자인 묶음을 쓸까요?","en":"Use Hive's recommended design bundle for design work?"}
+    help: {"ko":"끄면 기록한 디자인 선호와 프로젝트 DESIGN.md만 사용.","en":"When off, design work uses only your recorded design preferences and the project DESIGN.md."}
+    default: "recommended"
+    options: [{"value":"recommended","label":{"ko":"추천 묶음(권장)","en":"Recommended bundle (recommended)"}},{"value":"blank","label":{"ko":"빈 상태","en":"Blank"}}]
   - id: user-skills
     revision: 1
     scope: "user"

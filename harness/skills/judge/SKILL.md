@@ -12,7 +12,7 @@ reference, and follow it.
 
 | Request | Mode | Read | Command |
 | --- | --- | --- | --- |
-| An explicitly requested Judge step or a verified-workflow Judge node | adversarial | [adversarial](references/adversarial.md) | `hive judge package`, host launch, `hive judge quorum` |
+| An explicitly requested Judge step or a Judge step in a saved plan | adversarial | [adversarial](references/adversarial.md) | `hive judge package`, host launch, `hive judge quorum` |
 | Validate an existing Judge package and signed acceptance evidence | evidence | [evidence](references/evidence.md) | `hive judge package`, `hive judge quorum` |
 
 The former names select modes of this Skill: `adversarial-judge` is adversarial and

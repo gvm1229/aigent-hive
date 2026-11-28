@@ -16,7 +16,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ROUTE_FIXTURE = ROOT / "tests/fixtures/skills/routes/complex-verified-workflow.json"
+ROUTE_FIXTURE = ROOT / "tests/fixtures/skills/routes/complex-autonomous-workflow.json"
 JUDGE_FIXTURES = ROOT / "tests/fixtures/judge"
 
 
@@ -262,7 +262,7 @@ def main() -> int:
         )
         route_payload = routed["payload"]
         require(routed["return_code"] == 0, "natural-language routing facts were rejected")
-        require(route_payload.get("data", {}).get("selected_skill") == "verified-workflow", "verified-workflow was not selected")
+        require(route_payload.get("data", {}).get("selected_skill") == "autonomous-workflow", "autonomous-workflow was not selected")
         receipt["steps"].append(
             {
                 "name": "natural-language-routing",
@@ -270,7 +270,7 @@ def main() -> int:
                 "request_digest": digest_bytes(request_path.read_bytes()),
                 "normalized_signals": route_request["workflow_signals"],
                 "process_id": routed["process_id"],
-                "selected_skill": "verified-workflow",
+                "selected_skill": "autonomous-workflow",
             }
         )
 

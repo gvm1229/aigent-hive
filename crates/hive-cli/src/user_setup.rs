@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub(crate) mod claude_browser_deny;
 pub(crate) mod claude_statusline;
 mod migration;
 mod progress_store;
@@ -373,6 +374,54 @@ pub(crate) enum AiCoauthor {
     Allow,
 }
 
+/// Where agents open web and localhost previews.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum BrowserTarget {
+    #[default]
+    DefaultBrowser,
+    InApp,
+}
+
+/// Preview browser choice; an install without the key keeps the defaults.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct BrowserPreferences {
+    #[serde(default)]
+    pub(crate) target: BrowserTarget,
+    #[serde(default = "default_true")]
+    pub(crate) reuse_active_tab: bool,
+    /// Raw default-browser answer the setup Skill read from the operating system.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) detected_default: Option<String>,
+}
+
+impl Default for BrowserPreferences {
+    fn default() -> Self {
+        Self {
+            target: BrowserTarget::default(),
+            reuse_active_tab: true,
+            detected_default: None,
+        }
+    }
+}
+
+/// Whether design-curate uses Hive's bundled design sources.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum DesignBundle {
+    #[default]
+    Recommended,
+    Blank,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DesignPreferences {
+    #[serde(default)]
+    pub(crate) bundle: DesignBundle,
+}
+
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum JudgeInvocation {
@@ -413,6 +462,10 @@ pub(crate) struct UserSetupConfig {
     pub(crate) judge_invocation: JudgeInvocation,
     #[serde(default)]
     pub(crate) ai_coauthor: AiCoauthor,
+    #[serde(default)]
+    pub(crate) browser: BrowserPreferences,
+    #[serde(default)]
+    pub(crate) design: DesignPreferences,
     pub(crate) usage_guard: UsageGuardPreferences,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) preference_decisions: hive_core::preferences::PreferenceDecisions,
@@ -623,6 +676,9 @@ pub(crate) fn run(arguments: &[String]) -> ExitCode {
     }
     if arguments.first().map(String::as_str) == Some("feature") {
         return run_feature(&arguments[1..]);
+    }
+    if claude_browser_deny::handles(arguments) {
+        return claude_browser_deny::run(arguments);
     }
     if claude_statusline::handles(arguments) {
         return claude_statusline::run(arguments);
@@ -5185,12 +5241,12 @@ usage_guard:
 
         assert_eq!(
             config.skills.selected,
-            ["code-polish", "knowledge-capture", "user-setup"]
+            ["ai-slop-cleaner", "knowledge-capture", "user-setup"]
         );
         let canonical = String::from_utf8(canonical_config(&config).expect("canonical config"))
             .expect("UTF-8 canonical config");
-        assert!(canonical.contains("- code-polish"));
-        assert!(!canonical.contains("ai-slop-cleaner"));
+        assert!(canonical.contains("- ai-slop-cleaner"));
+        assert!(!canonical.contains("code-polish"));
     }
 
     #[test]

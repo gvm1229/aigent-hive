@@ -199,6 +199,18 @@ fn validate_host_receipt(arguments: &ReceiptArguments) -> Result<ActionResult, A
     let package_path = validate_target_relative(&arguments.package)?;
     let assignment_path = validate_target_relative(&arguments.assignment)?;
     let receipt_bytes = target.read_required(receipt_path, MAX_QUORUM_DOCUMENT_BYTES)?;
+    // Google's Antigravity terms: Antigravity and Gemini are never independent Judges.
+    if serde_json::from_slice::<serde_json::Value>(&receipt_bytes)
+        .ok()
+        .as_ref()
+        .and_then(|value| value.get("host"))
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(hive_core::automation_terms::is_terms_restricted)
+    {
+        return Err(AdapterError::Unsupported(
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.to_owned(),
+        ));
+    }
     let receipt = parse_json_bytes::<HostJudgeReceipt>(
         &receipt_bytes,
         HOST_RECEIPT_SCHEMA,

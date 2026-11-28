@@ -76,7 +76,7 @@
     "refine_suggestion": { "type": "boolean" },
     "workflow_route": {
       "type": ["string", "null"],
-      "enum": ["simple", "verified-workflow", "required-but-unsupported", null]
+      "enum": ["simple", "autonomous-workflow", "required-but-unsupported", null]
     },
     "workflow_reason_codes": {
       "type": "array",
@@ -94,7 +94,11 @@
     },
     "workflow_override": {
       "type": ["string", "null"],
-      "enum": ["simple-continuation", "verified-workflow", "no-retry", null]
+      "enum": ["simple-continuation", "autonomous-workflow", "no-retry", null]
+    },
+    "renamed_from": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
     }
   }
 }

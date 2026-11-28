@@ -1,0 +1,6 @@
+interface:
+  display_name: "Clean AI slop"
+  short_description: "(ai-slop-cleaner) Clean AI slop from selected code, documents or design after a confirmed plan."
+  default_prompt: "Use $aigent-hive:ai-slop-cleaner to show a cleanup plan for these changes, then clean only what I confirm."
+policy:
+  allow_implicit_invocation: true

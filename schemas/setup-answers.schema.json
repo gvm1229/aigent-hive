@@ -731,7 +731,9 @@
     "skill_name": {
       "enum": [
         "adversarial-judge",
+        "ai-slop-cleaner",
         "amend-directive",
+        "autonomous-workflow",
         "code-polish",
         "custom-subagent-create",
         "humanize-kor",
@@ -769,7 +771,9 @@
         "poseidon",
         "demeter",
         "aither",
-        "hades"
+        "hades",
+        "aphrodite",
+        "design-curate"
       ]
     },
     "skill_selection": {

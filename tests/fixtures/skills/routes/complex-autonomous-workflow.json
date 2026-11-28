@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "host": "codex",
+  "explicit_action": "RunWork",
+  "explicit_skill": null,
+  "plain_answer": false,
+  "simple_question": false,
+  "project_context_required": true,
+  "external_candidate": null,
+  "hive_candidate": null,
+  "active_hive_skills": [
+    {
+      "name": "autonomous-workflow",
+      "source_type": "built-in",
+      "content_digest": "sha256:b34cea59b0aae88c6e2587a3ff0a4a5f991911adfc8dc7fa414d2b399bb6bbce",
+      "side_effect_class": "project-write",
+      "capabilities": ["filesystem-read", "filesystem-write", "shell"],
+      "consent_digest": null,
+      "consent": null
+    }
+  ],
+  "refine_mode": null,
+  "explicit_run_intent": true,
+  "workflow_signals": ["dependency-graph", "independent-verifier"],
+  "workflow_override": null
+}

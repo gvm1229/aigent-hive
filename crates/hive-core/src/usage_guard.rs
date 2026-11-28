@@ -1532,3 +1532,95 @@ mod tests {
         );
     }
 }
+
+/// Remaining-percent change that counts as a sharp drop while delegated workers run.
+pub const DELEGATION_DROP_PERCENT_POINTS: u8 = 20;
+/// Window in which a sharp drop is measured.
+pub const DELEGATION_DROP_WINDOW_SECONDS: u64 = 10 * 60;
+
+/// Decision before preparing one more delegated worker (OV170-025).
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case", tag = "decision")]
+pub enum DelegationDecision {
+    /// Another worker may start; each running worker may use this many percent points.
+    Allow { per_worker_percent: u8 },
+    /// Remaining usage fell sharply inside the window; prepare no new worker.
+    StopNewWorkers { dropped_percent_points: u8 },
+    /// Remaining usage is at or below the stop threshold.
+    AtThreshold,
+}
+
+/// Re-check usage while delegated workers run. `samples` are `(unix_seconds, remaining_percent)`
+/// readings of one guarded window, oldest first; `stop_remaining_percent` is the user's guard.
+/// The headroom above the threshold is split evenly across running workers plus the new one.
+#[must_use]
+pub fn evaluate_delegation(
+    samples: &[(u64, u8)],
+    stop_remaining_percent: u8,
+    running_workers: u8,
+) -> DelegationDecision {
+    let Some(&(latest_time, latest)) = samples.last() else {
+        return DelegationDecision::AtThreshold;
+    };
+    if latest <= stop_remaining_percent {
+        return DelegationDecision::AtThreshold;
+    }
+    let peak = samples
+        .iter()
+        .filter(|(time, _)| latest_time.saturating_sub(*time) <= DELEGATION_DROP_WINDOW_SECONDS)
+        .map(|(_, remaining)| *remaining)
+        .max()
+        .unwrap_or(latest);
+    let dropped = peak.saturating_sub(latest);
+    if dropped >= DELEGATION_DROP_PERCENT_POINTS {
+        return DelegationDecision::StopNewWorkers {
+            dropped_percent_points: dropped,
+        };
+    }
+    let headroom = latest - stop_remaining_percent;
+    DelegationDecision::Allow {
+        per_worker_percent: headroom / running_workers.saturating_add(1),
+    }
+}
+
+#[cfg(test)]
+mod delegation_tests {
+    use super::*;
+
+    #[test]
+    fn delegation_stops_new_workers_on_a_sharp_drop_and_splits_headroom() {
+        // The 2026-11-21 incident: four parallel Codex workers took the 30-day limit from 94% to 0%.
+        let incident = [(0, 94), (300, 80), (600, 66)];
+        assert_eq!(
+            evaluate_delegation(&incident, 20, 4),
+            DelegationDecision::StopNewWorkers {
+                dropped_percent_points: 28
+            }
+        );
+        assert_eq!(
+            evaluate_delegation(&[(0, 94), (3000, 70)], 20, 4),
+            DelegationDecision::Allow {
+                per_worker_percent: 10
+            }
+        );
+        assert_eq!(
+            evaluate_delegation(&[(0, 50)], 20, 0),
+            DelegationDecision::Allow {
+                per_worker_percent: 30
+            }
+        );
+        assert_eq!(
+            evaluate_delegation(&[(0, 21), (60, 20)], 20, 1),
+            DelegationDecision::AtThreshold
+        );
+        assert_eq!(
+            evaluate_delegation(&[], 20, 1),
+            DelegationDecision::AtThreshold
+        );
+        // A slow decline across a longer time is not a sharp drop.
+        assert!(matches!(
+            evaluate_delegation(&[(0, 90), (1200, 75), (2400, 60)], 20, 2),
+            DelegationDecision::Allow { .. }
+        ));
+    }
+}

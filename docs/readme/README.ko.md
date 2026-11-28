@@ -128,6 +128,22 @@ hive knowledge import --user-root $env:USERPROFILE --bundle "$env:USERPROFILE\Do
 hive usage enforce --target <project> --session-id <id> --process-id <pid> --output json
 ```
 
+## Gemini Antigravity 지원 범위
+
+Hive는 Gemini Antigravity를 Codex·Claude Code보다 좁은 범위로 지원.
+
+- **되는 일:** Hive가 Antigravity에 Skill과 지침을 설치. 이후 사람이 `agy`나 Antigravity 앱을 다른
+  앱처럼 직접 사용. Antigravity가 스스로 보내는 사용량 숫자는 Hive가 확인
+- **Hive가 Antigravity로 절대 하지 않는 일:** Hive가 스스로 Antigravity를 켜거나 조종하는 일. 작업자로
+  일 맡기기, 다른 앱의 결과 검토·판정, 야간 반복 작업, 자동 재시작 모두 해당. Codex와 Claude Code는
+  각자의 공식 명령줄·훅 기능이 이런 사용을 허용하므로 이 일들도 담당 가능
+- **이유:** Google [Antigravity FAQ](https://antigravity.google/docs/faq/)는 제3자 소프트웨어로 Antigravity에 접근하면 약관 위반이고
+  계정이 정지·해지될 수 있다고 안내. Hive가 `agy`를 조종하면 Hive가 바로 그 제3자 소프트웨어. 다른
+  도구에서 한 번 사용한 뒤 정지됐다는 신고가 있고 이의 제기 기회도 제한적. 그래서 Hive는 이 일들을
+  항상 거부. 실수로 켤 수 있는 설정이 아닌 고정 규칙
+- **다른 도구에서 Gemini 모델 쓰기:** Google은 제3자 도구에 Gemini Enterprise나 Google AI Studio API
+  키를 권장. Hive는 모델 제공자 API 키를 묻거나 저장하지 않으므로 이 경로는 미제공
+
 ## 지원 플랫폼
 
 macOS(Apple Silicon·Intel), Linux(x86_64·arm64), Windows x86_64. 공개 시험 수용 범위: macOS Apple

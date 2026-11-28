@@ -27,7 +27,7 @@
 | 4. 멈춘 정확한 규칙 확인 | [지침 구절](../../crates/hive-cli/src/policy/directive_context.rs)에 파일·행·내용 지문, [차단 응답](../../crates/hive-cli/src/policy/native.rs)에 이유 존재. 보호 경로 거부 문구는 일반 설명 | 지침·프로그램 정책·호스트 승인·사용량 제한을 구분한 안내. 문서 원인이 아닌 오류에 문서 출처 생성 금지 |
 | 5. 숫자로 변경 제한 | [편집 지침](../../harness/template/.hive/directives/00-editing-discipline.md)에 일회성 추상화·불필요한 변경 금지 | 작은 수정에 파일·의존성·검사 범위를 계획에서 명시. 모든 작업의 파일 4개 상한 강제 제외 |
 | 6. 필요한 시점에 질문 | [설치용 편집 지침](../../harness/template/.hive/directives/00-editing-discipline.md)에 핵심 선택만 질문·독립 작업 계속, [일반 지침](../../harness/directives/00-project-harness.md)에 권한 경계 존재 | 대부분 반영. 결과를 바꿀 질문은 초반, 공개·설치 승인은 준비 후 해당 행동 직전. 모든 질문을 끝으로 미루는 규칙 제외 |
-| 7. 같은 작업에서 방향 수정 | [검증 흐름](../../harness/skills/verified-workflow/SKILL.md)의 `hive loop steer`와 새 불변 revision 존재 | 기존 기능 활용. 일반 대화의 방향 수정마다 검증 흐름을 활성화하는 확대 제외 |
+| 7. 같은 작업에서 방향 수정 | [검증 흐름](../../harness/project-bases/0.16.1/skills/verified-workflow/SKILL.md)의 `hive loop steer`와 새 불변 revision 존재 | 기존 기능 활용. 일반 대화의 방향 수정마다 검증 흐름을 활성화하는 확대 제외 |
 | 8. 검사 횟수 관리 | [소스 검증 단계](../../.agents/directives/references/verification.md)에 관련 검사 우선·논리적 작업 단위 전체 검사 1회. 검증 흐름에는 재시도 예산 존재 | 설치용 일반 작업에도 같은 원칙 전달. 재시도 예산과 통과한 검사의 불필요한 반복을 별개로 취급 |
 | 9. 단계별 강도 조절 | 명시 모델·강도 매핑 존재. 모든 호스트의 진행 중 자동 변경을 입증하는 근거 없음 | 1번과 통합, 별도 조절 장치 추가 제외. 호스트가 지원하고 사용자가 허용한 범위만 적용 |
 | 10. 완료 상태 중심 요청 | [편집 지침](../../harness/template/.hive/directives/00-editing-discipline.md)의 검증 가능한 목표, [완료 판단](../../harness/directives/00-project-harness.md)의 전체 요청 대조 존재 | 이미 반영. 분석 요청을 자동 구현으로 바꾸지 않는 범위 보존 |

@@ -463,6 +463,8 @@ class StableAnnouncementContext(unittest.TestCase):
     def test_correction_names_and_explains_every_shipped_god_with_a_call(self) -> None:
         import tomllib
         gods = tomllib.loads((ROOT / "harness/gods.toml").read_text(encoding="utf-8"))["gods"]
+        # The 0.15.0 copy covers the nine gods that shipped then; Aphrodite arrived in 0.17.0.
+        gods = [god for god in gods if god["name"] != "aphrodite"]
         text = (ROOT / "docs/releases/0.15.0.subscriber.ko.md").read_text(encoding="utf-8")
         self.assertEqual(len(gods), 9)
         self.assertIn("0.15.0 안내 정정", text)

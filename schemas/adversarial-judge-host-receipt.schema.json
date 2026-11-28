@@ -7,7 +7,7 @@
   "required": ["schema_version", "host", "package_digest", "assignment_digest", "slot_id", "requester_id", "task_agent_id", "judge_instance_id", "launch", "result", "completion_authority"],
   "properties": {
     "schema_version": { "const": 1 },
-    "host": { "enum": ["codex", "claude", "antigravity"] },
+    "host": { "enum": ["codex", "claude"] },
     "package_digest": { "$ref": "#/$defs/digest" },
     "assignment_digest": { "$ref": "#/$defs/digest" },
     "slot_id": { "type": "string", "minLength": 1, "maxLength": 128 },

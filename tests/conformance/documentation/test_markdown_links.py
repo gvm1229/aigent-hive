@@ -18,6 +18,16 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MarkdownLinkTest(unittest.TestCase):
+    def test_projected_upstream_subset_links_resolve_only_inside_the_vendored_source(self) -> None:
+        root = Path(__file__).resolve().parents[3]
+        projected = root / "harness/skills/design-curate/references/upstream/hallmark/SKILL.md"
+        self.assertEqual(MODULE.vendored_subset_target(root, projected, "references/gates.md"),
+                         "harness/upstream/hallmark/references/gates.md")
+        self.assertIsNone(MODULE.vendored_subset_target(root, projected, "references/missing.md"))
+        self.assertIsNone(MODULE.vendored_subset_target(root, projected, "../../../../../README.md"))
+        ordinary = root / "docs/licensing.md"
+        self.assertIsNone(MODULE.vendored_subset_target(root, ordinary, "../README.md"))
+
     def test_upstream_link_exception_requires_exact_source_path_bytes_and_target(self) -> None:
         temporary, root = self.make_repository()
         with temporary:

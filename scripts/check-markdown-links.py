@@ -169,6 +169,24 @@ def resolve_path(root: Path, source: Path, target: str) -> Path:
     return source.parent / relative
 
 
+PROJECTED_UPSTREAM = re.compile(r"^(?:harness/skills|harness/plugins/aigent-hive/skills|harness/template/\.(?:agents|claude)/skills)/[a-z0-9-]+/references/upstream/([a-z0-9-]+)/(.*)$")
+
+
+def vendored_subset_target(root: Path, source: Path, path_text: str) -> str | None:
+    """Map a link inside a projected upstream copy to the full vendored source, if it exists there."""
+    if not path_text or path_text.startswith("/"):
+        return None
+    match = PROJECTED_UPSTREAM.match(source.relative_to(root).as_posix())
+    if match is None:
+        return None
+    vendored_source = root / "harness/upstream" / match[1] / match[2]
+    candidate = (vendored_source.parent / unquote(path_text)).resolve()
+    vendored_root = (root / "harness/upstream" / match[1]).resolve()
+    if candidate.is_relative_to(vendored_root) and candidate.exists():
+        return candidate.relative_to(root.resolve()).as_posix()
+    return None
+
+
 def scan(root: Path) -> dict[str, object]:
     root = root.resolve()
     documents = inventory(root)
@@ -198,6 +216,14 @@ def scan(root: Path) -> dict[str, object]:
             checked_links += 1
             path_text, separator, anchor = target.partition("#")
             destination = resolve_path(root, source, path_text) if path_text else source
+            subset = vendored_subset_target(root, source, path_text)
+            if subset is not None and not destination.exists():
+                preserved_upstream_links.append({
+                    "source": source.relative_to(root).as_posix(), "line": line_number,
+                    "target": target, "source_sha256": source_digest,
+                    "reason": "vendored target outside the projected subset: " + subset,
+                })
+                continue
             if not destination.exists():
                 failures.append(
                     Failure(

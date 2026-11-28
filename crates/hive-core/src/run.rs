@@ -39,7 +39,8 @@ pub enum Host {
     Codex,
     /// Claude Code.
     Claude,
-    /// Gemini Antigravity.
+    /// Gemini Antigravity, as a human-interactive run owner only. It is never an automatic
+    /// dispatch or continuation target (Google's Antigravity terms).
     Antigravity,
 }
 

@@ -32,7 +32,7 @@
       "required": ["binding_state", "host", "session_id_digest"],
       "properties": {
         "binding_state": { "enum": ["awaiting-host-attestation", "recorded"] },
-        "host": { "type": ["string", "null"], "enum": ["codex", "claude", "antigravity", null] },
+        "host": { "type": ["string", "null"], "enum": ["codex", "claude", null] },
         "session_id_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" }
       }
     },

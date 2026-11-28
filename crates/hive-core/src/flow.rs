@@ -91,10 +91,9 @@ impl StepKind {
 pub enum HostMode {
     /// Claude: the subscribed interactive host; no non-interactive Claude invocation.
     InteractiveHost,
-    /// Codex: a worker whose invocation the host hook owns.
+    /// Codex: a worker whose invocation the host hook owns. Antigravity and Gemini are never
+    /// flow workers or reviewers (Google's Antigravity terms).
     Worker,
-    /// Gemini: a peer worker, unverified until its own real acceptance.
-    PeerWorkerUnverified,
 }
 
 impl HostMode {
@@ -102,7 +101,6 @@ impl HostMode {
     pub fn for_provider(provider: &str) -> Self {
         match provider {
             "claude" => Self::InteractiveHost,
-            "gemini" => Self::PeerWorkerUnverified,
             _ => Self::Worker,
         }
     }
@@ -129,18 +127,19 @@ impl StepProfile {
             .map_or_else(|| self.role.clone(), crate::gods::God::display_name)
     }
 
-    /// Real acceptance exists only for Claude and Codex; Gemini stays unverified.
+    /// Real acceptance exists only for Claude and Codex.
     #[must_use]
     pub fn verified(&self) -> bool {
-        HostMode::for_provider(&self.provider) != HostMode::PeerWorkerUnverified
+        matches!(self.provider.as_str(), "claude" | "codex")
     }
 
     fn validate(&self) -> Result<(), String> {
+        crate::automation_terms::refuse_automated(&self.provider)?;
         if [&self.role, &self.provider, &self.model, &self.effort]
             .iter()
             .any(|value| !valid_id(value))
             || self.god.as_deref().is_some_and(|god| !valid_id(god))
-            || !matches!(self.provider.as_str(), "claude" | "codex" | "gemini")
+            || !matches!(self.provider.as_str(), "claude" | "codex")
         {
             return Err("invalid flow step profile".into());
         }
@@ -461,7 +460,6 @@ pub fn provider_display_name(provider: &str) -> String {
     match provider {
         "claude" => "Claude".into(),
         "codex" => "Codex".into(),
-        "gemini" => "Gemini".into(),
         other => other.into(),
     }
 }
@@ -491,7 +489,8 @@ pub fn model_display_name(model: &str) -> String {
         .unwrap_or_else(|| model.to_owned())
 }
 
-/// `Athena (Claude Fable 5.2 · high) ▸ 검토 중`, with ` [미검증]` / ` [unverified]` for Gemini.
+/// `Athena (Claude Fable 5.2 · high) ▸ 검토 중`, with ` [미검증]` / ` [unverified]` for an
+/// unknown provider.
 #[must_use]
 pub fn status_line(
     profile: &StepProfile,
@@ -812,23 +811,20 @@ mod tests {
                 format!("Athena (Codex GPT-5.6 Terra · max) ▸ {text}")
             );
         }
-        let gemini = profile(
-            "hive-research-specialist",
-            None,
-            "gemini",
-            "gemini-3-pro-preview",
-            "high",
-        );
-        assert_eq!(
-            status_line(
-                &gemini,
-                StepKind::Reviewer,
-                Some(MessageState::Queued),
-                true
-            ),
-            "hive-research-specialist (Gemini gemini-3-pro-preview · high) ▸ 대기 [미검증]"
-        );
-        assert!(!gemini.verified());
+        for provider in ["gemini", "antigravity"] {
+            let refused = profile(
+                "hive-research-specialist",
+                None,
+                provider,
+                "gemini-3-pro-preview",
+                "high",
+            );
+            assert!(!refused.verified());
+            assert_eq!(
+                refused.validate().unwrap_err(),
+                crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+            );
+        }
         assert_eq!(HostMode::for_provider("claude"), HostMode::InteractiveHost);
         assert_eq!(HostMode::for_provider("codex"), HostMode::Worker);
     }

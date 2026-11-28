@@ -34,8 +34,9 @@ CURRENT = {
     "demeter",
     "aither",
     "hades",
+    "aphrodite",
 
-    "quick-answer", "project-setup", "code-polish", "humanize-kor", "verified-workflow",
+    "quick-answer", "project-setup", "ai-slop-cleaner", "design-curate", "humanize-kor", "autonomous-workflow",
     "knowledge-manage", "knowledge-capture", "prompt-refine", "research-best-practices",
     "knowledge-recall", "usage-guard", "ship", "amend-directive", "user-setup",
     "run", "project-transition", "product-update", "project-refresh", "judge",

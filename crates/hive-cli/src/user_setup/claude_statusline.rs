@@ -534,18 +534,18 @@ fn splice_status_line(text: &str, value: Option<&Value>) -> Result<String, Strin
     Ok(output)
 }
 
-struct Member {
-    key: String,
-    key_start: usize,
-    value_start: usize,
-    value_end: usize,
+pub(super) struct Member {
+    pub(super) key: String,
+    pub(super) key_start: usize,
+    pub(super) value_start: usize,
+    pub(super) value_end: usize,
     previous_value_end: Option<usize>,
     next_key_start: Option<usize>,
 }
 
-struct Members {
-    open: usize,
-    close: usize,
+pub(super) struct Members {
+    pub(super) open: usize,
+    pub(super) close: usize,
     list: Vec<Member>,
 }
 
@@ -556,7 +556,7 @@ impl std::ops::Deref for Members {
     }
 }
 
-fn top_level_members(text: &str) -> Result<Members, String> {
+pub(super) fn top_level_members(text: &str) -> Result<Members, String> {
     let bytes = text.as_bytes();
     let invalid = || "Claude settings.json is not a simple JSON object".to_owned();
     let mut index = skip_space(bytes, 0);
@@ -610,7 +610,7 @@ fn top_level_members(text: &str) -> Result<Members, String> {
     }
 }
 
-fn skip_space(bytes: &[u8], mut index: usize) -> usize {
+pub(super) fn skip_space(bytes: &[u8], mut index: usize) -> usize {
     while bytes
         .get(index)
         .is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\r' | b'\n'))
@@ -632,7 +632,7 @@ fn skip_string(bytes: &[u8], start: usize) -> Option<usize> {
     None
 }
 
-fn skip_value(bytes: &[u8], start: usize) -> Option<usize> {
+pub(super) fn skip_value(bytes: &[u8], start: usize) -> Option<usize> {
     match bytes.get(start)? {
         b'"' => skip_string(bytes, start),
         b'{' | b'[' => {

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Save, hand off, or resume a run (run)"
+  short_description: "(run) Save progress, record a role handoff, or resume an existing Hive run. Formerly run-checkpoint, run-handoff, run-resume."
+  default_prompt: "Use $aigent-hive:run to checkpoint, hand off, or resume this durable Hive run."
+policy:
+  allow_implicit_invocation: true

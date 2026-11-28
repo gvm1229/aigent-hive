@@ -40,7 +40,18 @@ class NativeOrchestrationFeasibilityContract(unittest.TestCase):
                 validator.validate(payload)
                 self.assertEqual(payload["activation"], "default-off")
                 hosts.add(payload["host"])
-        self.assertEqual(hosts, {"codex", "claude", "antigravity"})
+        self.assertEqual(hosts, {"codex", "claude"})
+
+    def test_antigravity_is_never_a_native_dispatch_host(self) -> None:
+        # Google's Antigravity terms prohibit third-party tools accessing Antigravity.
+        validator = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
+        payload = json.loads(
+            (FIXTURES / "codex-capability.json").read_text(encoding="utf-8")
+        )
+        for host in ("antigravity", "gemini"):
+            with self.subTest(host=host):
+                payload["host"] = host
+                self.assertFalse(validator.is_valid(payload))
 
     def test_no_host_claims_complete_lifecycle_or_attestation(self) -> None:
         for path in sorted(FIXTURES.glob("*-capability.json")):

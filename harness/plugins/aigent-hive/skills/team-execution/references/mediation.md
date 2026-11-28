@@ -48,8 +48,11 @@ The policy file names the message and, under `policy`, binds the role, provider,
   `codex exec --sandbox <policy.sandbox> -C <worktree> -o <result-file> <task prompt>` with every
   `git_env` entry set. Never add `--dangerously-bypass-approvals-and-sandbox`, `--yolo`,
   `--full-auto`, `--add-dir`, `danger-full-access` or a second `--sandbox`.
-- Claude and Gemini (`enforced_by: host-guidance`): the policy is guidance only; apply it through
-  the host's own permission settings for the subagent or peer worker.
+- Claude (`enforced_by: host-guidance`): the policy is guidance only; apply it through the
+  host's own permission settings for the subagent.
+- Antigravity and Gemini are never workers, reviewers or hook hosts. Google's Antigravity terms
+  prohibit third-party tools from accessing Antigravity (account suspension risk), so Hive
+  refuses them; the person uses Antigravity directly.
 - `{target}` in `writable_roots` is the task worktree. Score and check files pinned by
   `msg flow start --check` stay outside it and read-only; `.hive/` is never writable by a worker.
 
@@ -76,8 +79,8 @@ The policy file names the message and, under `policy`, binds the role, provider,
   becomes `cancel-requested`. `hive stop status` shows active stops.
 - End claimed work only through the host's official cancel, then record it with
   `hive msg cancel-ack --id <message-id> --claim <claim_token or claim_digest> --receipt <host-cancel-receipt.json>`
-  (`hive stop` lists each in-progress `claim_digest`). Claude and Gemini
-  report `unsupported`; their work runs to its lease. Never force-kill or send interrupt keys.
+  (`hive stop` lists each in-progress `claim_digest`). Claude reports
+  `unsupported`; its work runs to its lease. Never force-kill or send interrupt keys.
 - Resume with `hive stop clear` (preview and digest), then
   `hive stop clear --confirm <stop-digest>`. Nothing is re-sent after a clear.
 
@@ -86,7 +89,7 @@ The policy file names the message and, under `policy`, binds the role, provider,
 - `hive msg hooks preview --host claude|codex --role <r>` shows the exact project-only hook and
   its approval digest; `hive msg hooks apply ... --confirm <approval-digest>` writes it. Remove
   with `hive msg hooks remove`; inspect with `hive msg hooks status`.
-- Gemini is preview only: apply is refused until its hook round trip is verified.
+- Antigravity and Gemini hooks are refused permanently under Google's Antigravity terms.
 - Hooks never touch user-global `~/.claude`, `~/.codex` or `~/.gemini`. A hook only records the
   event and hands an acknowledged result back once; it never claims, dispatches or launches.
 

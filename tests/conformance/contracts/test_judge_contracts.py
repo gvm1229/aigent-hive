@@ -221,10 +221,15 @@ class Phase5JudgeStaticContracts(unittest.TestCase):
             with self.subTest(name=name):
                 self.package_request_validator.validate(read_json(FIXTURES / name))
 
-    def test_three_host_receipts_are_typed_and_clean_context_bound(self) -> None:
+    def test_host_receipts_are_typed_and_clean_context_bound(self) -> None:
         assignment = read_json(FIXTURES / "assignment-elevated.json")
         expected = {slot["slot_id"]: slot for slot in assignment["slots"]}
-        for host in ("codex", "claude", "antigravity"):
+        # Google's Antigravity terms: Antigravity is never an independent Judge host.
+        with self.assertRaises(ValidationError):
+            self.host_receipt_validator.validate(
+                read_json(FIXTURES / "host-receipt-antigravity-refused.json")
+            )
+        for host in ("codex", "claude"):
             with self.subTest(host=host):
                 receipt = read_json(FIXTURES / f"host-receipt-{host}.json")
                 self.host_receipt_validator.validate(receipt)
@@ -552,8 +557,18 @@ class Phase5JudgeCliContracts(unittest.TestCase):
         self.assertEqual(package, read_json(FIXTURES / "package-elevated.json"))
         self.assertEqual(package["package_digest"], package_digest(package))
 
-    def test_three_host_receipts_bind_launch_result_and_verdict(self) -> None:
-        for host in ("codex", "claude", "antigravity"):
+    def test_antigravity_host_receipt_is_refused_by_terms(self) -> None:
+        process, payload = self.run_judge(
+            "receipt",
+            FIXTURES / "host-receipt-antigravity-refused.json",
+            package="judge/package-elevated.json",
+            assignment="judge/assignment-elevated.json",
+        )
+        self.assertNotEqual(process.returncode, 0, payload)
+        self.assertIn("Antigravity terms", payload["message"])
+
+    def test_host_receipts_bind_launch_result_and_verdict(self) -> None:
+        for host in ("codex", "claude"):
             with self.subTest(host=host):
                 process, payload = self.run_judge(
                     "receipt",

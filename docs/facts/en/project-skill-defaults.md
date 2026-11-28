@@ -9,9 +9,9 @@ summary: "Project Skill Defaults"
 tags: [directive, project, skill]
 aliases: []
 sources:
-  - "repo:crates/hive-render/src/lib.rs#sha256:23b7954dec7567430840b7f9b568bb519df9519693b905c9f7fda19fca13399b"
-  - "repo:harness/project-setup/skill-suites.yml#sha256:31e7c19ef5cc7b4edf9646f07fa81bbcbc3a37a39b9d34ec7fb0b0c26e5159d2"
-  - "repo:schemas/setup-answers.schema.json#sha256:b4661bb62fff062db316f5e3899c11f7e369c8111956b08b2f501be4da9551ff"
+  - "repo:crates/hive-render/src/lib.rs#sha256:db8acd2d00532f6ed23b0adce6e9c8f3a3648c74874cc860eeb3633b20a0e92d"
+  - "repo:harness/project-setup/skill-suites.yml#sha256:d2fc0676ba94bcfcb55a8694c21a6f424d8f5f023c96566297a386df3d8024c2"
+  - "repo:schemas/setup-answers.schema.json#sha256:0b2610b633e440d8ba534aa0136ea8a28f08e93b9fd80bdf56f7694485d5069a"
 links: [agent-directive-ownership, codex-skill-delivery]
 reviewed_revision: "git:319ac812a6905a9810fdec56f81f0dc605b80895"
 status: active

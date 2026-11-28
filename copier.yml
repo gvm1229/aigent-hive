@@ -25,14 +25,20 @@ _exclude:
   - "{% if 'eileithyia' not in selected_project_skills %}.claude/skills/eileithyia{% endif %}"
   - "{% if 'hades' not in selected_project_skills %}.agents/skills/hades{% endif %}"
   - "{% if 'hades' not in selected_project_skills %}.claude/skills/hades{% endif %}"
+  - "{% if 'aphrodite' not in selected_project_skills %}.agents/skills/aphrodite{% endif %}"
+  - "{% if 'aphrodite' not in selected_project_skills %}.claude/skills/aphrodite{% endif %}"
   - "{% if 'hephaistos' not in selected_project_skills %}.agents/skills/hephaistos{% endif %}"
   - "{% if 'hephaistos' not in selected_project_skills %}.claude/skills/hephaistos{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.agents/skills/poseidon{% endif %}"
   - "{% if 'poseidon' not in selected_project_skills %}.claude/skills/poseidon{% endif %}"
+  - "{% if 'ai-slop-cleaner' not in selected_project_skills %}.agents/skills/ai-slop-cleaner{% endif %}"
+  - "{% if 'ai-slop-cleaner' not in selected_project_skills %}.claude/skills/ai-slop-cleaner{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.agents/skills/amend-directive{% endif %}"
   - "{% if 'amend-directive' not in selected_project_skills %}.claude/skills/amend-directive{% endif %}"
-  - "{% if 'code-polish' not in selected_project_skills %}.agents/skills/code-polish{% endif %}"
-  - "{% if 'code-polish' not in selected_project_skills %}.claude/skills/code-polish{% endif %}"
+  - "{% if 'autonomous-workflow' not in selected_project_skills %}.agents/skills/autonomous-workflow{% endif %}"
+  - "{% if 'autonomous-workflow' not in selected_project_skills %}.claude/skills/autonomous-workflow{% endif %}"
+  - "{% if 'design-curate' not in selected_project_skills %}.agents/skills/design-curate{% endif %}"
+  - "{% if 'design-curate' not in selected_project_skills %}.claude/skills/design-curate{% endif %}"
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.agents/skills/custom-subagent-create{% endif %}"
   - "{% if 'custom-subagent-create' not in selected_project_skills %}.claude/skills/custom-subagent-create{% endif %}"
   - "{% if 'humanize-kor' not in selected_project_skills %}.agents/skills/humanize-kor{% endif %}"
@@ -69,8 +75,6 @@ _exclude:
   - "{% if 'team-execution' not in selected_project_skills %}.claude/skills/team-execution{% endif %}"
   - "{% if 'usage-guard' not in selected_project_skills %}.agents/skills/usage-guard{% endif %}"
   - "{% if 'usage-guard' not in selected_project_skills %}.claude/skills/usage-guard{% endif %}"
-  - "{% if 'verified-workflow' not in selected_project_skills %}.agents/skills/verified-workflow{% endif %}"
-  - "{% if 'verified-workflow' not in selected_project_skills %}.claude/skills/verified-workflow{% endif %}"
   # Claude project projection carries Skill bodies only, matching the Rust renderer.
   - ".claude/skills/*/agents"
   # The Discord onboarding guide belongs to the user-level installation.
@@ -302,13 +306,16 @@ selected_project_skills:
   type: yaml
   when: false
   default:
+    - ai-slop-cleaner
     - aither
     - amend-directive
+    - aphrodite
     - apollon
     - artemis
     - athena
-    - code-polish
+    - autonomous-workflow
     - demeter
+    - design-curate
     - eileithyia
     - hades
     - hephaistos
@@ -328,4 +335,3 @@ selected_project_skills:
     - ship
     - team-execution
     - usage-guard
-    - verified-workflow

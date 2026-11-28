@@ -1,4 +1,4 @@
-//! Names and display text for the nine functional entry points.
+//! Names and display text for the ten functional entry points.
 #[derive(Clone, Copy, Debug)]
 pub struct God {
     pub name: &'static str,
@@ -63,6 +63,7 @@ mod tests {
             ("Apollo", "apollon"),
             ("Eleuthia", "eileithyia"),
             ("Aether", "aither"),
+            ("Venus", "aphrodite"),
         ] {
             assert_eq!(find(alias).unwrap().name, canonical);
         }
@@ -88,28 +89,30 @@ mod tests {
         assert_eq!(command_owner("unknown"), None);
     }
     #[test]
-    fn gods_nine_by_two_language_display_snapshots() {
+    fn gods_ten_by_two_language_display_snapshots() {
         let expected_en = [
             "Calling upon Athena — planning",
             "Calling upon Artemis — research",
             "Calling upon Hephaistos — implementation",
-            "Calling upon Apollon — writing",
+            "Calling upon Apollon — knowledge",
             "Calling upon Eileithyia — setup",
             "Calling upon Poseidon — coordination",
-            "Calling upon Demeter — knowledge",
+            "Calling upon Demeter — writing",
             "Calling upon Aither — usage controls",
             "Calling upon Hades — cleanup",
+            "Calling upon Aphrodite — design",
         ];
         let expected_ko = [
             "아테나 호출 — 계획",
             "아르테미스 호출 — 조사",
             "헤파이스토스 호출 — 구현",
-            "아폴론 호출 — 글쓰기",
+            "아폴론 호출 — 지식",
             "에일레이티이아 호출 — 설정",
             "포세이돈 호출 — 조율",
-            "데메테르 호출 — 지식",
+            "데메테르 호출 — 글쓰기",
             "아이테르 호출 — 사용량 관리",
             "하데스 호출 — 정리",
+            "아프로디테 호출 — 디자인",
         ];
         for (i, god) in GODS.iter().enumerate() {
             assert_eq!(god.announcement(false), expected_en[i]);

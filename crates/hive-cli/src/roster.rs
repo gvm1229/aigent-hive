@@ -40,7 +40,7 @@ fn execute(arguments: &[String]) -> Result<Value, String> {
     let user = required(&options, "--user-root").map_err(|e| e.message().to_owned())?;
     let roster = Roster::load(Path::new(user), Path::new(target))?;
     if !check {
-        return Ok(json!({"roster":roster,"enabled":false}));
+        return Ok(json!({"roster":roster,"notices":roster.notices,"enabled":false}));
     }
     let role = required(&options, "--role").map_err(|e| e.message().to_owned())?;
     let report_path = required(&options, "--capabilities").map_err(|e| e.message().to_owned())?;

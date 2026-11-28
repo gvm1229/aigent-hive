@@ -12,8 +12,8 @@ ownership_ko = "계획·검증"
 role = "hive-complex-implementer"
 aliases = ["Minerva", "미네르바"]
 commands = ["roster", "judge", "report", "release", "discord"]
-skills = ["athena", "verified-workflow", "multi-goal", "judge", "run"]
-steps = ["Choose the owned planning or verification Skill for the request; save its plan and acceptance criteria before implementation."]
+skills = ["athena", "autonomous-workflow", "multi-goal", "judge", "run"]
+steps = ["Choose the owned planning or verification Skill for the request; save its plan and acceptance criteria before implementation, and use autonomous-workflow to finish without mid-task questions."]
 
 [[gods]]
 name = "artemis"
@@ -40,22 +40,22 @@ ownership_ko = "구현"
 role = "hive-routine-implementer"
 aliases = ["Hephaestus"]
 commands = ["role", "agent", "run", "loop"]
-skills = ["hephaistos", "code-polish", "custom-subagent-create", "ship"]
-steps = ["Follow the saved implementation plan and required checks. Use code-polish only for selected code review or cleanup, and ship only for verified focused commits."]
+skills = ["hephaistos", "ai-slop-cleaner", "custom-subagent-create", "ship"]
+steps = ["Follow the saved implementation plan and required checks. Use ai-slop-cleaner only for selected code review or cleanup, and ship only for verified focused commits."]
 
 [[gods]]
 name = "apollon"
 korean = "아폴론"
-purpose_en = "writing"
-purpose_ko = "글쓰기"
-summary_en = "Writes and polishes text, and refines requests and prompts."
-summary_ko = "글을 쓰고 다듬으며 요청문과 프롬프트를 정리"
-ownership_ko = "글쓰기"
-role = "hive-article-writer"
+purpose_en = "knowledge"
+purpose_ko = "지식"
+summary_en = "Saves, searches and maintains Hive knowledge and moves it to another computer."
+summary_ko = "Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전"
+ownership_ko = "지식"
+role = "hive-research-specialist"
 aliases = ["Apollo", "아폴로"]
-commands = ["prompt", "korean"]
-skills = ["apollon", "humanize-kor", "prompt-refine"]
-steps = ["Use humanize-kor for selected Korean prose or prompt-refine for an explicit prompt-authoring request; preserve meaning and protected literals."]
+commands = ["knowledge", "source-wiki", "index"]
+skills = ["apollon", "knowledge-capture", "knowledge-recall", "knowledge-manage"]
+steps = ["Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts.", "During 0.17.x, if the request is writing, Korean prose or prompt refinement, say that since 0.17.0 this work belongs to Demeter, then open the demeter Skill."]
 
 [[gods]]
 name = "eileithyia"
@@ -88,16 +88,16 @@ steps = ["Use team-execution for bounded team coordination; record a role handof
 [[gods]]
 name = "demeter"
 korean = "데메테르"
-purpose_en = "knowledge"
-purpose_ko = "지식"
-summary_en = "Saves, searches and maintains Hive knowledge and moves it to another computer."
-summary_ko = "Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전"
-ownership_ko = "지식"
-role = "hive-research-specialist"
+purpose_en = "writing"
+purpose_ko = "글쓰기"
+summary_en = "Writes and polishes text, and refines requests and prompts."
+summary_ko = "글을 쓰고 다듬으며 요청문과 프롬프트를 정리"
+ownership_ko = "글쓰기"
+role = "hive-article-writer"
 aliases = []
-commands = ["knowledge", "source-wiki", "index"]
-skills = ["demeter", "knowledge-capture", "knowledge-recall", "knowledge-manage"]
-steps = ["Choose the owned knowledge Skill for the exact requested operation; keep canonical Markdown authoritative and reject secrets or raw transcripts."]
+commands = ["prompt", "korean"]
+skills = ["demeter", "humanize-kor", "prompt-refine"]
+steps = ["Use humanize-kor for selected Korean prose or prompt-refine for an explicit prompt-authoring request; preserve meaning and protected literals.", "During 0.17.x, if the request is about saving, searching or maintaining Hive knowledge, say that since 0.17.0 this work belongs to Apollon, then open the apollon Skill."]
 
 [[gods]]
 name = "aither"
@@ -126,3 +126,17 @@ aliases = []
 commands = ["storage", "prune", "uninstall"]
 skills = ["hades"]
 steps = ["Inspect exact storage, prune or uninstall candidates through existing CLI previews. Apply removal only with the required exact authority; cleanup planning grants no deletion authority."]
+
+[[gods]]
+name = "aphrodite"
+korean = "아프로디테"
+purpose_en = "design"
+purpose_ko = "디자인"
+summary_en = "Designs web interfaces, settles conflicts between design Skills and keeps them in step with their sources."
+summary_ko = "웹 화면을 디자인하고 디자인 Skill끼리 부딪히는 지시를 정리하며 원본에 맞춰 갱신"
+ownership_ko = "디자인"
+role = "hive-routine-implementer"
+aliases = ["Venus", "비너스"]
+commands = ["design"]
+skills = ["aphrodite", "design-curate"]
+steps = ["Use design-curate for design direction, conflict decisions or source sync; route each task to one lead and at most two supporting bundled design sources, apply the precedence ladder and conflict rulings, and record project decisions in DESIGN.md."]

@@ -8,7 +8,7 @@
 ## 이름 원칙
 
 - Active Skill: 설치 제품의 단일 목록만 유지
-- Source 전용 Skill: 비출하 `update-summary|draft-devlog|autonomous-workflow` 3건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외
+- Source 전용 Skill: 비출하 `update-summary|draft-devlog|autonomous-workflow` 3건. 경로: `.agents/skills/<name>/`; 제품 catalog·release bundle·consumer projection 제외. `autonomous-workflow`는 0.17.0부터 같은 본문의 제품 Skill도 존재(본문 동일 계약 시험)
 - 제품 이름: 사용자가 인식할 기능 중심
 - 모든 Hive Skill: 선택 언어·host와 무관하게 설명 첫머리에 `(정본 영문 ID)` 표기
 - 폐기 ID: scope가 지정된 one-to-one·merge·split 이관 입력으로만 허용
@@ -20,9 +20,10 @@
 | --- | --- | --- |
 | `quick-answer` | 별도 조사 없는 독립 질문 응답 | `rehash` 명령 의미 설명 |
 | `project-setup` | 저장소 근거를 활용한 안내형·자동 프로젝트 설정 | 저장소 최소 질문 설정 |
-| `code-polish` | 동작·회귀 시험을 보존하는 생성 코드 정리 | 변경 파일의 중복 wrapper 정리 |
+| `ai-slop-cleaner` | 코드·문서·디자인의 AI 티 정리, 수정 전 계획 확인 | 변경 파일의 중복 wrapper·반복 문단·카드 속 카드 정리 |
+| `design-curate` | 동봉 디자인 원본으로 웹 디자인 방향·시안·점검, 원본끼리 부딪히는 지시 정리 | 새 화면 방향 정하기 |
 | `humanize-kor` | 의미·수치·인용·링크를 보존하는 기존 한국어 text 윤문 | 번역투가 있는 한국어 문서의 보수적 윤문 |
-| `verified-workflow` | 의존성·증거·재시도·독립 검증을 적용한 제한된 실행 graph | 복잡한 작업의 검증형 workflow 실행 |
+| `autonomous-workflow` | 중간 질문 없이 끝까지 진행, 진짜 질문은 마지막에 한 번 | 자리를 비운 동안 작업 끝내기 |
 | `team-execution` | Mailbox·장벽·경로 lease·취소를 적용한 제한된 팀 조율 | 분리된 구현·검증 lane 실행 |
 | `multi-goal` | 집계 규칙·중첩 예산·종료 검증을 적용한 목표 graph 실행 | AND 기준을 가진 복수 목표 실행 |
 | `custom-subagent-create` | Codex·Claude custom subagent profile 추천·동의·생성 | 구현·검증 역할의 제한된 profile 생성 |
@@ -43,12 +44,13 @@
 | `athena` | 작업 계획과 완료 기준을 구현 전에 저장하고 결과를 별도로 검토 | 아테나 호출 |
 | `artemis` | 코드 변경 없이 자료를 조사하고 문제 원인을 진단 | 아르테미스 호출 |
 | `hephaistos` | 저장한 계획을 구현하고 결과 코드를 정리 | 헤파이스토스 호출 |
-| `apollon` | 글을 쓰고 다듬으며 요청문과 프롬프트를 정리 | 아폴론 호출 |
+| `apollon` | Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전 | 아폴론 호출 |
 | `eileithyia` | 사용자나 프로젝트의 Hive를 설정하고 업데이트를 설치 | 에일레이티이아 호출 |
 | `poseidon` | 여러 작업의 역할을 배정하고 작업 간 인계를 기록 | 포세이돈 호출 |
-| `demeter` | Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전 | 데메테르 호출 |
+| `demeter` | 글을 쓰고 다듬으며 요청문과 프롬프트를 정리 | 데메테르 호출 |
 | `aither` | 사용량을 확인하고 사용량 보호 기준을 관리 | 아이테르 호출 |
 | `hades` | Hive 저장 공간을 측정하고 정리할 파일을 미리 보여 줌 | 하데스 호출 |
+| `aphrodite` | 웹 화면을 디자인하고 디자인 Skill끼리 부딪히는 지시를 정리하며 원본에 맞춰 갱신 | 아프로디테 호출 |
 
 9신 입구: 정본 이름·별칭 명시 요청 전용, 일반 작업 문구는 기존 전문 Skill 소속. `harness/gods.toml`에서 위 신 입구 행 생성, 기존 기능·승인 경계 유지. 소스 개발 브랜치의 추가 항목이며 공개 안정판의 설치 범위는 README 안내 기준. [기능 소속·역할 이전](architecture/god-ownership.md) 참조.
 
@@ -58,8 +60,8 @@
 | --- | --- |
 | `source-answer` | `quick-answer` |
 | `source-project-setup` | `project-setup` |
-| `source-code-polish` | `code-polish` |
-| `source-ralph-loop` | `verified-workflow` |
+| `source-code-polish` | `ai-slop-cleaner` |
+| `source-ralph-loop` | `autonomous-workflow` |
 | `source-knowledge-import` | `knowledge-capture` |
 | `source-knowledge-maintain` | `knowledge-manage` |
 | `source-knowledge-capture` | `knowledge-capture` |
@@ -100,14 +102,13 @@
 
 ## `hive-loop-engineering` 계보
 
-`hive-loop-engineering` → current `engineer-run` → product `verified-workflow`. Host가 실제
-task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증만 소유.
+`hive-loop-engineering` → current `engineer-run` → product `verified-workflow`(0.10.0–0.16.x) → `autonomous-workflow`(0.17.0). 반복 상태 기계는 `hive loop`·`hive orchestration` CLI에 유지
 
 ## `0.10.0` 이름 이관
 
 - `knowledge-import` → `knowledge-scan`; 기존 지식의 컴퓨터 간 이전은 `knowledge-transfer`
 
-- `ralph-loop`와 `iterative-execution` → `verified-workflow`
+- `ralph-loop`와 `iterative-execution` → `verified-workflow`(0.17.0부터 `autonomous-workflow`)
 - `package-review` → `judge-evidence`
 - Retired 이름: routing compatibility만 제공
 - Successful upgrade: authenticated retired Skill artifact·projection `0건`
@@ -130,3 +131,8 @@ task를 실행하고 Skill은 graph·증거·재시도·receipt·독립 검증�
 - 옛 이름 호출: 새 Skill 설명과 본문의 옛 이름 안내, 새 이름과 위치 한 번 안내 뒤 계속
 - 이전 단계 기록: `0.10.0`의 `knowledge-import`·`package-review` 이관도 최종 이름으로 직접 연결
 - 갱신: 인증된 옛 Skill 폴더 제거, 사용자 수정·외부 파일 보존과 충돌 보고
+
+## `0.17.0` 이름 이관
+
+- `verified-workflow` → `autonomous-workflow`(이름 변경, 유지관리자 2026-11-28 결정: 두 달간 사용 기록 없음)
+- `code-polish` → `ai-slop-cleaner`(이름 복원과 대상 확대: 코드·문서·디자인, 유지관리자 2026-11-28 결정). `clean-ai-slop`도 새 이름으로

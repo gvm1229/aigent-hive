@@ -52,12 +52,12 @@ USAGE:
     hive msg claim --id <message-id> --role <role|god> [--lease <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg ack --id <message-id> --claim <claim-token|claim-digest> --result <file> [--worker codex:<session-id>|claude:<agent-id>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg status --id <message-id|summon:<run>:<action>> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
-    hive msg flow start --builder <role|god> --reviewer <role|god> [--reviewer-provider codex|claude|gemini] [--advisor <role|god>] --task <id> --file <brief> [--kind review] [--from <role|god>] [--key <flow-key>] [--allow-same-provider] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
+    hive msg flow start --builder <role|god> --reviewer <role|god> [--reviewer-provider codex|claude] [--advisor <role|god>] --task <id> --file <brief> [--kind review] [--from <role|god>] [--key <flow-key>] [--allow-same-provider] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow advance|status --flow <flow-id> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg flow requeue --flow <flow-id> --confirm <blocked-envelope-digest> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
-    hive msg hooks preview|apply|remove --host claude|codex|gemini --role <role|god> [--task <id>] [--return context|block] [--confirm <approval-digest>] --target <dir> --user-root <home> [--output json]
-    hive msg hooks status --host claude|codex|gemini --target <dir> --user-root <home> [--output json]
-    hive msg hook --host claude|codex|gemini --event <official-event> --role <role> [--task <id>] --binding <digest> --target <dir> --user-root <home> < hook-stdin.json
+    hive msg hooks preview|apply|remove --host claude|codex --role <role|god> [--task <id>] [--return context|block] [--confirm <approval-digest>] --target <dir> --user-root <home> [--output json]
+    hive msg hooks status --host claude|codex --target <dir> --user-root <home> [--output json]
+    hive msg hook --host claude|codex --event <official-event> --role <role> [--task <id>] --binding <digest> --target <dir> --user-root <home> < hook-stdin.json
     hive msg decide request --from <role|god> --question-file <file> --option <label> --option <label> [--option <label>...] [--recommend <label>] [--task <id>] [--message <id>] [--flow <id>] [--key <k>] [--ttl <seconds>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg decide list [--state open|answered|withdrawn|expired|quarantined|all] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg decide show --id <decision-id> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
@@ -65,7 +65,7 @@ USAGE:
     hive msg decide withdraw --id <decision-id> --from <role|god> [--note-file <file>] [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
     hive msg cancel-ack --id <message-id> --claim <claim-token|claim-digest> --receipt <host-cancel-receipt.json> [--now <unix-seconds>] --target <dir> --user-root <home> [--output json]
 
-Project hooks only: user-global ~/.claude, ~/.codex and ~/.gemini are never touched, and nothing
+Project hooks only: user-global ~/.claude and ~/.codex are never touched, and nothing
 is enabled until `msg hooks apply --confirm <approval-digest>`. `msg hook` is the command those
 hooks run: it records the event, prints one host-native JSON document, always exits 0, and hands
 an acknowledged result back once. It never waits, claims, dispatches or launches a worker.

@@ -28,8 +28,7 @@
     "host": {
       "enum": [
         "codex",
-        "claude",
-        "antigravity"
+        "claude"
       ]
     },
     "host_version": {
