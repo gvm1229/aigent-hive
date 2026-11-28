@@ -676,8 +676,23 @@ class V09RuntimeBoundaryContract(unittest.TestCase):
         manifest = REPOSITORY_ROOT / "harness/plugins/aigent-hive/.claude-plugin/plugin.json"
         self.assertEqual(
             list(json.loads(manifest.read_text(encoding="utf-8"))["hooks"]),
-            ["UserPromptSubmit"],
+            ["SessionStart", "UserPromptSubmit"],
         )
+
+    def test_project_sync_hook_is_the_only_session_start_hook(self) -> None:
+        # Documented exception (docs/architecture/hook-consent.md, OV170-031).
+        manifest = REPOSITORY_ROOT / "harness/plugins/aigent-hive/.claude-plugin/plugin.json"
+        hooks = json.loads(manifest.read_text(encoding="utf-8"))["hooks"]["SessionStart"]
+        commands = [hook["command"] for entry in hooks for hook in entry["hooks"]]
+        self.assertEqual(commands, ["hive project sync --hook claude --stdin-json 2>/dev/null || true"])
+        sync = REPOSITORY_ROOT / "crates/hive-cli/src/project_upgrade/sync.rs"
+        text = sync.read_text(encoding="utf-8")
+        self.assertIn("HIVE_PROJECT_SYNC", text)
+        for forbidden in ('"agy"', '"claude").arg', '"codex").arg', '"gemini"', "Command::new(\"hive\")"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
+        self.assertEqual(text.count("Command::new("), 1)
+        self.assertIn('Command::new("git")', text)
 
     def test_scanner_detects_executable_and_activation_dependencies(self) -> None:
         hostile = "\n".join(

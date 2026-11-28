@@ -11,6 +11,17 @@
   "license": "Apache-2.0",
   "keywords": ["agent-harness", "claude-code", "knowledge", "skills"],
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hive project sync --hook claude --stdin-json 2>/dev/null || true",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
