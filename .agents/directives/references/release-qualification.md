@@ -32,6 +32,10 @@
 - Any product, packaging, installer, metadata, or acceptance fix invalidates earlier test evidence.
   Publish the next numbered test version and repeat affected acceptance checks; never repair the
   candidate by silently reusing a version or by testing through the stable channel.
+- Stable release needs the maintainer's explicit go in the current request, every time (2026-11-29;
+  overrides earlier overhaul pre-approvals). This covers the stable candidate, the `main` merge, the
+  stable tag, the npm `latest` publish and the subscriber notice. When everything is ready, report
+  that it is ready and stop; never release stable autonomously. Numbered tests are unaffected.
 - Create the protected `main` stable candidate only after the latest numbered test is accepted and
   the active plan reports zero incomplete in-scope items. Stable publication cannot create missing
   qualification evidence or be described as testing.
