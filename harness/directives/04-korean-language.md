@@ -32,8 +32,9 @@ command-backed rewriting. Keep the original draft when unsure; do not claim CLI 
 - `verbatim`: inspect only. Do not rewrite.
 
 Codex uses this instruction and final self-review because no verified final-response replacement
-hook is available. Claude `Stop` hooks are diagnostic-only and return neutral allow without retry or re-invocation. Antigravity may use
-a consented bounded `AfterAgent` validation retry when fresh capability evidence supports it.
+hook is available. Claude `Stop` hooks are diagnostic-only and return neutral allow without retry or re-invocation. Antigravity uses
+this instruction and final self-review only: Hive never installs an automatic retry or re-invocation hook for it, because Google's
+Antigravity terms prohibit third-party tools from driving Antigravity.
 Unsupported host events remain instruction-only and must not be described as active hooks.
 
 ## Integrity boundary
