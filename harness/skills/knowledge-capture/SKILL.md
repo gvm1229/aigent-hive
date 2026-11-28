@@ -75,6 +75,10 @@ only after a new request receives fresh allowed usage; never write during the ha
    derived shared index. Missing project setup, a project marker, or an attached collection never
    skips lint. Identical input is a no-op. A contradiction, ambiguous scope, failed secret gate,
    or stale replacement digest stops the write and preserves current truth.
+7. Report the write with the `notice` text from the write result, unchanged, in the final
+   response: the god name, every recorded fact, and the result line. A count alone, such as
+   "recorded 3 facts", is not a report. A query that changes nothing shows no notice unless its
+   result was used; then say "Apollon called · used N related knowledge entries" in one line.
 
 ## Automatic derived relationships
 
