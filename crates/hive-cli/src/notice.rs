@@ -331,9 +331,24 @@ pub(crate) fn json_line(
     if !decorate(&mut value, family) {
         return Ok(json);
     }
-    let mut extra = json!({"actor": value["actor"], "items": value["items"]});
+    let mut extra = json!({"actor": value["actor"]});
+    // Generic file actions list exactly `changed_paths`; repeating them would double large
+    // update results past their output budget, so the JSON keeps only actor and notice.
+    let repeats_paths = value["action"]
+        .as_str()
+        .and_then(words)
+        .is_some_and(|words| words.operation == CHANGE.operation);
+    if !repeats_paths {
+        extra["items"] = value["items"].clone();
+    }
     if let Some(text) = render(&value, crate::human_output::language()) {
-        // The exact text a session copies into its final response (OV170-035).
+        // The exact text a session copies into its final response (OV170-035). For file
+        // actions the path list stays in `changed_paths`; the notice keeps its first and
+        // last lines so large update results stay inside their output budget.
+        let text = match (repeats_paths, text.lines().next(), text.lines().last()) {
+            (true, Some(first), Some(last)) if first != last => format!("{first}\n{last}"),
+            _ => text,
+        };
         extra["notice"] = json!(text);
     }
     let extra = serde_json::to_string(&extra)?;
@@ -634,7 +649,20 @@ mod tests {
     fn json_line_keeps_field_order_and_appends_notice() {
         let value = result("UpdateProjectHarness", json!({}), &["a.md"]);
         let line = json_line(&value, "project").unwrap();
-        assert!(line.contains(",\"actor\":\"Eileithyia\",\"items\":[{\"outcome\":\"done\",\"target\":\"a.md\"}],\"notice\":\"Eileithyia called"), "{line}");
+        assert!(
+            line.contains(",\"actor\":\"Eileithyia\",\"notice\":\"Eileithyia called"),
+            "{line}"
+        );
+        assert!(
+            !line.contains("\"items\""),
+            "file actions do not repeat changed_paths"
+        );
+        let sync = result("SyncProjectHarness", json!({}), &["a.md"]);
+        let line = json_line(&sync, "project").unwrap();
+        assert!(
+            line.contains("\"items\":[{\"outcome\":\"done\",\"target\":\"a.md\"}]"),
+            "{line}"
+        );
         let plain = result("QueryKnowledge", json!({}), &[]);
         assert_eq!(
             json_line(&plain, "knowledge").unwrap(),
