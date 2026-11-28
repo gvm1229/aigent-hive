@@ -49,6 +49,7 @@ struct Options {
     section: Option<String>,
     legacy_budget: Option<crate::update_bridge::LegacyBudget>,
     update_hosts: Vec<String>,
+    discard_pending: bool,
 }
 
 fn parse(arguments: &[String]) -> Result<Options, SetupError> {
@@ -63,6 +64,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         section: None,
         legacy_budget: None,
         update_hosts: Vec::new(),
+        discard_pending: false,
     };
     let mut seen = std::collections::BTreeSet::new();
     let mut scope = None;
@@ -79,6 +81,7 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
             "--review" => options.review = true,
             "--show" => options.show = true,
             "--dry-run" => options.dry_run = true,
+            "--discard-pending" => options.discard_pending = true,
             "--scope" | "--user-root" | "--output" | "--section" | "--review-answers" => {
                 let value = arguments
                     .get(index + 1)
@@ -107,6 +110,12 @@ fn parse(arguments: &[String]) -> Result<Options, SetupError> {
         || (options.resume && options.dry_run && !options.review)
         || (options.review && (!options.resume || options.show || options.section.is_some()))
         || (options.review_answers.is_some() && (!options.review || options.dry_run))
+        || (options.discard_pending
+            && (options.resume
+                || options.review
+                || options.show
+                || options.dry_run
+                || options.section.is_some()))
     {
         return Err(SetupError::Input(
             "choose user setup or a separate settings inspection".to_owned(),
@@ -233,6 +242,7 @@ pub(super) fn execute_update<R: BufRead, W: Write>(
         section: None,
         legacy_budget: None,
         update_hosts: Vec::new(),
+        discard_pending: false,
     };
     execute(&options, mode, terminal)
 }
@@ -256,6 +266,7 @@ pub(in crate::user_setup) fn update_with_terminal<R: BufRead, W: Write>(
         section: None,
         legacy_budget: Some(budget),
         update_hosts: hosts.to_vec(),
+        discard_pending: false,
     };
     let mut terminal = Terminal {
         reader,
@@ -344,19 +355,34 @@ fn route_pending_to_agent(
         "hive setup --scope user --resume --user-root '{quoted_root}'{}",
         if review { " --review" } else { "" }
     );
-    let agent = if review {
-        [
+    let mut agent = if review {
+        vec![
             format!("{terminal} --dry-run --output json"),
             format!("{terminal} --review-answers <answers-file> --output json"),
         ]
     } else {
-        [
+        vec![
             format!("hive setup --scope user --user-root '{quoted_root}' --show --summary --output json"),
             format!(
                 "hive setup --scope user --user-root '{quoted_root}' --answers <patch-file> --input-channel agent --dry-run --output json"
             ),
         ]
     };
+    let incompatible = result
+        .data
+        .as_ref()
+        .is_some_and(|data| data["pending_state"] == "incompatible");
+    if incompatible {
+        agent.push(format!(
+            "hive setup --scope user --user-root '{quoted_root}' --discard-pending --output json"
+        ));
+        result.message.clone_from(&(if language == InterfaceLanguage::En {
+            "The saved unfinished setup can no longer continue because the settings or questions changed after it started. It was never applied. Run --discard-pending to keep a copy and clear it (the settings file stays unchanged), or continue in a terminal to start again."
+        } else {
+            "저장된 미완료 설정은 그 뒤 설정이나 질문이 바뀌어 이어서 진행할 수 없습니다. 아직 적용하지 않은 답안입니다. --discard-pending으로 사본을 보관하고 정리하거나(설정 파일은 그대로), 터미널에서 다시 시작하세요."
+        })
+        .to_owned());
+    }
     result.next_action = Some(agent.join("\n"));
     if review {
         result.message.clone_from(&(if language == InterfaceLanguage::En {
@@ -420,10 +446,16 @@ fn execute_inner<R: BufRead, W: Write>(
         };
         super::host_scope::check_request(progress, &options.update_hosts)?;
     }
+    if options.discard_pending {
+        return discard_pending(&store, &snapshot, terminal.language);
+    }
     if let Some(result) =
         preliminary_result(options, mode, &store, &snapshot, config.as_ref(), terminal)?
     {
         return Ok(result);
+    }
+    if !options.dry_run {
+        retire_incompatible_draft(&store, &mut snapshot, terminal)?;
     }
     refresh_questions(options, &store, &mut snapshot, terminal)?;
     let record = match snapshot.progress.clone() {
@@ -495,6 +527,71 @@ fn collect_conversation<R: BufRead, W: Write>(
     } else {
         collect(store, progress, &questions.questions, options, terminal)
     }
+}
+
+/// A terminal run tells the person that an unconfirmed draft can no longer continue, keeps a copy,
+/// and starts again from the saved settings. Nothing is applied and no consent is carried over.
+fn retire_incompatible_draft<R: BufRead, W: Write>(
+    store: &ProgressStore,
+    snapshot: &mut ProgressSnapshot,
+    terminal: &mut Terminal<R, W>,
+) -> Result<(), SetupError> {
+    let Some(progress) = snapshot.progress.as_ref() else {
+        return Ok(());
+    };
+    if !store.incompatible_draft(progress)? {
+        return Ok(());
+    }
+    let archive = store.abandon_draft(snapshot)?;
+    *snapshot = store.load()?;
+    terminal.say(
+        &format!("저장된 미완료 설정은 그 뒤 설정 파일이나 질문 목록이 바뀌어 이어서 진행할 수 없습니다. 아직 적용하지 않은 답안이므로 현재 설정 파일은 그대로 두고, 미완료 답안은 {archive}에 보관했습니다. 현재 설정에서 다시 시작합니다. 새 상시 감시는 다시 \"예\"라고 답하기 전에는 등록하지 않습니다."),
+        &format!("The saved unfinished setup can no longer continue because the settings file or the question list changed after it started. It was never applied, so the current settings file is unchanged and the unfinished answers were kept at {archive}. Setup starts again from the current settings. New monitoring is not registered unless you answer yes again."),
+    )
+}
+
+/// Explicitly retires an unconfirmed draft for a person or an AI agent. Confirmed operations
+/// carry recovery evidence and must be resumed instead.
+fn discard_pending(
+    store: &ProgressStore,
+    snapshot: &ProgressSnapshot,
+    language: InterfaceLanguage,
+) -> Result<crate::ActionResult, SetupError> {
+    let Some(progress) = snapshot
+        .progress
+        .as_ref()
+        .filter(|p| p.phase != ProgressPhase::Complete)
+    else {
+        return Ok(result(
+            "success",
+            0,
+            "hive.setup-nothing-pending",
+            language,
+            "보관할 미완료 설정이 없습니다. 설정 파일은 바뀌지 않았습니다.",
+            "No unfinished setup is pending. The settings file was not changed.",
+            None,
+            None,
+        ));
+    };
+    if !user_setup::progress_store::unconfirmed(progress) {
+        return Err(SetupError::Conflict(
+            "a confirmed or migrating setup must be resumed with --resume so recovery can finish; nothing was discarded".into(),
+        ));
+    }
+    let operation_id = progress.operation_id.clone();
+    let archive = store.abandon_draft(snapshot)?;
+    let mut done = result(
+        "success",
+        0,
+        "hive.setup-pending-discarded",
+        language,
+        "아직 적용하지 않은 미완료 설정을 보관하고 정리했습니다. 설정 파일은 바뀌지 않았고 상시 감시도 켜지지 않았습니다.",
+        "The unapplied unfinished setup was kept as a copy and cleared. The settings file was not changed and monitoring was not turned on.",
+        Some(json!({"operation_id":operation_id,"archived_draft":archive,"settings_changed":false})),
+        None,
+    );
+    done.changed_paths = vec![store.relative.to_string_lossy().replace('\\', "/")];
+    Ok(done)
 }
 
 fn refresh_questions<R: BufRead, W: Write>(
@@ -570,14 +667,17 @@ fn preliminary_result<R: BufRead, W: Write>(
         ));
     }
     if options.show {
-        return inspect_settings(
+        let mut shown = inspect_settings(
             &options.root,
             config,
             snapshot,
             terminal,
             options.interaction.json,
-        )
-        .map(Some);
+        )?;
+        if let (Some(state), Some(data)) = (pending_state(store, snapshot)?, shown.data.as_mut()) {
+            data["pending_state"] = json!(state);
+        }
+        return Ok(Some(shown));
     }
     let confirmed_resume = options.resume
         && snapshot.progress.as_ref().is_some_and(|p| {
@@ -587,9 +687,36 @@ fn preliminary_result<R: BufRead, W: Write>(
             )
         });
     if mode != InteractionMode::Terminal && !confirmed_resume {
-        return Ok(Some(pending(terminal.language, "hive.setup-needs-input")));
+        let mut result = pending(terminal.language, "hive.setup-needs-input");
+        if pending_state(store, snapshot)? == Some("incompatible") {
+            result.data = Some(json!({"pending_state":"incompatible"}));
+        }
+        return Ok(Some(result));
     }
     Ok(None)
+}
+
+/// How an unfinished operation can continue: `resumable` drafts continue with --resume,
+/// `confirmed` operations finish recovery with --resume, and `incompatible` drafts can only be
+/// retired with --discard-pending (a terminal run or an agent apply also retires them).
+fn pending_state(
+    store: &ProgressStore,
+    snapshot: &ProgressSnapshot,
+) -> Result<Option<&'static str>, SetupError> {
+    let Some(progress) = snapshot
+        .progress
+        .as_ref()
+        .filter(|p| p.phase != ProgressPhase::Complete)
+    else {
+        return Ok(None);
+    };
+    Ok(Some(if store.incompatible_draft(progress)? {
+        "incompatible"
+    } else if user_setup::progress_store::unconfirmed(progress) {
+        "resumable"
+    } else {
+        "confirmed"
+    }))
 }
 
 fn fresh_answers() -> Value {
@@ -1602,6 +1729,7 @@ mod tests {
             section: None,
             legacy_budget: None,
             update_hosts: Vec::new(),
+            discard_pending: false,
         }
     }
 
@@ -2401,5 +2529,125 @@ mod tests {
         assert!(String::from_utf8(terminal.writer)
             .unwrap()
             .contains("Enter this answer again"));
+    }
+
+    /// A draft interrupted at the monitor confirmation, made before the settings file changed.
+    fn stale_monitor_draft(root: &Path) -> (std::path::PathBuf, String) {
+        let store = ProgressStore::open(root, None).unwrap();
+        let answers = super::super::default_answers(Some(InterfaceLanguage::En));
+        let mut progress = store
+            .new_progress("user-monitor-activation".into(), answers.clone())
+            .unwrap();
+        progress.setup_mode = Some("custom".into());
+        progress.selected_section = Some("usage".into());
+        progress
+            .answered_questions
+            .insert("user-monitor-activation".into(), 1);
+        progress.phase = ProgressPhase::Previewed;
+        store.save(&store.load().unwrap(), &progress).unwrap();
+        // A later product step rewrote the saved settings while the draft waited.
+        let settings = root.join(user_setup::USER_SETUP_RELATIVE);
+        std::fs::write(&settings, serde_yaml::to_string(&answers).unwrap()).unwrap();
+        (settings, progress.operation_id)
+    }
+
+    #[test]
+    fn terminal_resume_retires_a_stale_monitor_draft_and_restarts_without_changing_settings() {
+        let root = tempfile::tempdir().unwrap();
+        let (settings, operation_id) = stale_monitor_draft(root.path());
+        let saved = std::fs::read(&settings).unwrap();
+        let mut options = options(root.path());
+        options.resume = true;
+        let mut terminal = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let result = execute(&options, InteractionMode::Terminal, &mut terminal).unwrap();
+        let shown = String::from_utf8(terminal.writer).unwrap();
+        // Before the fix this returned hive.setup-resume-required without asking anything.
+        assert_eq!(result.code, "hive.setup-input-pending");
+        assert!(shown.contains("can no longer continue"), "{shown}");
+        assert!(shown.contains("New monitoring is not registered"));
+        assert_eq!(std::fs::read(&settings).unwrap(), saved);
+        let archive = root.path().join(format!(
+            ".hive/config/setup-progress/abandoned/{operation_id}.yml"
+        ));
+        let archived: SetupProgress =
+            serde_yaml::from_slice(&std::fs::read(archive).unwrap()).unwrap();
+        assert_eq!(archived.step, "user-monitor-activation");
+        assert_eq!(archived.phase, ProgressPhase::Previewed);
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let fresh = store.load().unwrap().progress.unwrap();
+        assert_ne!(fresh.operation_id, operation_id);
+        assert!(store.resume_ready(&fresh));
+        assert!(fresh.monitor_start.is_none());
+    }
+
+    #[test]
+    fn agents_see_an_incompatible_draft_and_can_discard_only_unconfirmed_drafts() {
+        let root = tempfile::tempdir().unwrap();
+        let (settings, operation_id) = stale_monitor_draft(root.path());
+        let saved = std::fs::read(&settings).unwrap();
+        let mut terminal = Terminal {
+            reader: Cursor::new(b""),
+            writer: Vec::new(),
+            language: InterfaceLanguage::En,
+        };
+        let mut resume = options(root.path());
+        resume.resume = true;
+        let result = execute(&resume, InteractionMode::NonInteractive, &mut terminal).unwrap();
+        assert_eq!(result.code, "hive.setup-needs-input");
+        let data = result.data.as_ref().unwrap();
+        assert_eq!(data["pending_state"], "incompatible");
+        assert!(data["agent_next_actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|action| action.as_str().unwrap().contains("--discard-pending")));
+        let mut show = options(root.path());
+        show.show = true;
+        show.interaction.json = true;
+        let shown = execute(&show, InteractionMode::NonInteractive, &mut terminal).unwrap();
+        assert_eq!(
+            shown.data.as_ref().unwrap()["pending_state"],
+            "incompatible"
+        );
+
+        let mut discard = options(root.path());
+        discard.discard_pending = true;
+        let result = execute(&discard, InteractionMode::NonInteractive, &mut terminal).unwrap();
+        assert_eq!(result.code, "hive.setup-pending-discarded");
+        assert_eq!(result.data.as_ref().unwrap()["operation_id"], operation_id);
+        assert_eq!(std::fs::read(&settings).unwrap(), saved);
+        assert_eq!(terminal.reader.position(), 0);
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        assert!(store.load().unwrap().progress.is_none());
+        let again = execute(&discard, InteractionMode::NonInteractive, &mut terminal).unwrap();
+        assert_eq!(again.code, "hive.setup-nothing-pending");
+
+        // A confirmed operation keeps its recovery evidence and must be resumed instead.
+        let mut confirmed = store
+            .new_progress("file-apply".into(), super::super::default_answers(None))
+            .unwrap();
+        confirmed.phase = ProgressPhase::Applying;
+        let bytes = serde_yaml::to_string(&confirmed).unwrap();
+        std::fs::write(root.path().join(&store.relative), &bytes).unwrap();
+        assert!(execute(&discard, InteractionMode::NonInteractive, &mut terminal).is_err());
+        assert_eq!(
+            std::fs::read_to_string(root.path().join(&store.relative)).unwrap(),
+            bytes
+        );
+    }
+
+    #[test]
+    fn discard_pending_is_a_separate_command() {
+        for extra in ["--resume", "--show", "--dry-run", "--review"] {
+            let arguments: Vec<String> = ["--scope", "user", "--discard-pending", extra]
+                .into_iter()
+                .map(str::to_owned)
+                .collect();
+            assert!(parse(&arguments).is_err(), "{extra}");
+        }
     }
 }

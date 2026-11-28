@@ -11,10 +11,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
+mod abandon;
 mod history;
 mod monitor_review;
 mod questions;
 mod state_io;
+pub(super) use abandon::unconfirmed;
 pub(super) use questions::QuestionBinding;
 
 const LEGACY_PROGRESS: &str = ".hive/config/user-setup-progress.yml";

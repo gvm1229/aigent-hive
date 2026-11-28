@@ -48,6 +48,11 @@ pub(in crate::user_setup) use worker::run as run_apply_worker;
 
 pub(super) const QUESTIONS: &str = include_str!("../../../../../harness/setup/questions.yml");
 
+/// A per-app question generated from a template that the current catalog still has.
+pub(in crate::user_setup) fn expanded_question(id: &str) -> bool {
+    host_windows::instance(id).is_some()
+}
+
 pub(super) fn catalog() -> Result<QuestionCatalog, SetupError> {
     let catalog: QuestionCatalog = serde_yaml::from_str(QUESTIONS)
         .map_err(|error| SetupError::Internal(format!("invalid setup questions: {error}")))?;

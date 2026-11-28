@@ -19,7 +19,7 @@ pub(super) fn apply(
     let index_rebuild_scope = options.index_rebuild_scope.as_deref();
     let store = ProgressStore::open(&arguments.user_root, None)?;
     store.recover_pending_state()?;
-    let snapshot = store.load()?;
+    let (snapshot, retired) = retire_incompatible(&store)?;
     if let Some(pending) = snapshot
         .progress
         .as_ref()
@@ -94,11 +94,47 @@ pub(super) fn apply(
     super::index_rebuild::bind_file(arguments, &mut progress, index_rebuild_scope)?;
     super::monitor_start::preflight(&arguments.user_root, &progress)?;
     super::application::begin(&store, &snapshot, &mut progress)?;
-    super::application::finish(
+    let mut result = super::application::finish(
         &store,
         &progress,
         super::legacy::apply(arguments, &bytes, expected, &progress),
-    )
+    )?;
+    if let Some(retired) = retired {
+        if let Some(object) = result
+            .data
+            .get_or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+        {
+            object.insert("retired_draft".into(), retired);
+        }
+    }
+    Ok(result)
+}
+
+/// An unconfirmed draft whose settings base or questions changed can never resume. Keep a copy
+/// and clear it so one stale draft cannot block an unrelated, newly reviewed answer file.
+fn retire_incompatible(
+    store: &ProgressStore,
+) -> Result<
+    (
+        user_setup::progress_store::ProgressSnapshot,
+        Option<serde_json::Value>,
+    ),
+    SetupError,
+> {
+    let snapshot = store.load()?;
+    let Some(pending) = &snapshot.progress else {
+        return Ok((snapshot, None));
+    };
+    if !store.incompatible_draft(pending)? {
+        return Ok((snapshot, None));
+    }
+    let operation_id = pending.operation_id.clone();
+    let archive = store.abandon_draft(&snapshot)?;
+    Ok((
+        store.load()?,
+        Some(serde_json::json!({"operation_id":operation_id,"archived_draft":archive})),
+    ))
 }
 
 fn preserve_terminal_answers(

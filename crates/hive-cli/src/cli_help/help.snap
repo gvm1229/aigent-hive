@@ -93,6 +93,7 @@ hive setup: 처음 설정 또는 프로젝트 설정
   --interactive                터미널에서 질문으로 진행
   --non-interactive            질문 없이 진행
   --resume                     중단한 설정 이어서 진행
+  --discard-pending            적용 전 미완료 설정 보관 후 정리
   --show [--summary]           현재 설정 보기 (짧은 요약)
   --describe --section <id>    설정 항목 설명 보기
   --answers <yml>              답변 파일로 설정 (모드 필요)
@@ -477,6 +478,7 @@ Optional
   --interactive                Ask questions in the terminal
   --non-interactive            Never wait for input
   --resume                     Continue an interrupted setup
+  --discard-pending            Keep a copy of an unapplied setup, then clear it
   --show [--summary]           Show the setup (short summary)
   --describe --section <id>    Describe one setup section
   --answers <yml>              Use an answers file (needs a mode)

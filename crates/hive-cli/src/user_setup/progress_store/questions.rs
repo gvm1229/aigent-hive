@@ -62,6 +62,18 @@ pub(super) fn validate_bindings(
     Ok(())
 }
 
+/// Whether the draft answered a question that the current catalog no longer asks. Per-app
+/// questions are expanded from templates, so they count as current while their template exists.
+pub(super) fn removed_question(
+    scope: PreferenceScope,
+    progress: &super::SetupProgress,
+) -> Result<bool, SetupError> {
+    let current = capture(scope)?;
+    Ok(progress.answered_questions.keys().any(|id| {
+        !current.contains_key(id) && !crate::user_setup::setup_engine::expanded_question(id)
+    }))
+}
+
 impl ProgressStore {
     pub(in crate::user_setup) fn refresh_draft_questions(
         &self,
@@ -82,11 +94,7 @@ impl ProgressStore {
             return Ok(None);
         }
         let current = capture(self.binding.scope)?;
-        if prior
-            .answered_questions
-            .keys()
-            .any(|id| !current.contains_key(id))
-        {
+        if removed_question(self.binding.scope, prior)? {
             return Err(SetupError::Conflict(
                 "a saved question is no longer supported; answers were preserved".into(),
             ));
@@ -158,6 +166,34 @@ mod tests {
         assert_eq!(after.phase, ProgressPhase::AwaitingAnswers);
         assert!(store.resume_ready(after));
         assert!(store.refresh_draft_questions(&refreshed).unwrap().is_none());
+    }
+
+    #[test]
+    fn answered_per_app_questions_do_not_count_as_removed_after_a_catalog_change() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ProgressStore::open(root.path(), None).unwrap();
+        let mut prior = stale(&store, ProgressPhase::Previewed);
+        let progress = prior.progress.as_mut().unwrap();
+        for id in [
+            "usage-host-weekly-threshold-claude",
+            "usage-host-guard-claude",
+            "user-monitor-activation",
+        ] {
+            progress.answered_questions.insert(id.into(), 1);
+        }
+        fs::write(
+            store.root_path.join(&store.relative),
+            serde_yaml::to_string(progress).unwrap(),
+        )
+        .unwrap();
+        let prior = store.load().unwrap();
+        // Before the fix the expanded per-app ids were reported as unsupported questions.
+        let refreshed = store.refresh_draft_questions(&prior).unwrap().unwrap();
+        let after = refreshed.progress.unwrap();
+        assert_eq!(after.phase, ProgressPhase::AwaitingAnswers);
+        assert!(after
+            .answered_questions
+            .contains_key("usage-host-weekly-threshold-claude"));
     }
 
     #[test]

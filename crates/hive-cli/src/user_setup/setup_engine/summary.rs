@@ -98,7 +98,11 @@ fn add_status(data: &Value, summary: &mut Value) {
     summary["pending"] = if pending["phase"] == "complete" || pending.is_null() {
         Value::Null
     } else {
-        pick(pending, &["operation_id", "phase", "step"])
+        let mut picked = pick(pending, &["operation_id", "phase", "step"]);
+        if let Some(state) = data.get("pending_state") {
+            picked["state"] = state.clone();
+        }
+        picked
     };
     summary["effective"] = pick(
         &data["effective"],

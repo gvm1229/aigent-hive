@@ -1,6 +1,8 @@
 //! Recover metadata CAS without mistaking a live writer for an abandoned claim.
 //! This journal binds file bytes; it never authorizes setup execution.
-use super::{history, valid_hash, ProgressStore, SetupError, SetupProgress, TargetBinding};
+use super::{
+    abandon, history, valid_hash, ProgressStore, SetupError, SetupProgress, TargetBinding,
+};
 use crate::user_install::{
     host_policy_mode, inspect_setup_write_claim, lock_setup_state, read_user_setup_file,
     recover_user_setup_file, replace_user_setup_file, SetupWriteClaim,
@@ -55,6 +57,7 @@ impl ProgressStore {
             || (self.binding.scope == hive_core::preferences::PreferenceScope::User
                 && relative == Path::new(super::monitor_review::PATH))
             || history::is_record_path(relative)
+            || abandon::is_record_path(relative)
             || (self.binding.scope == hive_core::preferences::PreferenceScope::User
                 && relative == Path::new(super::LEGACY_PROGRESS))
     }
@@ -70,6 +73,8 @@ impl ProgressStore {
             super::parse_progress_file(bytes).map(|_| ())
         } else if relative == Path::new(super::monitor_review::PATH) {
             super::monitor_review::validate_scope(self, bytes).map(|_| ())
+        } else if abandon::is_record_path(relative) {
+            abandon::validate_scope(self, relative, bytes)
         } else {
             history::validate_scope(self, relative, bytes)
         }
