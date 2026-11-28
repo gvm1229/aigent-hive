@@ -14184,3 +14184,55 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod pre_0_17_role_swap_authentication {
+    use super::*;
+
+    /// 0.17.0 swapped the Apollon and Demeter roles (OV170-015). A Korean 0.16.1 projection
+    /// still carries the old descriptions and must authenticate for update (found on the
+    /// maintainer PC with 0.17.0-test.1).
+    #[test]
+    fn korean_0_16_1_apollon_and_demeter_projections_authenticate() {
+        for (name, description) in [
+            ("apollon", "(apollon) 글을 쓰고 다듬으며 요청문과 프롬프트를 정리. 사용자가 apollon, 아폴론, Apollo, 아폴로 중 하나를 부를 때만 사용."),
+            ("demeter", "(demeter) Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전. 사용자가 demeter, 데메테르 중 하나를 부를 때만 사용."),
+        ] {
+            let relative = format!("skills/{name}/SKILL.md");
+            let source = HISTORICAL_USER_SKILL_CONTENTS
+                .iter()
+                .find(|(release, _)| *release == "0.16.1")
+                .and_then(|(_, files)| files.iter().find(|(path, _)| *path == relative))
+                .map(|(_, bytes)| String::from_utf8_lossy(bytes).into_owned())
+                .expect("frozen 0.16.1 Skill");
+            let installed: String = source
+                .lines()
+                .map(|line| {
+                    if line.starts_with("description:") {
+                        format!("description: {description}")
+                    } else {
+                        line.to_owned()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+                + if source.ends_with('\n') { "\n" } else { "" };
+            for host in [UserHost::Codex, UserHost::Claude] {
+                let path = format!(
+                    ".hive/marketplaces/{}/plugins/aigent-hive/{relative}",
+                    host.as_str()
+                );
+                assert!(
+                    historical_user_artifact_matches(
+                        "0.16.1",
+                        host,
+                        &path,
+                        &sha256_digest(installed.as_bytes())
+                    ),
+                    "{name} Korean 0.16.1 projection for {}",
+                    host.as_str()
+                );
+            }
+        }
+    }
+}

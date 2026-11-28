@@ -1263,7 +1263,13 @@ pub fn historical_localized_builtin_artifacts(
         variants.push(bytes);
     }
     if language == DescriptorLanguage::Ko {
-        if let Some((display_name, description)) = pre_0_16_korean_skill_text(name) {
+        for (display_name, description) in [
+            pre_0_16_korean_skill_text(name),
+            pre_0_17_korean_skill_text(name),
+        ]
+        .into_iter()
+        .flatten()
+        {
             let description = canonical_skill_description(name, description);
             let legacy = match suffix {
                 "SKILL.md" => replace_metadata_line(
@@ -1297,6 +1303,22 @@ pub fn historical_localized_builtin_artifacts(
 
 /// Korean display names and descriptions published through `0.15.3` for Skills that were
 /// merged or reworded by the `0.16.0` consolidation.
+/// Korean text that 0.16.x shipped before 0.17.0 swapped the Apollon and Demeter roles
+/// (OV170-015). Installed 0.16.x Korean projections must still authenticate for update.
+fn pre_0_17_korean_skill_text(name: &str) -> Option<(&'static str, &'static str)> {
+    Some(match name {
+        "apollon" => (
+            "아폴론",
+            "(apollon) 글을 쓰고 다듬으며 요청문과 프롬프트를 정리. 사용자가 apollon, 아폴론, Apollo, 아폴로 중 하나를 부를 때만 사용.",
+        ),
+        "demeter" => (
+            "데메테르",
+            "(demeter) Hive 지식을 저장·검색·관리하고 다른 컴퓨터로 이전. 사용자가 demeter, 데메테르 중 하나를 부를 때만 사용.",
+        ),
+        _ => return None,
+    })
+}
+
 fn pre_0_16_korean_skill_text(name: &str) -> Option<(&'static str, &'static str)> {
     Some(match name {
         "knowledge-capture" => (
