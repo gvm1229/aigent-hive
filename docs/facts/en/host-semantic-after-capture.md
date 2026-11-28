@@ -9,7 +9,7 @@ summary: "Bounded host review follows successful storage without making derived 
 tags: [graph, knowledge, provenance]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:1005e13b2b4b354a8846e3b6d080ba6e738b87e4cb54a88f2e2b8bb5316dd0bd"
+  - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:b2401742bd4e50fbf838b1080deda29b437ac64f1725fbc4a9370fce002b166e"
   - "repo:crates/hive-wiki/src/semantic_graph.rs#sha256:211c9a8cee0dd8217be535dcdc4c355d4fd50442693f90fd22945674b153adad"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:3ddc5bf3e58c774266ce2bb11654fa54c80e0a09c519347b9de54d61eedaaa11"
   - "repo:tests/results/semantic-host-0.11.2.json#sha256:b8e9e8f9e987993f82ed584c2dea46e6b8d70ca0ab51f86b55b48b435ccdaaac"
@@ -26,4 +26,4 @@ Hive checks scope, source digests, UTF-8 evidence spans and bound result receipt
 
 Source, shared, project-private and confidential data stay separate. Deleted relations are hidden; an empty result clears obsolete state without analysis.
 
-Windows CLI checks and a current Codex two-document review passed. Fresh Skill discovery, Antigravity delivery and independent host attestation remain unverified.
+Windows CLI checks and a current Codex two-document review passed. Skill discovery and host attestation are unverified; Antigravity is refused (Google terms).

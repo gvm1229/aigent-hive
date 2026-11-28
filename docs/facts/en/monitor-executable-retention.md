@@ -9,7 +9,7 @@ summary: "Exact monitor cleanup compares full streams after a no-follow quaranti
 tags: [monitor, safety, storage]
 aliases: [monitor-executable-retention]
 sources:
-  - "repo:crates/hive-cli/src/run.rs#sha256:4fdb81d3893e68681945090bedccfaa3b4a74f88593ec169a4ec0ef10c19fbc9"
+  - "repo:crates/hive-cli/src/run.rs#sha256:7e5e36779280c7e039abb2241266a5531320bfb6fceb8d6a2d82d5c4e77fa1ed"
   - "repo:crates/hive-cli/src/usage_monitor/upgrade.rs#sha256:00b66cc8825ac157550b7dd280cb7599f94bb9172069866df550bb4d8ae2525b"
   - "repo:docs/research/overhaul/OV142-003.md#sha256:d47f74746c332a0ef804eb943106ecd472ed490995c924e7303587dcfd545ae9"
   - "repo:docs/research/overhaul/OV142-008.md#sha256:c95277586522b5b471f3e2e4968999bda076573c5dd68dbaf16919f30dded9d0"

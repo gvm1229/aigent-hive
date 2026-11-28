@@ -9,7 +9,7 @@ summary: "저장 성공을 보존하는 제한된 호스트 검토와 파생 관
 tags: [graph, knowledge, provenance]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:1005e13b2b4b354a8846e3b6d080ba6e738b87e4cb54a88f2e2b8bb5316dd0bd"
+  - "repo:crates/hive-cli/src/knowledge/semantic_graph.rs#sha256:b2401742bd4e50fbf838b1080deda29b437ac64f1725fbc4a9370fce002b166e"
   - "repo:crates/hive-wiki/src/semantic_graph.rs#sha256:211c9a8cee0dd8217be535dcdc4c355d4fd50442693f90fd22945674b153adad"
   - "repo:harness/skills/knowledge-capture/SKILL.md#sha256:3ddc5bf3e58c774266ce2bb11654fa54c80e0a09c519347b9de54d61eedaaa11"
   - "repo:tests/results/semantic-host-0.11.2.json#sha256:b8e9e8f9e987993f82ed584c2dea46e6b8d70ca0ab51f86b55b48b435ccdaaac"
@@ -25,4 +25,4 @@ status: active
 - 범위·원문 지문·UTF-8 바이트 근거 위치·결과 확인 기록 검증 뒤 원자적 적용, 잘못된 결과 교정 1회
 - 관계의 정본 승격·제공자 API·상시 실행기·재귀 저장 제외
 - Source Wiki·공유·프로젝트 비공개·기밀 분리. 삭제 관계 숨김과 분석 없는 빈 결과 정리
-- Windows CLI·현재 Codex의 두 문서 검토 통과. 새 대화 스킬 발견·Antigravity 전달·독립 호스트 증명 미검증
+- Windows CLI·현재 Codex의 두 문서 검토 통과. 새 대화 스킬 발견·독립 호스트 증명 미검증. Antigravity는 Google 약관으로 제외

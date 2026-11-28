@@ -9,10 +9,10 @@ summary: "Host 소유 Goal·task의 전체 차단 전 모든 미통과 criterion
 tags: [hooks, orchestration, v0-10]
 aliases: ["Continuation closure gate"]
 sources:
-  - "repo:crates/hive-cli/src/run.rs#sha256:4fdb81d3893e68681945090bedccfaa3b4a74f88593ec169a4ec0ef10c19fbc9"
-  - "repo:crates/hive-core/src/run.rs#sha256:f9f45d8c48283ce08dbe900387493e268143f6f3b1280dcab7c8e3c358b80103"
+  - "repo:crates/hive-cli/src/run.rs#sha256:7e5e36779280c7e039abb2241266a5531320bfb6fceb8d6a2d82d5c4e77fa1ed"
+  - "repo:crates/hive-core/src/run.rs#sha256:61eadfbbb9f6fa834f9c3579d51b78e39688c5c93c6e503aa4aca47d2cd68050"
   - "repo:harness/project-bases/0.16.1/skills/verified-workflow/SKILL.md#sha256:f06e29b9f7738d4ef33c16bd45fea4844e9408b87ee287c611d152d2f6c76cf6"
-  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:498eb7bbdc189359c0c86c0a0eb029fad6998da9f883556b1e6a22a4c508fb1b"
+  - "repo:tests/conformance/contracts/test_run_role_contracts.py#sha256:76b3ca6dea80f0da390d90e4c0a3e26daac0f4026d1ba56409b6397b002e78cb"
 links: [agent-autonomous-continuation, consumer-session-coordination, v0-10-product-scope]
 reviewed_revision: "git:cd38b4c24b580a8ef800837a91f88e7a0301111c"
 status: active
