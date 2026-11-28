@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/project-lock.schema.json",
+  "title": "Aigent Hive project lock (.hive/project.lock)",
+  "description": "Written by Hive only and committed with the Hive files it describes. After a Git conflict, `hive project sync` recomputes it from the authenticated project base.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "hive_version", "range", "base_ledger_digest", "files"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "hive_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$"
+    },
+    "range": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "base_ledger_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "digest"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      }
+    }
+  }
+}

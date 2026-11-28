@@ -35,6 +35,7 @@ mod knowledge_scan;
 mod korean;
 mod loop_engineering;
 mod msg;
+mod notice;
 mod orchestration;
 mod overnight;
 mod policy;
@@ -1155,7 +1156,7 @@ fn emit_json_result(result: &ActionResult) {
     if human_output::emit_if_human(result) {
         return;
     }
-    match serde_json::to_string(result) {
+    match notice::json_line(result, &human_output::family()) {
         Ok(json) => println!("{json}"),
         Err(error) => {
             println!(

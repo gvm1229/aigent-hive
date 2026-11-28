@@ -9,7 +9,7 @@ summary: "Hive coordinates overlapping automated consumer-project edits through 
 tags: [consumer-harness, preservation, session, upgrade]
 aliases: ["CHS93"]
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:b9439680a397b8459548cffabf6ebd0ff74f5e5ca4977ec8adda5e9676f92a0b"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:854a734679dfa346f4543a633789840eaa6af4b63ddb73df58e172da91b86c84"
   - "repo:crates/hive-cli/src/session.rs#sha256:80274c387a137cab1e3c33ec95021e3c23ea519703d40b04be485dd1b5ddb8be"
   - "repo:docs/archive/plans/release-0.10.0.md#sha256:2b8007e0cbf5a0f89ebb654ee7f6b44a1b203eee905205fe7ea90629941e4cad"
   - "repo:docs/decisions/product-release-decisions.md#sha256:3620f38dc575abdd65508175d3a33b7e998b957d70b05c8c807337eafa5a0321"

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gvm1229/aigent-hive/schemas/project-settings.schema.json",
+  "title": "Aigent Hive project settings (.hive/project.toml)",
+  "description": "People edit this file; Hive creates it once and never rewrites it. Each section keeps the protection class of the file it names.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "hive"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "hive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["range"],
+      "properties": {
+        "range": {
+          "description": "Hive versions that may update this project automatically: MAJOR.MINOR, optionally followed by .x.",
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\.x)?$"
+        }
+      }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "protection"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^\\.hive/[A-Za-z0-9._/-]+$" },
+          "protection": {
+            "enum": ["hive-managed-config", "user-answer-protected", "user-consent-protected"]
+          }
+        }
+      }
+    }
+  }
+}

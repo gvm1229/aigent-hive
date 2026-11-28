@@ -173,7 +173,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["loop_engineering.rs", "overnight.rs"], &["loop"], &[]),
     (&["orchestration.rs"], &["orchestration"], &[]),
     (&["policy.rs", "policy"], &["policy"], &[]),
-    (&["project_upgrade.rs", "project_upgrade"], &["project"], &[]),
+    (&["project_upgrade.rs", "project_upgrade"], &["project"], &["--absolute-git-dir", "--porcelain", "--untracked-files=no"]),
     (&["report.rs"], &["report"], &[]),
     (&["role.rs"], &["role"], &[]),
     (&["roster.rs"], &["roster"], &["--unknown"]),
@@ -187,7 +187,7 @@ const SOURCES: &[(&[&str], &[&str], &[&str])] = &[
     (&["usage.rs", "usage"], &[], &["--all-accounts", "--format", "--json-only", "--provider",
        "--source", "--stdio", "--version"]),
     (&["cli_help.rs", "cli_help", "display_options.rs", "gods.rs", "human_output.rs",
-       "human_output", "user_directives.rs", "browser.rs"], &[], &[]),
+       "human_output", "user_directives.rs", "browser.rs", "notice.rs"], &[], &["--output"]),
 ];
 
 #[test]

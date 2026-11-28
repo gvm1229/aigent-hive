@@ -119,7 +119,8 @@
         "OrchestrationAuthorityIssue",
         "OrchestrationAuthorityRevoke",
         "OrchestrationMigrate",
-        "UpdateHarness"
+        "UpdateHarness",
+        "SyncProjectHarness"
       ]
     },
     "status": {
@@ -189,6 +190,30 @@
     },
     "data": {
       "type": "object"
+    },
+    "actor": {
+      "description": "God that performed a write action, from the command family owner in harness/gods.toml; null means Hive itself.",
+      "enum": [null, "Athena", "Artemis", "Hephaistos", "Apollon", "Eileithyia", "Poseidon", "Demeter", "Aither", "Hades", "Aphrodite"]
+    },
+    "notice": {
+      "description": "Rendered god notice in the configured language; a session copies it unchanged into its final response.",
+      "type": "string",
+      "minLength": 1
+    },
+    "items": {
+      "description": "Exact targets of a write action and the result for each.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target", "outcome"],
+        "properties": {
+          "target": { "type": "string", "minLength": 1 },
+          "outcome": { "enum": ["done", "skipped", "failed", "planned"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "secret": { "const": true }
+        }
+      }
     }
   },
   "oneOf": [

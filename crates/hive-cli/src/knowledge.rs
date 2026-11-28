@@ -4483,7 +4483,7 @@ fn emit(result: &KnowledgeResult) {
     if crate::human_output::emit_if_human(result) {
         return;
     }
-    match serde_json::to_string(result) {
+    match crate::notice::json_line(result, &crate::human_output::family()) {
         Ok(json) => println!("{json}"),
         Err(error) => {
             println!("{{\"schema_version\":1,\"action\":\"UnknownAction\",\"status\":\"error\",\"exit_code\":10,\"code\":\"hive.internal-error\",\"message\":\"JSON serialization failed\",\"changed_paths\":[],\"evidence\":[],\"next_action\":null}}");

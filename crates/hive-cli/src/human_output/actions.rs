@@ -6,6 +6,7 @@ pub(super) const ACTIONS: &[(&str, &str, &str)] = &[
     ("RoleWork", "역할 작업 처리 완료", "Role work processed"),
     ("RunWork", "작업 기록 처리 완료", "Work record processed"),
     ("ScanProjectUpgrade", "프로젝트 갱신 대상 확인 완료", "Project update targets inspected"),
+    ("SyncProjectHarness", "프로젝트 Hive 맞춤 확인 완료", "Project Hive alignment checked"),
     ("ValidateProjectUpgrade", "프로젝트 갱신 확인 완료", "Project update checked"),
     ("VectorKnowledge", "의미 기반 지식 검색 처리 완료", "Meaning-based knowledge search processed"),
 

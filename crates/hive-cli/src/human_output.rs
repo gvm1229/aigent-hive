@@ -76,6 +76,8 @@ pub(crate) fn emit_if_human(result: &impl Serialize) -> bool {
                 "Could not display the result. Run the command with --output json to inspect the cause."));
             return true;
         };
+        let mut value = value;
+        crate::notice::decorate(&mut value, &options.family);
         println!("{}", render(&value, options.language, &options.family));
         true
     })
@@ -95,6 +97,7 @@ include!("human_output/actions.rs");
 include!("human_output/codes.rs");
 include!("human_output/families.rs");
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -> String {
     let action = value["action"].as_str().unwrap_or(family);
     let (ko, en) = topic(action, family);
@@ -128,7 +131,10 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
     }
     let coded = code_sentence(value["code"].as_str().unwrap_or(""));
     let message = readable(message);
-    let mut output = if language == InterfaceLanguage::Ko {
+    let notice = crate::notice::render(value, language);
+    let mut output = if let Some(notice) = &notice {
+        notice.clone()
+    } else if language == InterfaceLanguage::Ko {
         if let Some((ko, _)) = coded {
             ko.to_owned()
         } else if has_hangul(&message) {
@@ -148,7 +154,7 @@ pub(crate) fn render(value: &Value, language: InterfaceLanguage, family: &str) -
     } else {
         format!("Success. {}", sentence(&message))
     };
-    if !value["changed_paths"].as_array().is_none_or(Vec::is_empty) {
+    if notice.is_none() && !value["changed_paths"].as_array().is_none_or(Vec::is_empty) {
         output.push_str(&if planned_only(value, data) {
             choose(language, "\n변경 예정 파일:", "\nPlanned file changes:")
         } else {
@@ -873,6 +879,10 @@ pub(crate) fn guidance(lines: &[String]) {
             }
         }
     });
+}
+
+pub(crate) fn family() -> String {
+    OPTIONS.with(|options| options.borrow().family.clone())
 }
 
 pub(crate) fn machine() -> bool {

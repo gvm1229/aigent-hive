@@ -6,9 +6,9 @@
       "sha256": "59ced32a777492992e4b490fdd97849b3c137c88c59d7cd21ae5a1897c91866b"
     },
     {
-      "length": 8300,
+      "length": 8368,
       "path": "targets/release-surface-inventory.json",
-      "sha256": "4157af1da300cf33aec4db9480a9f64f3ac158efda1a5bc160c9103a13235b99"
+      "sha256": "dd5bae3591d9a9125660d7d63888d27570912c2225b503c14937db079f0ce0cc"
     }
   ],
   "classification": "feature",
@@ -25,5 +25,5 @@
     "repository": "https://github.com/gvm1229/aigent-hive",
     "tag": "v0.17.0"
   },
-  "surface_inventory_digest": "sha256:4157af1da300cf33aec4db9480a9f64f3ac158efda1a5bc160c9103a13235b99"
+  "surface_inventory_digest": "sha256:dd5bae3591d9a9125660d7d63888d27570912c2225b503c14937db079f0ce0cc"
 }

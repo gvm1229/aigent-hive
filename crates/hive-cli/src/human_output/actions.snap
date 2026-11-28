@@ -26,6 +26,10 @@ ScanProjectUpgrade
 ko: 프로젝트 갱신 대상 확인 완료.
 en: Success. Project update targets inspected.
 
+SyncProjectHarness
+ko: 프로젝트 Hive 맞춤 확인 완료.
+en: Success. Project Hive alignment checked.
+
 ValidateProjectUpgrade
 ko: 프로젝트 갱신 확인 완료.
 en: Success. Project update checked.

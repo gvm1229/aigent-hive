@@ -13,7 +13,8 @@ pub(crate) fn work_completion_block(language: UserDirectiveLanguage) -> &'static
 - Observed quota exhaustion takes priority over closure and memory gates: no further tools for checkpoints, knowledge, lint, Git, cleanup, or handoff. Give only a short halt notice; defer these operations until a new request receives fresh allowed usage.\n\
 - Classify remaining work as `agent-owned`, `awaiting-user-authority`, `awaiting-external-evidence`, or `blocked`, and finish every safe agent-owned action before handoff.\n\
 - Every release request defaults to implementation, verification, or a numbered public test. Stable tag, protected-branch integration, publication, and installation require current version-specific user approval.\n\
-- For every passed, failed, skipped, deferred, unverified, or unsupported result, state the scope, exact reason, actual host or platform execution, proven range, and unproven range.\n"
+- For every passed, failed, skipped, deferred, unverified, or unsupported result, state the scope, exact reason, actual host or platform execution, proven range, and unproven range.\n\
+- After a Hive write command, copy its god notice into the final response unchanged: the human output's notice block, or the JSON `notice` field. Never shorten it to a count such as \"recorded 3 facts\".\n"
         }
         UserDirectiveLanguage::Ko => {
             "- `all todos`, `until completion`, `do not stop` 또는 같은 요청: Agent 소유 작업 잔존 시 계속 진행. 진행 보고를 closure로 사용 금지.\n\
@@ -22,7 +23,8 @@ pub(crate) fn work_completion_block(language: UserDirectiveLanguage) -> &'static
 - 할당량 소진 확인은 종료 정리·지식 기록보다 우선. 이후 체크포인트·지식 저장·검사·Git·정리·인계 도구 호출 금지, 짧은 중단 안내만 허용. 새 요청의 정상 사용량 확인 뒤 해당 작업 재개.\n\
 - 남은 작업 분류: `agent-owned|awaiting-user-authority|awaiting-external-evidence|blocked`. 인계 전 안전한 Agent 소유 작업 완료.\n\
 - 모든 출시 요청의 기본값: 구현·검증·번호 공개 시험판. Stable tag·protected branch 통합·게시·설치: 현재 version별 사용자 명시 승인 필수.\n\
-- 통과·실패·건너뜀·연기·미검증·미지원 결과: 범위·정확한 이유·실행 host·운영체제·증명 범위·미증명 범위 명시.\n"
+- 통과·실패·건너뜀·연기·미검증·미지원 결과: 범위·정확한 이유·실행 host·운영체제·증명 범위·미증명 범위 명시.\n\
+- Hive 쓰기 명령 뒤 최종 응답에 신 호출 안내를 고치지 않고 포함: 사람용 출력의 안내 블록 또는 JSON `notice` 값. \"지식 3개를 기록함\"처럼 개수만 말하기 금지.\n"
         }
     }
 }
@@ -43,6 +45,7 @@ mod tests {
             assert!(block.contains("cancel"));
             assert!(block.contains("Stable tag"));
             assert!(block.contains("failed") || block.contains("실패"));
+            assert!(block.contains("`notice`"));
         }
     }
 }

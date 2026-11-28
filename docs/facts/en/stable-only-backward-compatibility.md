@@ -9,7 +9,7 @@ summary: "Stable compatibility requires complete provenance; 0.14.0 adds the exa
 tags: [compatibility, provenance, release, v0-12-0]
 aliases: []
 sources:
-  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:b9439680a397b8459548cffabf6ebd0ff74f5e5ca4977ec8adda5e9676f92a0b"
+  - "repo:crates/hive-cli/src/project_upgrade.rs#sha256:854a734679dfa346f4543a633789840eaa6af4b63ddb73df58e172da91b86c84"
   - "repo:crates/hive-render/src/lib.rs#sha256:db8acd2d00532f6ed23b0adce6e9c8f3a3648c74874cc860eeb3633b20a0e92d"
   - "repo:docs/decisions/ADR-0025-0.11.2-scope.md#sha256:958df30cdb8c19d4591eed2324587cd0cdb3fb90a30da8ef01daee015efc150e"
   - "repo:tests/results/acceptance-0.12.0-test.3.json#sha256:56a95cce7790c624305121943ac216f2651350f2b9325b8f61a24db566b89304"
