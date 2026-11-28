@@ -41,3 +41,8 @@
 - 판별 값 기록 시도: `user-setup` Skill과 같은 답변 묶음(`browser.detected_default: WhaleHTM`)의 미리 보기는 통과. 적용은 2026-11-20에 미리 보기 단계에서 멈춘 사용자 설정(사용량 감시 켜기 단계) 때문에 충돌로 거부. 이 PC의 설정 변경 0건
 - 제품 빈틈: 오래 멈춘 설정은 `--resume` 말고 버리는 방법 부재. 관계없는 설정 절 변경까지 계속 차단
 
+## Whale 기록(2026-11-29, `0.17.0-test.3`)
+
+- 멈춘 초안 정리 뒤 `browser.detected_default: WhaleHTM` 적용 성공. Claude·Codex·Antigravity 전역 지침 모두 "항상 Whale에서 열기", Whale의 Claude in Chrome 안내 한 줄 포함
+- 남은 범위: 사람이 터미널에서 설정할 때의 기본 브라우저 판별(`winreg` 결정 대기), 새 세션에서 실제 미리 보기 요청 확인
+
