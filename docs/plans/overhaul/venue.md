@@ -29,5 +29,5 @@
 
 ## 결정과 미결
 
-- Gemini CLI는 이 계정에서 Google 지원 종료. Gemini 실제 수용 항목(OV160-003·004, OV170-008)은 Antigravity CLI·IDE로 대체 확인, 원래 Gemini 수용은 미검증 표시
+- Gemini CLI는 이 계정에서 Google 지원 종료. Gemini 실제 수용 항목(OV160-003·004)은 미검증 유지. Antigravity를 작업자로 대체 확인하는 방식은 약관 위험으로 폐기([OV170-028](../../research/overhaul/OV170-028.md))
 - 제안(미결정): 단계마다 공개 시험과 정식 사이에 local 실제 호스트 확인 항목 1개(0.15.2 OV152-007 형식). 실제 호스트 CLI 출력 기록을 가짜 실행기가 재생하는 고정물. 읽기 전용 `scripts/qualify-local-hosts.py`. 이전 정식→새 버전 갱신의 CI 시험

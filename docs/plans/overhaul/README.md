@@ -111,7 +111,7 @@
 
 - 공식 문서의 CLI 확장점만 사용. 제공자 CLI 키 주입·화면 캡처 금지, tmux·psmux `send-keys`/`capture-pane`·cmux 경로 제외
 - Claude는 사람이 쓰는 대화형 호스트: 자체 훅·하위 에이전트·`/loop`·예약. 비대화형·`claude -p` 금지
-- Codex·Gemini는 구독 로그인 공식 비대화형 작업자. Claude+Codex 먼저, Gemini도 동등한 작업자. Hive는 파일 봉투·수신 상자·훅 조율, 호스트가 실제 호출
+- Codex는 구독 로그인 공식 비대화형 작업자. Gemini·Antigravity는 2026-11-28부터 약관 위험으로 작업자 제외([OV170-028](../../research/overhaul/OV170-028.md)). Hive는 파일 봉투·수신 상자·훅 조율, 호스트가 실제 호출
 - Hive 자체 모델·프로세스 실행·제공자 API·자격 증명 요청·파일 읽기·복사 없음. 공식 기능 문서와 실제 동작 수용 구분
 - 실험: `tests/work/`·프로젝트 한정 훅. 전역 호스트 설정·훅·인증 변경 금지
 - Markdown·YAML·TOML 정본, SQLite 재생성 파생물. 사용자 바이트·과거 기준본 보존, 적용 전 미리보기·확인
