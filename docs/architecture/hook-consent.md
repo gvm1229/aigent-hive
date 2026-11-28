@@ -163,6 +163,15 @@ Hook 금지 기능:
 - 근거: 지침만으로는 Agent의 작업 전 조회 누락을 막지 못한 실제 사례([OV160-027](../research/overhaul/OV160-027.md))
 - 계약 시험: 예외 파일 1개의 응답 형식과 금지 항목 고정
 
+명시 예외(0.17.0, OV170-031): Claude 플러그인 선언의 `SessionStart` 프로젝트 맞추기 훅 1개.
+
+- 동작: `.hive/`가 있는 프로젝트만 `hive project sync --hook claude` 실행. 범위 안 새 판이고 겹치는 수정이 없을 때만 인증된 기준 3자 비교로 Hive 파일과 `.hive/project.lock` 갱신. 한 줄 안내만 출력, 자동 커밋 없음
+- 건너뛰기: rebase·merge 도중, Hive 파일에 커밋하지 않은 수정이 있을 때, 겹치는 수정이 있을 때. 범위 밖·오래된 전역 Hive는 경고만
+- 금지 유지: `.hive/` 없는 폴더의 쓰기·질문·설치 권유, 요청 분류·문장 변경·차단·Skill 실행, 다른 에이전트 CLI 호출(Antigravity `agy` 포함)
+- 동의: 기본 활성. `HIVE_PROJECT_SYNC=off` 또는 플러그인 비활성화로 끄기
+- 근거: 전역 Hive만 업데이트하면 프로젝트가 따라오게 하라는 유지관리자 결정([0.17.0 계획](../plans/active/0.17.0-project-sync.md))
+- 계약 시험: `.hive/` 없는 폴더 쓰기 0건, 훅 명령 1개 고정
+
 다른 하네스와의 공존: Claude Code는 여러 플러그인의 훅을 함께 실행. Hive는 다른 하네스의 제거를 요구하지 않고, 다른 하네스의 설정·훅 변경 0건.
 
 Wiki-enabled turn의 agent-reviewed memory gate: hook capability가 아닌 final response 전
