@@ -227,10 +227,12 @@ const ESCALATING_TOKENS: &[&str] = &[
 const ALLOWED_CONFIG_KEYS: &[&str] = &["model_reasoning_effort", "forced_login_method"];
 
 /// Refuse a profile whose argv grants more than its role's policy. Codex must carry exactly one
-/// `--sandbox` equal to the role sandbox; Claude and Gemini profiles must stay non-executable.
+/// `--sandbox` equal to the role sandbox; Claude profiles must stay non-executable. Antigravity
+/// and Gemini are refused under Google's Antigravity terms.
 /// # Errors
 /// Names the first escalating argument.
 pub fn validate_worker_argv(role: &str, profile: &WorkerProfile) -> Result<(), String> {
+    crate::automation_terms::refuse_automated(&profile.provider)?;
     let argv = &profile.argv;
     if let Some(token) = argv.iter().find(|arg| {
         let flag = arg.split_once('=').map_or(arg.as_str(), |(flag, _)| flag);
@@ -259,7 +261,7 @@ pub fn validate_worker_argv(role: &str, profile: &WorkerProfile) -> Result<(), S
         }
     }
     match profile.provider.as_str() {
-        "claude" | "gemini" | "codex" if argv.is_empty() => Ok(()),
+        "claude" | "codex" if argv.is_empty() => Ok(()),
         "codex" => {
             if sandboxes == [role_sandbox(role).as_str()] {
                 Ok(())
@@ -270,10 +272,7 @@ pub fn validate_worker_argv(role: &str, profile: &WorkerProfile) -> Result<(), S
                 ))
             }
         }
-        "claude" | "gemini" => Err(format!(
-            "{} worker profiles are not executable; argv must stay empty",
-            profile.provider
-        )),
+        "claude" => Err("claude worker profiles are not executable; argv must stay empty".into()),
         _ => Err("unknown worker provider".into()),
     }
 }
@@ -725,9 +724,9 @@ pub fn host_cancel_support(provider: &str) -> (CancelSupport, &'static str) {
             CancelSupport::Unsupported,
             "the interactive Claude host documents no cancel for a running turn or subagent that another process can request; Hive never sends keys",
         ),
-        "gemini" => (
+        "gemini" | "antigravity" => (
             CancelSupport::Unsupported,
-            "Gemini peer workers are unverified; no official cancel is known",
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL,
         ),
         _ => (CancelSupport::Unsupported, "unknown provider"),
     }
@@ -1109,6 +1108,10 @@ mod tests {
         assert!(wrong.validate(&stop).is_err());
         assert_eq!(host_cancel_support("claude").0, CancelSupport::Unsupported);
         assert_eq!(host_cancel_support("gemini").0, CancelSupport::Unsupported);
+        assert_eq!(
+            host_cancel_support("antigravity").1,
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
         assert_eq!(host_cancel_support("codex").0, CancelSupport::Unverified);
         for path in [
             stop_path(&stop.stop_id),

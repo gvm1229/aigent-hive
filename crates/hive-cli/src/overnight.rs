@@ -2,8 +2,9 @@
 //!
 //! Hive prepares records and host continuation guidance only. It never launches a host or
 //! worker process, never waits and never calls a provider: Claude continues with its official
-//! `/loop` or scheduled tasks inside the interactive host, and Codex or Gemini run as official
-//! non-interactive workers through a host-owned handler. Each exit writes a morning report.
+//! `/loop` or scheduled tasks inside the interactive host, and Codex runs as an official
+//! non-interactive worker through a host-owned handler. Antigravity and Gemini are never
+//! loop workers (Google's Antigravity terms). Each exit writes a morning report.
 use crate::run::{parse_options, read_explicit_file, required, FileSnapshot, PinnedTarget};
 use hive_core::overnight::{
     cancel_proof, morning_report, recover, DecisionPoint, LoopBudget, LoopEvent, LoopGoal,
@@ -211,7 +212,6 @@ fn guidance(run: &LoopRun) -> Value {
     json!({
         "claude": format!("In the interactive Claude host, continue with the official /loop or a scheduled task. Each iteration: read `hive loop status --loop {id}`, plan, record events with `hive loop record`, and stop when status is stopped.", id = run.loop_id),
         "codex": "A host-owned handler runs `codex exec` with the plan envelope and records the receipt with `hive loop record`.",
-        "gemini": "A host-owned handler runs Gemini's official non-interactive mode the same way.",
         "next_dedupe_key": run.next_dedupe_key(),
         "branch": run.branch,
         "launched_processes": 0,

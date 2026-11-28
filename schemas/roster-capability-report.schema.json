@@ -17,8 +17,7 @@
     "provider": {
       "enum": [
         "codex",
-        "claude",
-        "gemini"
+        "claude"
       ]
     },
     "version": {

@@ -79,6 +79,8 @@ pub(crate) enum SensorError {
     WrongWindows,
     Stale,
     ExecutableChanged,
+    /// Third-party usage readers never access Antigravity (Google's Antigravity terms).
+    TermsRestricted,
     FallbackRequired(UsageHost),
 }
 
@@ -106,6 +108,7 @@ impl Display for SensorError {
             Self::WrongWindows => "usage sensor returned unexpected quota windows",
             Self::Stale => "usage sensor returned a stale snapshot",
             Self::ExecutableChanged => "usage sensor executable changed during qualification",
+            Self::TermsRestricted => hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL,
             Self::FallbackRequired(host) => {
                 return write!(
                     formatter,
@@ -852,6 +855,10 @@ pub(crate) fn native_then_fallback<T>(
     native: Result<T, SensorError>,
     fallback: impl FnOnce() -> Result<T, SensorError>,
 ) -> Result<T, SensorError> {
+    if host == UsageHost::Antigravity {
+        // Only Antigravity's own usage callback counts; no third-party reader fallback.
+        return native;
+    }
     match native {
         Ok(value) => Ok(value),
         Err(error) if error.allows_native_fallback() => fallback().map_err(|fallback_error| {
@@ -897,6 +904,9 @@ fn check_codexbar_with_runner_for_account(
     account_digest: Option<&str>,
     now: SystemTime,
 ) -> Result<NormalizedSnapshot, SensorError> {
+    if host == UsageHost::Antigravity {
+        return Err(SensorError::TermsRestricted);
+    }
     let executable = runner.qualify("codexbar").map_err(|error| {
         if error == SensorError::Unavailable {
             SensorError::FallbackRequired(host)
@@ -2031,24 +2041,43 @@ mod tests {
     }
 
     #[test]
-    fn antigravity_omits_all_accounts_and_enforces_both_quota_pools() {
-        let output = antigravity_row(None, Some(serde_json::json!(10_080)), 44, 95);
-        let runner = FakeRunner::new([Ok(success("CodexBar 0.45.2\n")), Ok(success(output))]);
+    fn codexbar_never_reads_antigravity_usage() {
+        let runner = FakeRunner::new([]);
+        assert_eq!(
+            check_codexbar_provider_with_runner(
+                &runner,
+                UsageHost::Antigravity,
+                &account_digest(),
+                now("2026-07-23T12:00:30Z"),
+            ),
+            Err(SensorError::TermsRestricted)
+        );
+        assert_eq!(
+            super::check_codexbar_provider_unique_with_runner(
+                &runner,
+                UsageHost::Antigravity,
+                now("2026-07-23T12:00:30Z"),
+            ),
+            Err(SensorError::TermsRestricted)
+        );
+        assert!(runner.invocations.borrow().is_empty());
+        assert_eq!(
+            SensorError::TermsRestricted.to_string(),
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        assert!(!ANTIGRAVITY_USAGE_ARGUMENTS.contains(&"--all-accounts"));
+    }
 
-        let snapshot = check_codexbar_provider_with_runner(
-            &runner,
+    #[test]
+    fn antigravity_callback_snapshots_enforce_both_quota_pools() {
+        let output = antigravity_row(None, Some(serde_json::json!(10_080)), 44, 95);
+        let snapshot = normalize_output_for_account(
+            &output,
             UsageHost::Antigravity,
-            &account_digest(),
-            now("2026-07-23T12:00:30Z"),
+            Some(&account_digest()),
+            parse_iso8601_z("2026-07-23T12:00:30Z").expect("fixture should parse"),
         )
         .expect("both Antigravity quota pools should normalize");
-
-        let invocations = runner.invocations.borrow();
-        assert_eq!(invocations[1].arguments, ANTIGRAVITY_USAGE_ARGUMENTS);
-        assert!(!invocations[1]
-            .arguments
-            .iter()
-            .any(|argument| argument == "--all-accounts"));
         assert_eq!(snapshot.provider, "antigravity");
         assert_eq!(snapshot.windows.len(), 2);
         assert_eq!(snapshot.windows[0].name, "provider");
@@ -2489,7 +2518,24 @@ mod tests {
 
     #[test]
     fn allowlisted_native_errors_fallback_at_most_once_for_every_provider() {
-        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+        let calls = Cell::new(0);
+        assert_eq!(
+            native_then_fallback(
+                UsageHost::Antigravity,
+                Err::<u8, _>(SensorError::Unavailable),
+                || {
+                    calls.set(calls.get() + 1);
+                    Ok(7)
+                }
+            ),
+            Err(SensorError::Unavailable)
+        );
+        assert_eq!(
+            calls.get(),
+            0,
+            "Antigravity never uses a third-party fallback"
+        );
+        for host in [UsageHost::Codex, UsageHost::Claude] {
             for error in [
                 SensorError::Unavailable,
                 SensorError::Unsupported,
@@ -2511,7 +2557,7 @@ mod tests {
 
     #[test]
     fn unavailable_fallback_is_reported_once_for_the_exact_provider() {
-        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+        for host in [UsageHost::Codex, UsageHost::Claude] {
             let calls = Cell::new(0);
             assert_eq!(
                 native_then_fallback(host, Err::<u8, _>(SensorError::Unavailable), || {

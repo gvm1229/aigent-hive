@@ -1,11 +1,11 @@
 //! `hive msg hooks`: project-only official hook configuration for message mediation (OV160-003).
 //!
 //! Preview is read-only and prints an approval digest. Apply and remove change only the
-//! project host file (`.claude/settings.local.json`, `.codex/hooks.json` or
-//! `.gemini/settings.json`) and the Hive receipt `.hive/config/mediation-hooks/<host>.json`,
-//! and only with the exact current preview digest. User-global `~/.claude`, `~/.codex` and
-//! `~/.gemini` settings, hooks and credentials are never read or written. Nothing is enabled
-//! until an explicit apply. Foreign hook entries and bytes are preserved; only the exact Hive
+//! project host file (`.claude/settings.local.json` or `.codex/hooks.json`) and the Hive
+//! receipt `.hive/config/mediation-hooks/<host>.json`, and only with the exact current preview
+//! digest. User-global `~/.claude` and `~/.codex` settings, hooks and credentials are never read
+//! or written. Antigravity and Gemini are refused under Google's Antigravity terms. Nothing is
+//! enabled until an explicit apply. Foreign hook entries and bytes are preserved; only the exact Hive
 //! entries recorded in the receipt are inserted or removed.
 use super::{option, Context, MsgError, ACTION};
 use crate::run::{parse_options, required};
@@ -19,8 +19,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
 const LIMIT: u64 = 1024 * 1024;
-/// Claude and Codex document `timeout` in seconds. Gemini's unit is unverified, so its entries
-/// carry no timeout and are never applied.
+/// Claude and Codex document `timeout` in seconds.
 const HOOK_TIMEOUT_SECONDS: u64 = 10;
 
 /// A host whose allowlisted events are all unverified: preview only, never written (S7).
@@ -85,7 +84,6 @@ pub(super) fn config_path(host: HookHost) -> &'static str {
     match host {
         HookHost::Claude => ".claude/settings.local.json",
         HookHost::Codex => ".codex/hooks.json",
-        HookHost::Gemini => ".gemini/settings.json",
     }
 }
 
@@ -295,7 +293,6 @@ fn scope(context: &Context, options: &[(&str, &str)], action: &str) -> Result<Sc
         (HookHost::Claude, Some("block")) | (HookHost::Codex, None | Some("block")) => {
             Some(ReturnShape::StopBlock)
         }
-        (HookHost::Gemini, None) => None,
         (_, Some(other)) => {
             return Err(MsgError::input(format!(
                 "--return {other} is not a documented Stop return for {}",
@@ -437,9 +434,6 @@ fn applied_next_action(host: HookHost, options: &[(&str, &str)]) -> Result<Strin
         ),
         HookHost::Claude => format!(
             "If using Claude automatic mode, add a project permission rule for `Bash(hive msg:*)` in `.claude/settings.json`. A `Bash(codex exec:*)` rule would remove prompts for every Codex run, including unsafe flags; prefer approving each run. Then verify the hook record with: {status}"
-        ),
-        HookHost::Gemini => format!(
-            "Gemini hooks remain preview-only until their event support is verified. Check the recorded status with: {status}"
         ),
     })
 }

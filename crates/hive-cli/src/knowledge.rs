@@ -102,7 +102,7 @@ USAGE:
     hive knowledge transfer vector --id <transfer-id> --receipt-digest <sha256:...> --answer yes|no|cancel [--user-root <dir>] [--output json]
     hive knowledge refresh (--target <legacy-project>|--user-root <dir>) [--output json]
     hive knowledge graph preview|enable|status|rebuild|disable|query|export --target <dir> [--scope project] [--engine native-markdown|graphify-code] [--consent-digest <sha256:...>] [--input <graph.json> --receipt <receipt.json>] [--node-id <id>] [--text <query>] [--user-root <dir>] [--format json|html] [--output json]
-    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
+    hive knowledge graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --user-root <dir> --collection <id> --visibility shared|project-private|confidential --host codex [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive knowledge vector --help
     hive index rebuild (--target <legacy-project>|--user-root <dir>) [--output json]
 ";

@@ -2,8 +2,9 @@
 //!
 //! Hive owns only the goal, scorecard, budget and deterministic state. Every model call and
 //! worker process belongs to the host: Claude continues inside the interactive host with its
-//! official `/loop`, scheduled tasks, hooks or subagents; Codex and Gemini run as official
-//! non-interactive workers launched by a host-owned handler. This module performs no I/O,
+//! official `/loop`, scheduled tasks, hooks or subagents; Codex runs as an official
+//! non-interactive worker launched by a host-owned handler. Antigravity and the retired Gemini
+//! CLI are never workers or critics (Google's Antigravity terms). This module performs no I/O,
 //! launches no process and calls no provider. Worker authority comes from signed summons
 //! (ADR-0027); the file inbox only carries plan envelopes and results.
 
@@ -278,7 +279,6 @@ impl LoopInput {
 pub enum Provider {
     Claude,
     Codex,
-    Gemini,
 }
 
 /// Step reached inside one iteration.
@@ -901,6 +901,22 @@ pub fn morning_report(
 }
 
 #[cfg(test)]
+mod terms_tests {
+    use super::Provider;
+
+    #[test]
+    fn overnight_provider_refuses_gemini_and_antigravity() {
+        for name in ["gemini", "antigravity"] {
+            assert!(serde_json::from_str::<Provider>(&format!("\"{name}\"")).is_err());
+        }
+        assert_eq!(
+            serde_json::from_str::<Provider>("\"codex\"").unwrap(),
+            Provider::Codex
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -1126,7 +1142,7 @@ mod tests {
         run.apply(
             &input,
             &LoopEvent::Critiqued {
-                critic: Provider::Gemini,
+                critic: Provider::Claude,
                 score: 0.9,
                 severe: 0,
             },
@@ -1343,7 +1359,7 @@ mod tests {
         run.apply(
             &input,
             &LoopEvent::Critiqued {
-                critic: Provider::Gemini,
+                critic: Provider::Claude,
                 score: 0.5,
                 severe: 0,
             },

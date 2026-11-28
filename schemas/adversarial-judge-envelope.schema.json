@@ -44,7 +44,7 @@
       "required": ["launch_owner", "host", "assignment_required", "receipt_required"],
       "properties": {
         "launch_owner": { "const": "host-owned" },
-        "host": { "enum": ["codex", "claude", "antigravity"] },
+        "host": { "enum": ["codex", "claude"] },
         "assignment_required": { "const": true },
         "receipt_required": { "const": true }
       }

@@ -1466,7 +1466,14 @@ pub(crate) fn continuation(
         .ok_or_else(|| {
             AdapterError::Internal("continuation retry permission is missing".to_owned())
         })?;
-    let (mut decision, mut reason) = if expected_digest != Some(session_digest.as_str()) {
+    let antigravity_owner = envelope
+        .pointer("/outer_owner/host")
+        .and_then(Value::as_str)
+        .is_some_and(hive_core::automation_terms::is_terms_restricted);
+    let (mut decision, mut reason) = if antigravity_owner {
+        // Google's Antigravity terms: Hive never re-invokes Antigravity automatically.
+        ("allow", "terms-of-service")
+    } else if expected_digest != Some(session_digest.as_str()) {
         ("allow", "session-binding-mismatch")
     } else if ready_for_final || agent_owned.is_empty() {
         ("allow", "closure-ready")
@@ -1572,7 +1579,14 @@ fn continuation_adapter(owner: Option<&Value>) -> Value {
     }
     let task_kind = match binding.host {
         Host::Codex => "goal",
-        Host::Claude | Host::Antigravity => "task",
+        Host::Claude => "task",
+        Host::Antigravity => {
+            return json!({
+                "support": "unsupported",
+                "reason": "terms-of-service",
+                "message": hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL,
+            });
+        }
     };
     json!({
         "support": "requires-host-capability",
@@ -1689,14 +1703,17 @@ fn continuation_envelope(
     outer_owner: Option<&OwnerBinding>,
 ) -> Value {
     let continuation = status.status().continuation.as_ref();
-    let retry_permitted = continuation.is_some_and(|value| {
-        !value.cancel_requested
-            && value.attempts_used < value.max_retry_attempts
-            && !matches!(
-                status.status().state,
-                RunState::Cancelled | RunState::Succeeded
-            )
-    });
+    // Antigravity is never a continuation target (Google's Antigravity terms).
+    let antigravity_owner = outer_owner.is_some_and(|binding| binding.host == Host::Antigravity);
+    let retry_permitted = !antigravity_owner
+        && continuation.is_some_and(|value| {
+            !value.cancel_requested
+                && value.attempts_used < value.max_retry_attempts
+                && !matches!(
+                    status.status().state,
+                    RunState::Cancelled | RunState::Succeeded
+                )
+        });
     json!({
         "schema_version": 1,
         "run_id": run_id,
@@ -1704,7 +1721,9 @@ fn continuation_envelope(
         "outer_owner": outer_owner,
         "session_binding": {
             "binding_state": if continuation.is_some() { "recorded" } else { "awaiting-host-attestation" },
-            "host": outer_owner.map(|binding| binding.host),
+            "host": outer_owner
+                .map(|binding| binding.host)
+                .filter(|host| *host != Host::Antigravity),
             "session_id_digest": continuation.map(|value| &value.session_binding_digest),
         },
         "next_action": status.status().next_action,
@@ -2604,6 +2623,11 @@ fn resume_inner(
                 }),
             );
         }
+        if capability.host == Host::Antigravity {
+            return Err(AdapterError::Unsupported(
+                hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.to_owned(),
+            ));
+        }
         let requested_account_digest = arguments.account_digest.as_deref();
         let role_id = arguments
             .role_id
@@ -3378,12 +3402,8 @@ mod tests {
     }
 
     #[test]
-    fn continuation_adapter_maps_three_host_native_owners_without_mutation() {
-        for (host, task_kind) in [
-            ("codex", "goal"),
-            ("claude", "task"),
-            ("antigravity", "task"),
-        ] {
+    fn continuation_adapter_maps_host_native_owners_without_mutation() {
+        for (host, task_kind) in [("codex", "goal"), ("claude", "task")] {
             let owner = json!({
                 "host": host,
                 "host_version": "fixture",
@@ -3411,6 +3431,22 @@ mod tests {
         assert_eq!(
             continuation_adapter(Some(&external))["reason"],
             "external-owner"
+        );
+        let antigravity = json!({
+            "host": "antigravity",
+            "host_version": "fixture",
+            "surface": "cli",
+            "external_runtime": null,
+            "resolved_owner": "host-native",
+            "resolution_evidence_digest": format!("sha256:{}", "0".repeat(64)),
+            "subagent_support": "supported",
+        });
+        let refused = continuation_adapter(Some(&antigravity));
+        assert_eq!(refused["support"], "unsupported");
+        assert_eq!(refused["reason"], "terms-of-service");
+        assert_eq!(
+            refused["message"],
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
         );
     }
 
@@ -3773,6 +3809,42 @@ mod tests {
         let mut manual_threshold = base.to_vec();
         manual_threshold.extend(["--threshold", "17"].map(str::to_owned));
         assert!(parse_resume_arguments(&manual_threshold).is_err());
+    }
+
+    #[test]
+    fn automatic_dispatch_is_refused_for_antigravity_runs() {
+        let (_temp, target, capability) = setup_run();
+        fs::write(
+            &capability,
+            include_bytes!("../../../tests/fixtures/setup/capabilities-antigravity-absent.json"),
+        )
+        .expect("antigravity capability");
+        let request = write_checkpoint_request(&target, 0, "2026-07-24T00:00:00Z", &[], None);
+        checkpoint(&CheckpointArguments {
+            target: target.clone(),
+            request,
+            capabilities: capability.clone(),
+        })
+        .expect("checkpoint");
+        let arguments = ResumeArguments {
+            target,
+            run_id: "run-1".to_owned(),
+            capabilities: capability,
+            dispatch_intent: DispatchIntent::Automatic,
+            account_digest: None,
+            session_id: Some("fixture-session".to_owned()),
+            process_id: Some(4242),
+            user_root: None,
+            role_id: Some("reviewer".to_owned()),
+            threshold: None,
+        };
+        let Err(super::AdapterError::Unsupported(message)) = resume(&arguments) else {
+            panic!("automatic Antigravity dispatch must be refused");
+        };
+        assert_eq!(
+            message,
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
     }
 
     #[test]

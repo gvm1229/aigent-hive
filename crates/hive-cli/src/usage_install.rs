@@ -82,8 +82,10 @@ fn parse(arguments: &[String]) -> Result<InstallArguments, String> {
     let host = match host.as_deref() {
         Some("codex") => UsageHost::Codex,
         Some("claude") => UsageHost::Claude,
-        Some("antigravity") => UsageHost::Antigravity,
-        Some(_) => return Err("--host must be codex, claude, or antigravity".to_owned()),
+        Some(host) if hive_core::automation_terms::is_terms_restricted(host) => {
+            return Err(hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.to_owned());
+        }
+        Some(_) => return Err("--host must be codex or claude".to_owned()),
         None => return Err("missing required option --host".to_owned()),
     };
     if output.as_deref().is_some_and(|value| value != "json") {
@@ -325,6 +327,23 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_fallback_install_is_refused_by_terms() {
+        let error = parse(&[
+            "fallback-install".to_owned(),
+            "--host".to_owned(),
+            "antigravity".to_owned(),
+            "--dry-run".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ])
+        .expect_err("Antigravity fallback is refused");
+        assert_eq!(
+            error,
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+    }
+
+    #[test]
     fn apply_requires_confirmation_during_argument_parsing() {
         let error = parse(&[
             "fallback-install".to_owned(),
@@ -344,7 +363,7 @@ mod tests {
         let runner = FakeRunner::new();
         let result = install(
             &InstallArguments {
-                host: UsageHost::Antigravity,
+                host: UsageHost::Claude,
                 mode: InstallMode::Apply,
                 confirmed: true,
             },

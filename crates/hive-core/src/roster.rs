@@ -32,6 +32,9 @@ pub struct Roster {
     pub providers: BTreeMap<String, Provider>,
     pub roles: BTreeMap<String, Role>,
     pub gods: BTreeMap<String, String>,
+    /// Load-time notices, such as an ignored Antigravity/Gemini provider table.
+    #[serde(skip)]
+    pub notices: Vec<String>,
 }
 
 impl Roster {
@@ -51,8 +54,28 @@ impl Roster {
                 Err(e) => return Err(e.to_string()),
             }
         }
+        roster.ignore_terms_restricted_providers();
         roster.validate()?;
         Ok(roster)
+    }
+
+    /// Drop provider tables for Antigravity or Gemini left in older roster files.
+    ///
+    /// They can never be routed, so keeping them would only fail the whole roster.
+    fn ignore_terms_restricted_providers(&mut self) {
+        let restricted: Vec<String> = self
+            .providers
+            .keys()
+            .filter(|name| crate::automation_terms::is_terms_restricted(name))
+            .cloned()
+            .collect();
+        for name in restricted {
+            self.providers.remove(&name);
+            self.notices.push(format!(
+                "ignored [providers.{name}] in roster.toml: {}",
+                crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+            ));
+        }
     }
 
     /// Embedded role defaults; legacy role files remain the initial source.
@@ -107,10 +130,18 @@ impl Roster {
     }
 
     fn validate(&self) -> Result<(), String> {
+        if let Some(provider) = self.workspace.provider.as_deref() {
+            crate::automation_terms::refuse_automated(provider)?;
+        }
+        for role in self.roles.values() {
+            if let Some(provider) = role.provider.as_deref() {
+                crate::automation_terms::refuse_automated(provider)?;
+            }
+        }
         if self
             .providers
             .keys()
-            .any(|p| !matches!(p.as_str(), "codex" | "claude" | "gemini"))
+            .any(|p| !matches!(p.as_str(), "codex" | "claude"))
         {
             return Err("unknown provider".into());
         }
@@ -200,6 +231,7 @@ impl Roster {
         name: &str,
         provider: &'a str,
     ) -> Result<(&'a str, Role), String> {
+        crate::automation_terms::refuse_automated(provider)?;
         let role = self
             .roles
             .get(name)
@@ -291,7 +323,16 @@ mod tests {
             Some("claude-sonnet-5")
         );
         roster.workspace.provider = Some("gemini".into());
-        assert!(roster.resolve("hive-routine-implementer").is_err());
+        assert_eq!(
+            roster.resolve("hive-routine-implementer").unwrap_err(),
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        assert_eq!(
+            roster
+                .resolve_named_for("hive-routine-implementer", "antigravity")
+                .unwrap_err(),
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
         roster.workspace.provider = Some("codex".into());
         assert_eq!(
             roster.resolve("Minerva").unwrap().1.model.as_deref(),
@@ -317,6 +358,36 @@ mod tests {
         let mut roster = Roster::defaults().unwrap();
         roster.gods.insert("hades".into(), "missing".into());
         assert!(roster.validate().is_err());
+    }
+
+    #[test]
+    fn roster_ignores_legacy_gemini_provider_and_refuses_gemini_routes() {
+        let user = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        fs::create_dir(user.path().join(".hive")).unwrap();
+        fs::create_dir(project.path().join(".hive")).unwrap();
+        fs::write(
+            user.path().join(".hive/roster.toml"),
+            "[providers.gemini]\nminimum_version='0.35.3'\n\n[providers.gemini.roles.hive-routine-implementer]\nmodel='gemini-3-pro-preview'\neffort='high'\n",
+        )
+        .unwrap();
+        let roster = Roster::load(user.path(), project.path()).unwrap();
+        assert!(!roster.providers.contains_key("gemini"));
+        assert_eq!(roster.notices.len(), 1);
+        assert!(roster.notices[0].contains("[providers.gemini]"));
+        assert!(roster.notices[0].contains(crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL));
+        roster.worker_profile("hive-routine-implementer").unwrap();
+        for text in [
+            "[workspace]\nprovider='gemini'\n",
+            "[roles.hive-routine-implementer]\nprovider='gemini'\nmodel='gemini-3-pro-preview'\neffort='high'\n",
+            "[roles.hive-routine-implementer]\nprovider='antigravity'\n",
+        ] {
+            fs::write(project.path().join(".hive/roster.toml"), text).unwrap();
+            assert_eq!(
+                Roster::load(user.path(), project.path()).unwrap_err(),
+                crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+            );
+        }
     }
 
     #[test]
@@ -367,7 +438,10 @@ impl CapabilityReport {
     /// # Errors
     /// Rejects malformed JSON and reports outside the capability schema.
     pub fn from_json_bytes(bytes: &[u8]) -> Result<Self, String> {
-        let value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        if let Some(provider) = value.get("provider").and_then(serde_json::Value::as_str) {
+            crate::automation_terms::refuse_automated(provider)?;
+        }
         crate::validate_json_schema(
             include_str!("../../../schemas/roster-capability-report.schema.json"),
             &value,
@@ -395,6 +469,8 @@ impl Roster {
         role: &Role,
         report: &CapabilityReport,
     ) -> Result<(), String> {
+        crate::automation_terms::refuse_automated(provider)?;
+        crate::automation_terms::refuse_automated(&report.provider)?;
         if report.provider != provider
             || !report
                 .version_output
@@ -404,7 +480,10 @@ impl Roster {
             return Err("provider/version output mismatch".into());
         }
         let version = version_tuple(&report.version).ok_or("unknown installed version")?;
-        let minimum = self.providers[provider]
+        let minimum = self
+            .providers
+            .get(provider)
+            .ok_or("unknown provider")?
             .minimum_version
             .as_deref()
             .ok_or("missing minimum version in provider configuration")?;
@@ -419,11 +498,6 @@ impl Roster {
             .is_some_and(|efforts| efforts.contains(effort))
         {
             return Err("unsupported exact model/effort; no fallback".into());
-        }
-        if provider == "gemini" {
-            return Err(
-                "Gemini subscription status and exact effort control unverified for 0.35.3".into(),
-            );
         }
         if provider == "claude" {
             let status: serde_json::Value = serde_json::from_str(&report.login_status_output)
@@ -452,11 +526,6 @@ impl Roster {
                 "\"subscriptionType\"",
                 &["--model"],
                 &["UserPromptSubmit", "Stop"],
-            ),
-            "gemini" => (
-                "Logged in with Google",
-                &["--model", "--output-format", "--prompt"],
-                &["BeforeAgent", "AfterAgent"],
             ),
             _ => return Err("unknown provider".into()),
         };
@@ -520,9 +589,19 @@ mod capability_tests {
         let mut bad = report.clone();
         bad.login_status_output = "Not logged in".into();
         assert!(roster.check("hive-routine-implementer", &bad).is_err());
-        let mut bad = report;
+        let mut bad = report.clone();
         bad.version = "0.100.0".into();
         assert!(roster.check("hive-routine-implementer", &bad).is_err());
+        let mut gemini = report;
+        gemini.provider = "gemini".into();
+        assert_eq!(
+            CapabilityReport::from_json_bytes(&serde_json::to_vec(&gemini).unwrap()).unwrap_err(),
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        assert_eq!(
+            roster.check_resolved("gemini", &role, &gemini).unwrap_err(),
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
     }
 }
 
@@ -558,6 +637,7 @@ impl Roster {
         provider: &str,
         role: &Role,
     ) -> Result<WorkerProfile, String> {
+        crate::automation_terms::refuse_automated(provider)?;
         let model = role.model.clone().ok_or("missing model")?;
         let effort = role.effort.clone().ok_or("missing effort")?;
         if model.is_empty()
@@ -618,12 +698,6 @@ impl Roster {
                     return Err("unsupported Claude effort".into());
                 }
                 profile.guidance=format!("Use the subscribed interactive Claude host. Select model {model} and effort {effort} in that host. Follow its official hooks and issue bound receipts; no non-interactive Claude invocation.");
-            }
-            "gemini" => {
-                profile.supported = false;
-                profile.input_mode = "stdin-task".into();
-                profile.result_format = "json".into();
-                profile.guidance=format!("Gemini CLI 0.35.3 documents --model {model}, --prompt and --output-format json (response field). Exact effort {effort} and official subscription status are unverified; no executable profile or fallback. Host qualification required.");
             }
             _ => return Err("unknown provider".into()),
         }
@@ -719,9 +793,17 @@ mod worker_tests {
             .get_mut("hive-routine-implementer")
             .unwrap()
             .effort = Some("high".into());
-        let p = roster.worker_profile("hive-routine-implementer").unwrap();
-        assert!(!p.supported);
-        assert_eq!(p.argv, Vec::<String>::new());
+        assert_eq!(
+            roster
+                .worker_profile("hive-routine-implementer")
+                .unwrap_err(),
+            crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        roster
+            .roles
+            .get_mut("hive-routine-implementer")
+            .unwrap()
+            .provider = None;
         roster
             .roles
             .get_mut("hive-routine-implementer")

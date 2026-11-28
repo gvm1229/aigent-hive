@@ -247,13 +247,15 @@ fn msg_flow_orders_steps_and_advances_only_after_ack() {
 #[test]
 fn reviewer_provider_uses_the_single_other_selected_host_and_keeps_it_for_later_steps() {
     let f = fixture();
+    // Antigravity is selected as a human host but is never a reviewer candidate.
     std::fs::write(
         f.home.join(".hive/config/user-setup.yml"),
         std::fs::read_to_string(f.home.join(".hive/config/user-setup.yml"))
             .unwrap()
-            .replace("- claude", "- antigravity"),
+            .replace("- claude", "- claude\n  - antigravity"),
     )
     .unwrap();
+    // A legacy Gemini provider table is ignored instead of failing the roster.
     std::fs::write(
         f.home.join(".hive/roster.toml"),
         format!(
@@ -264,27 +266,27 @@ fn reviewer_provider_uses_the_single_other_selected_host_and_keeps_it_for_later_
     .unwrap();
     let started = f.start(&["--advisor", "artemis"]);
     assert_eq!(started["code"], "hive.msg-flow-started", "{started}");
-    assert_eq!(step(&started, 1)["provider"], "gemini");
+    assert_eq!(step(&started, 1)["provider"], "claude");
     let builder = id(&started, 0);
     f.claim(&builder, "hephaistos", "1010");
     let acked_builder = f.ack(&builder, "builder result", "1020");
     let reviewer = id(&acked_builder, 1);
     f.claim(&reviewer, "athena", "1030");
     let acked_reviewer = f.ack(&reviewer, "review result", "1040");
-    assert_eq!(step(&acked_reviewer, 1)["provider"], "gemini");
+    assert_eq!(step(&acked_reviewer, 1)["provider"], "claude");
     let advisor = id(&acked_reviewer, 2);
     let inbox = f.run(&["inbox", "--role", "artemis", "--now", "1041"]);
     assert_eq!(inbox["data"]["messages"][0]["id"], advisor);
-    assert_eq!(inbox["data"]["messages"][0]["sender"]["provider"], "gemini");
+    assert_eq!(inbox["data"]["messages"][0]["sender"]["provider"], "claude");
 }
 
 #[test]
-fn ambiguous_reviewer_provider_returns_explicit_next_action() {
+fn missing_reviewer_provider_returns_explicit_next_action_without_antigravity() {
     let f = fixture();
     let path = f.home.join(".hive/config/user-setup.yml");
     let config = std::fs::read_to_string(&path)
         .unwrap()
-        .replace("- claude", "- claude\n  - antigravity");
+        .replace("- claude", "- antigravity");
     std::fs::write(path, config).unwrap();
     std::fs::write(
         f.home.join(".hive/roster.toml"),
@@ -296,7 +298,8 @@ fn ambiguous_reviewer_provider_returns_explicit_next_action() {
     assert_eq!(result["exit_code"], 3);
     let next = result["next_action"].as_str().unwrap();
     assert!(next.contains("--reviewer-provider claude"));
-    assert!(next.contains("--reviewer-provider gemini"));
+    assert!(!next.contains("gemini"), "{next}");
+    assert!(!next.contains("antigravity"), "{next}");
 }
 
 #[test]
@@ -509,7 +512,7 @@ fn msg_flow_uses_the_single_other_selected_provider_or_allows_same_provider_expl
 }
 
 #[test]
-fn msg_flow_status_uses_recorded_profiles_and_marks_gemini_unverified() {
+fn msg_flow_status_uses_recorded_profiles_and_refuses_gemini_reviewers() {
     let f = fixture();
     let started = f.start(&[]);
     let flow = flow_id(&started);
@@ -525,34 +528,29 @@ fn msg_flow_status_uses_recorded_profiles_and_marks_gemini_unverified() {
     );
     assert_eq!(step(&status, 1)["roster_changed"], true);
     let g = fixture();
-    std::fs::write(
-        g.home.join(".hive/roster.toml"),
-        "[roles.hive-research-specialist]\nprovider = 'gemini'\nmodel = 'gemini-3-pro-preview'\neffort = 'high'\n",
-    )
-    .unwrap();
     let brief = g.target.parent().unwrap().join("brief.md");
-    let started = g.run(&[
-        "flow",
-        "start",
-        "--builder",
-        "hephaistos",
-        "--reviewer",
-        "artemis",
-        "--reviewer-provider",
-        "gemini",
-        "--task",
-        "task-9",
-        "--file",
-        brief.to_str().unwrap(),
-        "--now",
-        "1000",
-    ]);
-    assert_eq!(started["code"], "hive.msg-flow-started", "{started}");
-    let gemini = step(&started, 1);
-    assert_eq!(gemini["verified"], false);
-    assert_eq!(gemini["host_mode"], "peer-worker-unverified");
-    assert_eq!(
-        gemini["display"]["ko"],
-        "Artemis (Gemini gemini-3-pro-preview · high) ▸ 대기 [미검증]"
-    );
+    for provider in ["gemini", "antigravity"] {
+        let refused = g.run(&[
+            "flow",
+            "start",
+            "--builder",
+            "hephaistos",
+            "--reviewer",
+            "artemis",
+            "--reviewer-provider",
+            provider,
+            "--task",
+            "task-9",
+            "--file",
+            brief.to_str().unwrap(),
+            "--now",
+            "1000",
+        ]);
+        assert_ne!(refused["code"], "hive.msg-flow-started", "{refused}");
+        assert!(
+            refused.to_string().contains("Antigravity terms"),
+            "{refused}"
+        );
+    }
+    assert_eq!(g.messages(), 0);
 }

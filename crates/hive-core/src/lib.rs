@@ -7,6 +7,7 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+pub mod automation_terms;
 pub mod containment;
 pub mod custom_agent;
 pub mod decision;

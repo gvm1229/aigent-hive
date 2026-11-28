@@ -476,7 +476,7 @@ fn msg_hook_return_shapes_follow_each_host() {
     g.ack(&id, "done", "1001");
     let block = g.hook("claude", "Stop", &claude, &[], &stop("p1", false, "x"));
     assert_eq!(parse_response(&block.response)["decision"], "block");
-    // Notification and Gemini events are recorded only.
+    // Notification events are recorded only.
     let note = g.hook(
         "claude",
         "Notification",
@@ -487,54 +487,18 @@ fn msg_hook_return_shapes_follow_each_host() {
     );
     assert_eq!(parse_response(&note.response), json!({}));
     assert_eq!(note.disposition, EventDisposition::Recorded);
-    // S7: Gemini events and return shapes are unverified: preview only, apply refused.
+    // Antigravity and Gemini mediation hooks are refused permanently (Google's terms).
     let h = fixture();
-    let preview = h.run(&["hooks", "preview", "--host", "gemini", "--role", "athena"]);
-    assert_eq!(preview["code"], "hive.msg-hooks-preview", "{preview}");
-    let gemini = preview["data"]["preview"]["binding_digest"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    let entry = &preview["data"]["preview"]["after"][0]["value"]["hooks"][0];
-    assert!(entry.get("timeout").is_none(), "unverified unit: {entry}");
-    let digest = preview["data"]["preview"]["approval_digest"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    let refused = h.run(&[
-        "hooks",
-        "apply",
-        "--host",
-        "gemini",
-        "--role",
-        "athena",
-        "--confirm",
-        &digest,
-    ]);
-    assert_eq!(
-        refused["code"], "hive.msg-hooks-unverified-host",
-        "{refused}"
-    );
-    assert_eq!(refused["exit_code"], 3);
+    for host in ["gemini", "antigravity"] {
+        let refused = h.run(&["hooks", "preview", "--host", host, "--role", "athena"]);
+        assert_ne!(refused["code"], "hive.msg-hooks-preview", "{refused}");
+        assert!(
+            refused.to_string().contains("Antigravity terms"),
+            "{refused}"
+        );
+    }
     assert!(!h.target.join(".gemini").exists());
     assert!(!h.target.join(".hive/config/mediation-hooks").exists());
-    let id = h.send("review", None);
-    h.claim(&id, "900");
-    h.ack(&id, "done", "1001");
-    let after = h.hook(
-        "gemini",
-        "AfterAgent",
-        &gemini,
-        &[],
-        &json!({"session_id": "g1", "hook_event_name": "AfterAgent"}).to_string(),
-    );
-    assert_eq!(parse_response(&after.response), json!({}));
-    assert_eq!(after.disposition, EventDisposition::Quarantined);
-    assert_eq!(
-        h.count(".hive/mediation/deliveries"),
-        0,
-        "Gemini return unverified"
-    );
 }
 
 #[test]

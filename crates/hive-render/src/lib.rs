@@ -683,7 +683,9 @@ pub fn authorize_hook_with_resolution(
     let fresh = load_resolution(&fresh_path)?;
     validate_resolution_host(&fresh.host, &fresh)?;
     let _ = derive_resolution(&fresh)?;
-    if !host_native_hook_event_supported(&fresh, event) {
+    if !host_native_hook_event_supported(&fresh, event)
+        || automatic_reinvocation_refused(&fresh, capability)
+    {
         return Ok(HookAuthorization::Inert);
     }
     ensure_consumer_target(target).map_err(|error| RenderError::Safety(error.to_string()))?;
@@ -4805,6 +4807,11 @@ fn validate_hook_approvals(
                 )));
             }
         };
+        if automatic_reinvocation_refused(resolution, &hook.capability) {
+            return Err(RenderError::Safety(
+                hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.to_owned(),
+            ));
+        }
         if !host_native_hook_event_supported(resolution, expected_event) {
             return Err(RenderError::Safety(format!(
                 "optional hook requires a supported host-native event: {expected_event}"
@@ -4835,6 +4842,13 @@ fn validate_hook_approvals(
         verify_consent_digest(hook, &hook.consent_digest, "fallback hook")?;
     }
     Ok(())
+}
+
+/// Hooks that make the host run again on its own. Antigravity never receives them, because
+/// Google's Antigravity terms prohibit third-party tools from driving Antigravity.
+fn automatic_reinvocation_refused(resolution: &CapabilityResolution, capability: &str) -> bool {
+    hive_core::automation_terms::is_terms_restricted(&resolution.host)
+        && matches!(capability, "continue-active-run" | "validate-korean-output")
 }
 
 fn host_native_hook_event_supported(resolution: &CapabilityResolution, event: &str) -> bool {
@@ -10087,6 +10101,35 @@ mod tests {
         changed.consent_digest =
             calculate_consent_digest(&changed).expect("mutated consent should canonicalize");
         assert!(validate_hook_approvals(&[changed], &resolution).is_err());
+    }
+
+    #[test]
+    fn antigravity_never_receives_automatic_reinvocation_hooks() {
+        let mut resolution = supported_host_native_hook_resolution();
+        resolution.host = "antigravity".to_owned();
+        resolution.external_runtime = None;
+        let Err(RenderError::Safety(message)) =
+            validate_hook_approvals(&[signed_continuation_hook()], &resolution)
+        else {
+            panic!("Antigravity continuation hook must be refused");
+        };
+        assert_eq!(
+            message,
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+        );
+        assert!(super::automatic_reinvocation_refused(
+            &resolution,
+            "validate-korean-output"
+        ));
+        assert!(!super::automatic_reinvocation_refused(
+            &resolution,
+            "checkpoint-reminder"
+        ));
+        resolution.host = "codex".to_owned();
+        assert!(!super::automatic_reinvocation_refused(
+            &resolution,
+            "continue-active-run"
+        ));
     }
 
     #[test]

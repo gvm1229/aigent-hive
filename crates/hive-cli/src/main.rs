@@ -96,7 +96,7 @@ USAGE:
     hive source-wiki index --target <source-root> [--output json]
     hive source-wiki query --target <source-root> --language en|ko (--text <query>|--tag <tag>) [--limit <1..100>] [--output json]
     hive source-wiki graph preview|enable|status|rebuild|disable|query|export --target <source-root> [--engine native-markdown|graphify-code] [--node-id <id>] [--text <query>] [--format json|html] [--output json]
-    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex|antigravity [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
+    hive source-wiki graph preview|enable|disable|status|prepare|apply|query --engine host-semantic --target <dir> --language en|ko --host codex [--consent-digest <digest>] [--request-digest <digest> --input <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
     hive update [--channel stable|test] [--user-root <absolute-dir>] [--confirm] [--interactive|--non-interactive] [--output json]
     hive update --check --user-root <absolute-dir> [--output json]
     hive knowledge add|authorize-confidential|collection|delete|export|import|ingest|lint|list|promote|query|read|refresh|remember|retrieve|scan|suppress --help
@@ -125,7 +125,7 @@ USAGE:
     hive usage session --target <dir> --session-id <id> --process-id <positive-u32> [--host codex|claude|antigravity] [--user-root <dir>] --action enable|disable|toggle [--confirm-session-disable] [--output json]
     hive usage capture --host claude|antigravity (--target <dir>|--target-from-stdin) --stdin-json [--output json]
     hive usage summarize-tokens --request <normalized-events.json> [--output json]
-    hive usage fallback-install --host codex|claude|antigravity (--dry-run|--apply) [--confirm-install] [--output json]
+    hive usage fallback-install --host codex|claude (--dry-run|--apply) [--confirm-install] [--output json]
     hive role validate --target <dir> --role <role-id> [--output json]
     hive role handoff --target <dir> --request <request.json> [--output json]
     hive run checkpoint --target <dir> --request <request.json> --capabilities <fresh-json> [--output json]

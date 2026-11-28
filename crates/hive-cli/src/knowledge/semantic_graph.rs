@@ -282,6 +282,15 @@ pub(super) fn run(arguments: &[String], source_scope: bool) -> Result<KnowledgeR
     let host = optional(&options, "--host")
         .or_else(|| stored.as_ref().map(|s| s.host.as_str()))
         .ok_or_else(|| invalid("semantic graph preview requires the exact --host"))?;
+    // Google's Antigravity terms: Antigravity never runs Hive semantic extraction. Turning a
+    // previously enabled Antigravity engine off and reading its status stay possible.
+    if hive_core::automation_terms::is_terms_restricted(host)
+        && !matches!(action, "disable" | "status")
+    {
+        return Err(invalid(
+            hive_core::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL,
+        ));
+    }
     if !matches!(host, "codex" | "antigravity") {
         return Err(invalid("semantic host has not been qualified"));
     }

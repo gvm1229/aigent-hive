@@ -56,9 +56,6 @@ effort = "high"
 model = "claude-sonnet-5"
 effort = "high"
 
-[providers.gemini]
-minimum_version = "0.35.3"
-
 [roles.hive-article-writer]
 
 [roles.hive-complex-implementer]

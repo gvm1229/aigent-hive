@@ -2682,24 +2682,9 @@ fn read_usage_snapshot(
                 ),
             },
         ),
-        "antigravity" => native_then_consented_fallback(
-            usage::UsageHost::Antigravity,
-            antigravity::read(target, binding, account_digest, sampled_at),
-            config.codexbar_fallback_enabled,
-            || match account_digest {
-                Some(account_digest) => usage::check_codexbar_provider_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Antigravity,
-                    account_digest,
-                    sampled_at,
-                ),
-                None => usage::check_codexbar_provider_unique_with_runner(
-                    &usage::SystemCommandRunner,
-                    usage::UsageHost::Antigravity,
-                    sampled_at,
-                ),
-            },
-        ),
+        // Only Antigravity's own statusLine callback counts. No third-party reader such as
+        // CodexBar accesses Antigravity (Google's Antigravity terms).
+        "antigravity" => antigravity::read(target, binding, account_digest, sampled_at),
         _ => Err(usage::SensorError::WrongProvider),
     }
 }
@@ -6490,7 +6475,22 @@ usage_guard:
 
     #[test]
     fn fallback_consent_controls_every_host_without_changing_native_results() {
-        for host in [UsageHost::Codex, UsageHost::Claude, UsageHost::Antigravity] {
+        // Antigravity never uses a third-party fallback, even with consent (Google's terms).
+        let calls = Cell::new(0);
+        assert_eq!(
+            native_then_consented_fallback(
+                UsageHost::Antigravity,
+                Err::<u8, _>(SensorError::Unsupported),
+                true,
+                || {
+                    calls.set(calls.get() + 1);
+                    Ok(7)
+                },
+            ),
+            Err(SensorError::Unsupported)
+        );
+        assert_eq!(calls.get(), 0);
+        for host in [UsageHost::Codex, UsageHost::Claude] {
             let calls = Cell::new(0);
             assert_eq!(
                 native_then_consented_fallback(host, Ok(5), true, || {

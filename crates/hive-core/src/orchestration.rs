@@ -347,10 +347,7 @@ impl HostReceipt {
             || !valid_head(&self.event_head)
             || !valid_digest(&self.host_capability_digest)
             || !valid_digest(&self.source_digest)
-            || !matches!(
-                self.host.as_str(),
-                "codex" | "claude" | "gemini" | "antigravity"
-            )
+            || !matches!(self.host.as_str(), "codex" | "claude")
             || self.source_locator.is_empty()
             || self.issued_at.is_empty()
             || self.received_at.is_empty()
@@ -1117,6 +1114,16 @@ mod tests {
     }
 
     #[test]
+    fn antigravity_and_gemini_host_receipts_are_refused() {
+        valid_receipt(ReceiptKind::Claim).validate().unwrap();
+        for host in ["gemini", "antigravity"] {
+            let mut receipt = valid_receipt(ReceiptKind::Claim);
+            host.clone_into(&mut receipt.host);
+            assert_eq!(receipt.validate(), Err(OrchestrationError::InvalidReceipt));
+        }
+    }
+
+    #[test]
     fn exact_duplicate_receipt_is_noop_and_conflict_quarantines() {
         let mut state = ReducerState {
             state: Some(DispatchState::Prepared),
@@ -1356,6 +1363,7 @@ impl SummonEnvelope {
         {
             return Err("invalid or unsupported inert summon envelope".into());
         }
+        crate::automation_terms::refuse_automated(&self.profile.provider)?;
         // A worker profile may never grant more than its role's least-privilege policy.
         crate::containment::validate_worker_argv(&self.role, &self.profile)?;
         let root = format!(".hive/runs/{}/", self.run_id);
@@ -1442,6 +1450,14 @@ mod summon_tests {
         changed.profile.provider = "gemini".into();
         changed.profile.supported = false;
         assert!(changed.validate().is_err());
+        for provider in ["gemini", "antigravity"] {
+            let mut refused = e.clone();
+            provider.clone_into(&mut refused.profile.provider);
+            assert_eq!(
+                refused.validate().unwrap_err(),
+                crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+            );
+        }
         assert_eq!(e.state, DispatchState::Prepared);
     }
 }

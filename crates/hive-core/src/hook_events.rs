@@ -37,18 +37,19 @@ pub const MAX_LISTED_IDS: usize = 10;
 pub enum HookHost {
     Claude,
     Codex,
-    Gemini,
 }
 
 impl HookHost {
     /// # Errors
-    /// Rejects every other host name.
+    /// Rejects every other host name; Antigravity and Gemini with the terms-of-service reason.
     pub fn parse(value: &str) -> Result<Self, String> {
         match value {
             "claude" => Ok(Self::Claude),
             "codex" => Ok(Self::Codex),
-            "gemini" => Ok(Self::Gemini),
-            _ => Err("host must be claude, codex or gemini".into()),
+            other if crate::automation_terms::is_terms_restricted(other) => {
+                Err(crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL.into())
+            }
+            _ => Err("host must be claude or codex".into()),
         }
     }
 
@@ -57,7 +58,6 @@ impl HookHost {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
-            Self::Gemini => "gemini",
         }
     }
 }
@@ -77,7 +77,7 @@ pub enum ReturnShape {
     /// `hookSpecificOutput.additionalContext` on `UserPromptSubmit`.
     PromptContext,
     /// The event is recorded; the response is `{}`. Used where the event cannot add context
-    /// (Claude Notification) or where the return shape is not yet verified (Gemini).
+    /// (Claude Notification).
     RecordOnly,
 }
 
@@ -99,7 +99,6 @@ pub struct AllowedEvent {
 
 const CLAUDE_HOOKS: &str = "https://code.claude.com/docs/en/hooks";
 const CODEX_HOOKS: &str = "https://learn.chatgpt.com/docs/hooks";
-const GEMINI_HOOKS: &str = "https://geminicli.com/docs/hooks/reference/";
 
 /// Exact allowlist. Any other host/event pair keeps the connection disabled.
 pub const ALLOWED_EVENTS: &[AllowedEvent] = &[
@@ -147,24 +146,6 @@ pub const ALLOWED_EVENTS: &[AllowedEvent] = &[
         recursion_guard: false,
         source: CODEX_HOOKS,
         live: "pending-local",
-    },
-    AllowedEvent {
-        host: HookHost::Gemini,
-        event: "AfterAgent",
-        shape: ReturnShape::RecordOnly,
-        alternatives: &[],
-        recursion_guard: true,
-        source: GEMINI_HOOKS,
-        live: "unverified",
-    },
-    AllowedEvent {
-        host: HookHost::Gemini,
-        event: "Notification",
-        shape: ReturnShape::RecordOnly,
-        alternatives: &[],
-        recursion_guard: false,
-        source: GEMINI_HOOKS,
-        live: "unverified",
     },
 ];
 
@@ -619,24 +600,23 @@ mod tests {
                 (HookHost::Claude, "Notification"),
                 (HookHost::Codex, "Stop"),
                 (HookHost::Codex, "UserPromptSubmit"),
-                (HookHost::Gemini, "AfterAgent"),
-                (HookHost::Gemini, "Notification"),
             ]
         );
         for (host, event) in [
             (HookHost::Codex, "Notification"),
-            (HookHost::Gemini, "Stop"),
             (HookHost::Claude, "AfterAgent"),
             (HookHost::Claude, "stop"),
             (HookHost::Claude, "SubagentStop"),
         ] {
             assert!(allowed_event(host, event).is_none(), "{event}");
         }
-        assert!(HookHost::parse("antigravity").is_err());
-        // Gemini return shapes are not verified: record only, never a guessed shape.
-        assert!(host_events(HookHost::Gemini)
-            .iter()
-            .all(|entry| entry.shape == ReturnShape::RecordOnly && entry.live == "unverified"));
+        for host in ["gemini", "antigravity"] {
+            assert_eq!(
+                HookHost::parse(host).unwrap_err(),
+                crate::automation_terms::ANTIGRAVITY_AUTOMATION_REFUSAL
+            );
+        }
+        assert!(HookHost::parse("other").is_err());
     }
 
     #[test]

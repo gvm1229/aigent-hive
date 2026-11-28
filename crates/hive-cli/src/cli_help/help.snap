@@ -278,10 +278,9 @@ export, import, transfer, scan, graph, vector
         [--user-root <dir>] [--format json|html] [--output json]
     hive knowledge graph preview|enable|disable|status|prepare|apply|query
         --engine host-semantic --target <dir> --user-root <dir> --collection
-        <id> --visibility shared|project-private|confidential --host
-        codex|antigravity [--consent-digest <digest>] [--request-digest <digest>
-        --input <result.json> --receipt <receipt.json>] [--node-id <id>]
-        [--output json]
+        <id> --visibility shared|project-private|confidential --host codex
+        [--consent-digest <digest>] [--request-digest <digest> --input
+        <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
 
 === hive knowledge retrieve --help (ko)
 hive knowledge retrieve
@@ -350,8 +349,8 @@ check, probe-native, capture, summarize-tokens, fallback-install
         <dir>|--target-from-stdin) --stdin-json [--output json]
     hive usage summarize-tokens --request <normalized-events.json> [--output
         json]
-    hive usage fallback-install --host codex|claude|antigravity
-        (--dry-run|--apply) [--confirm-install] [--output json]
+    hive usage fallback-install --host codex|claude (--dry-run|--apply)
+        [--confirm-install] [--output json]
 
 === hive project upgrade --help (ko)
 hive project upgrade: 프로젝트 Hive 지침 갱신
@@ -663,10 +662,9 @@ Full syntax
         [--user-root <dir>] [--format json|html] [--output json]
     hive knowledge graph preview|enable|disable|status|prepare|apply|query
         --engine host-semantic --target <dir> --user-root <dir> --collection
-        <id> --visibility shared|project-private|confidential --host
-        codex|antigravity [--consent-digest <digest>] [--request-digest <digest>
-        --input <result.json> --receipt <receipt.json>] [--node-id <id>]
-        [--output json]
+        <id> --visibility shared|project-private|confidential --host codex
+        [--consent-digest <digest>] [--request-digest <digest> --input
+        <result.json> --receipt <receipt.json>] [--node-id <id>] [--output json]
 
 === hive knowledge retrieve --help (en)
 hive knowledge retrieve
@@ -735,8 +733,8 @@ Full syntax
         <dir>|--target-from-stdin) --stdin-json [--output json]
     hive usage summarize-tokens --request <normalized-events.json> [--output
         json]
-    hive usage fallback-install --host codex|claude|antigravity
-        (--dry-run|--apply) [--confirm-install] [--output json]
+    hive usage fallback-install --host codex|claude (--dry-run|--apply)
+        [--confirm-install] [--output json]
 
 === hive project upgrade --help (en)
 hive project upgrade: upgrade a project's Hive harness
