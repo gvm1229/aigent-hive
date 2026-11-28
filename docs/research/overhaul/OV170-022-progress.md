@@ -11,7 +11,27 @@
 
 ## 남은 범위
 
-- 강제 겹(Claude): 사용자 확인과 `~/hive-backups` 백업 뒤 `~/.claude/settings.json`의 `permissions.deny` 추가, 미리보기·되돌리기 명령. 미구현
+- 강제 겹(Claude): 2026-11-28 local 구현 완료(아래). 이 PC의 실제 `~/.claude/settings.json` 적용은 사용자 승인 대기
 - 강제 겹(Codex): MCP 도구별 끄기 지원 조사 미완료. 확인 전에는 지침 겹만
 - 실제 확인(local): Whale 기본 설정으로 Claude·Codex 동작([local 인계](OV170-local-handoff.md))
 - 실행 파일 위치 기록: 판별 값만 기록, 실행 파일 경로 미기록
+
+## local 조사(2026-11-28, 이 Windows 11 Pro PC)
+
+- 기본 브라우저: `UserChoice` `ProgId` 값 `WhaleHTM`(읽기 전용 조회). `browser::recognize`의 `whale` 표지와 맞아 Whale로 판별
+- Claude in Chrome 연결: 연결 확인. `list_connected_browsers` 결과 Windows 로컬 브라우저 1개 연결·사용 중, 실행 중인 브라우저는 `whale` 프로세스뿐(`chrome` 없음), Claude 확장(`fcoeoabgfenejglbffodgkkbkcdhcgfn`)은 Whale `Profile 1`에만 설치. 탭 조작은 미실행: 이 세션의 탭 묶음이 없어 확인하려면 새 탭을 만들어야 하므로 보류
+- 빈틈: 지침에 Whale이 나오려면 `browser.detected_default`가 기록돼야 함. 이 값은 `user-setup` Skill이 OS 조회 결과를 답변 파일에 넣을 때만 기록. 사람이 터미널에서 `hive setup --scope user --section tools`를 직접 실행하면 기록되지 않아 지침이 Chrome으로 나옴. Hive 안에서 직접 읽으려면 작업 공간 규칙(`unsafe_code = "forbid"`) 때문에 레지스트리 읽기용 새 의존성(예: `winreg`) 필요. 결정 대기
+- Codex 강제 겹 조사: 설치된 `codex-cli 0.171.0` 실행 파일의 설정 구조(`RawMcpServerConfig`)에 MCP 서버별 `enabled_tools`·`disabled_tools` 키 있음. `codex features list`에 `browser_use`·`browser_use_external`·`browser_use_full_cdp_access`(모두 stable·활성) 있음. Codex의 브라우저 조작은 개별 MCP 도구가 아니라 `node_repl`·`cua_repl` 서버와 기능 스위치로 제공
+  - 지원되는 방식: 앱 내장 브라우저 끄기 `features.browser_use=false`, 외부 Chrome 조작 끄기 `features.browser_use_external=false`, MCP 서버 단위 `disabled_tools`
+  - 지원되지 않는 방식: 새 탭 열기만 따로 막기. 탭 도구가 별도 MCP 도구 이름으로 노출되지 않아 지침 겹만 적용
+  - 미검증: 두 기능 스위치가 실제로 어느 브라우저를 끄는지의 실행 확인. 문자열과 기능 목록만 확인
+
+## Claude 강제 겹(2026-11-28 local)
+
+- 명령: `hive setup --scope user --section tools --claude-browser-deny preview`, `... apply --confirm <digest>`, `... revert`(미리 보기)와 `... revert --confirm <digest>`
+- 추가 항목: `default-browser`는 `mcp__Claude_Browser__*`, `in-app`은 `mcp__claude-in-chrome__*`. 탭 재사용이 켜져 있으면 반대쪽 새 탭 도구 하나 추가
+- 적용 순서: 미리 보기 지문 일치 확인, `<user-root>/hive-backups/`에 검증된 백업, 되돌리기 기록 `.hive/state/claude-browser-deny.json`, `permissions.deny`만 고치고 다른 바이트 보존
+- 되돌리기: 적용 직후 그대로면 원래 바이트 복원, 바뀌었으면 Hive가 넣은 항목만 제거. 브라우저 선택이 바뀐 뒤에는 먼저 되돌리기 요구
+- 시험: `cargo test -p hive-cli --bin hive claude_browser_deny` 7개 통과(Windows 11, 이 PC, 임시 폴더만 사용)
+- 지침 문구에는 명령 줄 미추가. 설정 `tools` 절 결과에 선택 제안으로 표시
+
